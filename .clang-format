@@ -1,0 +1,8 @@
+---
+# Configure clang-tidy for this project.
+
+BasedOnStyle: LLVM
+IndentWidth: 2
+ColumnLimit: 0
+AlwaysBreakTemplateDeclarations: Yes
+# EscapedNewlineAlignmentStyle: DontAlign

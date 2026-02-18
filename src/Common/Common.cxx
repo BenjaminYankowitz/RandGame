@@ -1,0 +1,11 @@
+export module Common;
+export import :Location;
+export import :PathFind;
+export import :Shared;
+export import :Random;
+export import :CompileTimeHashMap;
+export import :Dice;
+export import :Misc;
+export import :IteratorBase;
+export import :Static2DArr;
+export import :SmallVector;

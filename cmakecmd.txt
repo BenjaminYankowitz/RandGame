@@ -1,0 +1,1 @@
+cmake -G Ninja -S . -B build -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_CXX_FLAGS=-stdlib=libc++ -DCMAKE_EXPORT_COMPILE_COMMANDS=1 --toolchain ubsan.cmake -Wno-dev
