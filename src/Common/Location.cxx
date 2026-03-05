@@ -1,70 +1,75 @@
 export module Common:Location;
 import std;
 
-
 export class Dir {
   class BoxIterable {
     using difference_type = std::ptrdiff_t;
     class BoxIterator {
-      public:
+    public:
       using value_type = Dir;
       using difference_type = BoxIterable::difference_type;
-      [[nodiscard]] explicit constexpr BoxIterator(int n) : n_(n){}
-      [[nodiscard]] explicit constexpr BoxIterator() : n_(9){}
-      [[nodiscard]] constexpr Dir operator*() const{
+      [[nodiscard]] explicit constexpr BoxIterator(int n) : n_(n) {}
+      [[nodiscard]] explicit constexpr BoxIterator() : n_(8) {}
+      [[nodiscard]] constexpr Dir operator*() const {
         return getBoxDir(n_);
       }
-      constexpr BoxIterator& operator++(){
+      constexpr BoxIterator &operator++() {
         n_++;
         return *this;
       }
-      constexpr BoxIterator operator++(int){
+      constexpr BoxIterator operator++(int) {
         BoxIterator ret = *this;
         operator++();
         return ret;
       }
-      [[nodiscard]] constexpr bool operator==(BoxIterator o) const{
-        return n_==o.n_;
+      [[nodiscard]] constexpr bool operator==(BoxIterator o) const {
+        return n_ == o.n_;
       }
-      [[nodiscard]] constexpr bool operator!=(BoxIterator o) const{
-        return n_!=o.n_;
+      [[nodiscard]] constexpr bool operator!=(BoxIterator o) const {
+        return n_ != o.n_;
       }
-      private:
+
+    private:
       int n_;
     };
-    public:
-  [[nodiscard]] static constexpr BoxIterator begin() {
-    return BoxIterator(0);
-  }
-  [[nodiscard]] static constexpr BoxIterator end() {
-    return BoxIterator(9);
-  }
-  [[nodiscard]] static constexpr BoxIterator cbegin(){return begin();}
-  [[nodiscard]] static constexpr BoxIterator cend(){return end();}
+
+  public:
+    [[nodiscard]] static constexpr BoxIterator begin() {
+      return BoxIterator(0);
+    }
+    [[nodiscard]] static constexpr BoxIterator end() {
+      return BoxIterator();
+    }
+    [[nodiscard]] static constexpr BoxIterator cbegin() { return begin(); }
+    [[nodiscard]] static constexpr BoxIterator cend() { return end(); }
   };
   constexpr static BoxIterable BoxIteratorInst;
+
 public:
-  [[nodiscard]] constexpr static Dir getBoxDir(int n){
-    const int k = n + n>4 ? 1 : 0;
-    return {k%3-1,k/3-1};
+  [[nodiscard]] constexpr static Dir getBoxDir(int n) {
+  if(n<0 || n>=8){
+    std::unreachable();
+  }
+    const int k = n + (n >= 4 ? 1 : 0);
+    return {k % 3 - 1, k / 3 - 1};
   }
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
   [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {}
   [[nodiscard]] constexpr bool noMove() const noexcept { return dx == 0 && dy == 0; }
-  [[nodiscard]] constexpr static Dir up() noexcept{
-    return {0,-1};
+  [[nodiscard]] constexpr static Dir up() noexcept {
+    return {0, -1};
   };
-  [[nodiscard]] constexpr static Dir down(){
-    return {0,1};
+  [[nodiscard]] constexpr static Dir down() {
+    return {0, 1};
   };
-  [[nodiscard]] constexpr static Dir left(){
-    return {-1,0};
+  [[nodiscard]] constexpr static Dir left() {
+    return {-1, 0};
   };
-  [[nodiscard]] constexpr static Dir right(){
-    return {1,0};
+  [[nodiscard]] constexpr static Dir right() {
+    return {1, 0};
   };
-  bool operator==(const Dir& pos) const = default;
-  [[nodiscard]] constexpr static const BoxIterable& boxDirs(){
+  bool operator==(const Dir &pos) const = default;
+  [[nodiscard]] constexpr static const BoxIterable &boxDirs() {
     return BoxIteratorInst;
   }
   int dx;
@@ -84,26 +89,34 @@ export constexpr Dir capDir(Dir d) noexcept {
   return d;
 }
 
-
-export std::ostream& operator<<(std::ostream& out, Dir dir){
-  out << '(' << dir.dx << ',' << dir.dy << ")\n";
+export std::ostream &operator<<(std::ostream &out, Dir dir) {
+  out << '(' << dir.dx << ',' << dir.dy << ")";
   return out;
 }
 
 export class Position {
 public:
   [[nodiscard]] constexpr Position(int xI, int yI) noexcept : x(xI), y(yI) {}
-  [[nodiscard]] static constexpr std::size_t chessboard(Position l1, Position l2) noexcept{
-    return std::max(std::abs(l1.x-l2.x),std::abs(l1.y-l2.y));
+  [[nodiscard]] static constexpr std::size_t chessboard(Position l1, Position l2) noexcept {
+    return std::max(std::abs(l1.x - l2.x), std::abs(l1.y - l2.y));
   }
-  bool operator==(const Position& pos) const = default;
-  [[nodiscard]] Position up(int d = 1) const noexcept {return {x,y-d};}
-  [[nodiscard]] Position down(int d = 1) const noexcept {return {x,y+d};}
-  [[nodiscard]] Position left(int d = 1) const noexcept {return {x-d,y};}
-  [[nodiscard]] Position right(int d = 1) const noexcept {return {x+d,y};}
+  constexpr bool operator==(const Position &pos) const = default;
+  [[nodiscard]] constexpr Position up(int d = 1) const noexcept { return {x, y - d}; }
+  [[nodiscard]] constexpr Position down(int d = 1) const noexcept { return {x, y + d}; }
+  [[nodiscard]] constexpr Position left(int d = 1) const noexcept { return {x - d, y}; }
+  [[nodiscard]] constexpr Position right(int d = 1) const noexcept { return {x + d, y}; }
+  [[nodiscard]] constexpr bool within(Position p1, Position p2 = {0, 0}) const noexcept {
+    const int minx = std::min(p1.x, p2.x);
+    const int maxx = std::max(p1.x, p2.x);
+    const int miny = std::min(p1.y, p2.y);
+    const int maxy = std::max(p1.y, p2.y);
+    return x >= minx && x <= maxx && y >= miny && y <= maxy;
+  }
   int x;
   int y;
 };
+
+static_assert(Position{2,1}.within({2,2}));
 
 export constexpr Position &operator+=(Position &pos, Dir dir) noexcept {
   pos.x += dir.dx;
@@ -118,7 +131,7 @@ export constexpr Position &operator-=(Position &pos, Dir dir) noexcept {
 }
 export [[nodiscard]] constexpr Position operator-(Position pos, Dir dir) noexcept { return pos -= dir; }
 export [[nodiscard]] constexpr Dir operator-(Position pos1, Position pos2) noexcept {
-return {pos1.x-pos2.x,pos1.y-pos2.y};
+  return {pos1.x - pos2.x, pos1.y - pos2.y};
 }
 
 export class FloorSpecifier {
@@ -136,7 +149,7 @@ public:
   FloorSpecifier mapPos;
 };
 
-export std::ostream& operator<<(std::ostream& out, Position pos){
-  out << '(' << pos.x << ',' << pos.y << ")\n";
+export std::ostream &operator<<(std::ostream &out, Position pos) {
+  out << '(' << pos.x << ',' << pos.y << ")";
   return out;
 }

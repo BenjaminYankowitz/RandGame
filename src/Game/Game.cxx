@@ -530,7 +530,7 @@ TimePeriod Monster::goToTarget(GameState &state, MonsterId targetId) noexcept {
   return pathTo(state, target.getLoc(), true);
 }
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
-  if (target.mapPos != getLoc().mapPos) {
+  if (target.mapPos != getLoc().mapPos) { // At some point add ability to target enemy on another floor.
     return reThink();
   }
   const Position tPos = target.pos;
@@ -551,6 +551,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexc
     state.printDebug("If it is possible logic should probably be reworked.");
     return reThink();
   }
+  // FindPath()
   // To Do add actual path finding
   const TimePeriod tTaken = generalMove(state, capDir(tPos - cPos), MoveMode::move());
   if (tTaken.future()) {
