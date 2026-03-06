@@ -19,15 +19,15 @@ template <class LayoutPolicy, class AccessorPolicy>
   auto originP = [&origin](Position p) -> std::int8_t & {
     return origin[p.y, p.x];
   };
-  constexpr int DirSent = 8;
-  origin.fill(DirSent);
+  constexpr static int NoDir = -2;
+  origin.fill(NoDir);
   originP(start) = -1;
   std::vector<Position> checking;
   std::vector<Position> toCheck;
   int bestDist = Position::chessboard(start, goal);
   std::int8_t bestDir = -1;
   auto checkSpot = [&mapP, &originP, &toCheck, &bestDist, &bestDir, goal](Position pos, std::int8_t dir) {
-    if (!mapP(pos) || originP(pos) != DirSent) {
+    if (!mapP(pos) || originP(pos) != NoDir) {
       return;
     }
     const int dist = Position::chessboard(pos, goal);
@@ -38,12 +38,11 @@ template <class LayoutPolicy, class AccessorPolicy>
       bestDir = dir;
     }
   };
-  std::ranges::for_each(std::views::iota(0, DirSent), [&checkSpot, start](std::int8_t dirN) {
-    Dir dir = Dir::getBoxDir(dirN);
+  for(auto [dirN, dir]  : std::views::zip(std::views::iota(0),Dir::boxDirs())){
     Position cPos = start + dir;
     checkSpot(cPos, dirN);
-  });
-  for (int dist = 0; dist < maxDist; dist++) {
+  }
+  for (int _ : std::views::iota(0,maxDist)) {
     swap(toCheck, checking);
     toCheck.clear();
     for (auto i : checking) {
@@ -51,10 +50,9 @@ template <class LayoutPolicy, class AccessorPolicy>
       if (Position::chessboard(i, goal) == 1) {
         return Dir::getBoxDir(oDir);
       }
-      std::ranges::for_each(Dir::boxDirs(), [&checkSpot, i, oDir](Dir dir) {
-        Position cPos = i + dir;
-        checkSpot(cPos, oDir);
-      });
+      for(Dir dir : Dir::boxDirs()){
+        checkSpot(i + dir, oDir);
+      }
     }
     if (toCheck.empty()) {
       break;
