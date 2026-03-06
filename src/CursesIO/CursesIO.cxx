@@ -336,15 +336,45 @@ void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
 }
 
 class ActionMod {
-public:
-  MoveMode moveMode = MoveMode::move() | MoveMode::fight();
+  public:
+  [[nodiscard]] constexpr MoveMode getMoveMode() noexcept {
+    return moveMode_;
+  }
+  [[nodiscard]] constexpr std::size_t getCount(std::size_t defaultV = 1) const noexcept {
+    if(count_==NoCount){
+      return defaultV;
+    }
+    return count_;
+  }
+  constexpr std::size_t addDigit(int n) noexcept {
+    changeDigitLast_=true;
+    if(count_==NoCount){
+      return count_ = n;
+    }
+   return count_ = count_*10+n;
+  }
+  constexpr void toggleMoveMode(MoveMode mode) noexcept{
+    moveMode_^=mode;
+  }
+  constexpr void betweenRounds() noexcept {
+    if(!changeDigitLast_){
+      count_=NoCount;
+    }
+    changeDigitLast_ = false;
+  }
+private:
+  static constexpr std::size_t NoCount = std::numeric_limits<std::size_t>::max();
+  static constexpr MoveMode DefaultMoveMode = MoveMode::move() | MoveMode::fight();
+  MoveMode moveMode_ = DefaultMoveMode;
+  bool changeDigitLast_ = false;
+  std::size_t count_ = NoCount;
 };
 
 template <int Dx, int Dy>
 constexpr bool movePlayer(GameInterface &gState, ActionMod &modifer) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
-  gState.generalMove(D, modifer.moveMode);
+  gState.generalMove(D, modifer.getMoveMode());
   return true;
 }
 
@@ -382,12 +412,12 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
 }
 
 bool toggleMoveMode(GameInterface & /*gState*/, ActionMod &mod) {
-  mod.moveMode ^= MoveMode::move();
+  mod.toggleMoveMode(MoveMode::move());
   return true;
 }
 
 bool toggleFightMode(GameInterface & /*gState*/, ActionMod &mod) {
-  mod.moveMode ^= MoveMode::fight();
+  mod.toggleMoveMode(MoveMode::fight());
   return true;
 }
 
@@ -415,6 +445,18 @@ bool dropItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
   return true;
 }
 
+bool passTime(GameInterface &gState, ActionMod & mod) noexcept {
+  gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
+  return true;
+}
+
+template<int n>
+bool addDigit(GameInterface & /*gState*/, ActionMod &mod){
+  static_assert(n>=0 && n<=9);
+  mod.addDigit(n);
+  return true;
+}
+
 bool quit(GameInterface &gState, ActionMod & /*mod*/) noexcept {
   gState.exit();
   return false;
@@ -437,10 +479,22 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
 
     {'F', toggleFightMode},
     {'m', toggleMoveMode},
+    
+    {'0', addDigit<0>},
+    {'1', addDigit<1>},
+    {'2', addDigit<2>},
+    {'3', addDigit<3>},
+    {'4', addDigit<4>},
+    {'5', addDigit<5>},
+    {'6', addDigit<6>},
+    {'7', addDigit<7>},
+    {'8', addDigit<8>},
+    {'9', addDigit<9>},
 
     {'d', dropItem},
     {'t', throwItem},
     {',', pickUpItem},
+    {'.', passTime},
 
     {SpecialChar::Backspace, quit},
 });
@@ -515,6 +569,7 @@ public:
     chtype userInput = getChar();
     const auto func = CmndMp.get(userInput);
 
+    mod_.betweenRounds();
     if (func == nullptr) {
       return true;
     }

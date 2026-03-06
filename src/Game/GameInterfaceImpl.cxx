@@ -118,6 +118,10 @@ GameTime GameInterface::getTime() const noexcept {
   return gs_->getTime();
 }
 
+TimePeriod GameInterface::getSpeed() const noexcept {
+  return gs_->getPlayer().getSpeed();
+}
+
 void GameInterface::dropItem(std::size_t i) noexcept {
   if(!gs_->getPlayer().isAlive()){
     return;

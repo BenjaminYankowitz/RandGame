@@ -4,15 +4,15 @@ import std;
 export class TimePeriod {
 public:
   friend class GameTime;
-  constexpr explicit TimePeriod(std::size_t time) noexcept : impl_(time) {}
-  [[nodiscard]] constexpr auto operator<=>(const TimePeriod &other) const noexcept { return impl_ <=> other.impl_; }
+  constexpr explicit TimePeriod(std::size_t time) noexcept : impl(time) {}
+  [[nodiscard]] constexpr auto operator<=>(const TimePeriod &other) const noexcept { return impl <=> other.impl; }
   [[nodiscard]] constexpr TimePeriod operator+(TimePeriod other) const noexcept {
     auto cp = *this;
     cp += other;
     return cp;
   }
   constexpr TimePeriod &operator+=(TimePeriod other) noexcept {
-    impl_ += other.impl_;
+    impl += other.impl;
     return *this;
   }
   [[nodiscard]] constexpr TimePeriod operator*(std::size_t other) const noexcept {
@@ -21,16 +21,16 @@ public:
     return cp;
   }
   constexpr TimePeriod &operator*=(std::size_t other) noexcept {
-    impl_ *= other;
+    impl *= other;
     return *this;
   }
   constexpr TimePeriod &operator--() noexcept {
-    --impl_;
+    --impl;
     return *this;
   }
-  [[nodiscard]] constexpr bool future() const noexcept { return impl_ != 0; }
+  [[nodiscard]] constexpr bool future() const noexcept { return impl != 0; }
   constexpr TimePeriod operator/=(std::size_t div) noexcept {
-    impl_ /= div;
+    impl /= div;
     return *this;
   }
   [[nodiscard]] constexpr TimePeriod operator/(std::size_t div) const noexcept {
@@ -38,8 +38,7 @@ public:
     return cp /= div;
   }
 
-private:
-  std::size_t impl_;
+  std::size_t impl;
 };
 
 export class GameTime {
@@ -51,7 +50,7 @@ public:
     return nTime += timePassed;
   }
   constexpr GameTime &operator+=(TimePeriod timePassed) noexcept {
-    impl += timePassed.impl_;
+    impl += timePassed.impl;
     return *this;
   }
   constexpr GameTime &operator++() noexcept {

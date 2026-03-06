@@ -309,7 +309,7 @@ private:
 
 WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16,4);
+  // DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16,4);
   return ret;
 }
 
@@ -465,10 +465,10 @@ GameState::GameState() noexcept {
   tryPlaceMonster({2,4}, MonsterClass::GreedyWeasel);
   tryPlaceMonster({4,4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
-  startingFloor.getObjects({0, 0}).addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
+  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
   startingFloor.getObjects({4, 2}).addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  startingFloor.getObjects({0, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Iron));
-  startingFloor.getObjects({0, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Gold));
+  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Iron));
+  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Gold));
 }
 
 [[nodiscard]] constexpr bool operator==(WorldFloor::EventListenersIterable::EventListenerSentinal end, WorldFloor::EventListenersIterable::EventListenerIterator iter) noexcept {

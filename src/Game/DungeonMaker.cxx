@@ -103,19 +103,30 @@ void rooms(Static2DArr<decltype(Wall)> &floor, double roomArea = DefaultRoomArea
 
 template <auto Wall, decltype(Wall) Empty>
 void perlin(Static2DArr<decltype(Wall)> &floor,double xscale, double yscale, double threshold = 0.0)noexcept{
-  if(xscale<1.0){
-    xscale = 1.0;
-  }
-  if(yscale<1.0){
-    yscale = 1.0;
-  }
-  PerlinNoise::Generator gen(std::ceil(floor.cols()/xscale)+1,std::ceil(floor.rows()/yscale)+1);
-  for(std::size_t x = 0; x < floor.cols(); x++){
-    for(std::size_t y = 0; y < floor.rows(); y++){
-      if(gen.getHeight(x/xscale, y/yscale)>=threshold){
-        floor[y,x] = Wall;
+  const double xoffset = Rnd::uniform_01();
+  const double yoffset = Rnd::uniform_01();
+  const double rotation = Rnd::uniform_real(0.0,0.25*std::numbers::pi_v<double>);
+  const double cos = std::cos(rotation);
+  const double sin = std::sin(rotation);
+  const double maxBaseX = (floor.cols()-1)/xscale;
+  const double maxBaseY = (floor.rows()-1)/yscale;
+  const double minX = -sin*maxBaseY;
+  const double minY = 0;
+  const double maxX = cos*maxBaseX;
+  const double maxY = cos*maxBaseY+sin*maxBaseX;
+  const double xRange = maxX-minX;
+  const double yRange = maxY-minY;
+  PerlinNoise::Generator gen(std::ceil(xRange+xoffset)+1,std::ceil(yRange+yoffset)+1);
+  for(std::size_t xI = 0; xI < floor.cols(); xI++){
+    for(std::size_t yI = 0; yI < floor.rows(); yI++){
+      const double x = xI/xscale;
+      const double y = yI/yscale;
+      const double eX = x*cos-y*sin-minX+xoffset;
+      const double eY = y*cos+x*sin-minY+yoffset;
+      if(gen.getHeight(eX, eY)>=threshold){
+        floor[yI,xI] = Wall;
       } else {
-        floor[y,x] = Empty;
+        floor[yI,xI] = Empty;
       }
     }
   }

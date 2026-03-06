@@ -96,6 +96,7 @@ public:
   [[nodiscard]] Location getLocation() const noexcept;
   [[nodiscard]] Health getHealth() const noexcept;
   [[nodiscard]] GameTime getTime() const noexcept;
+  [[nodiscard]] TimePeriod getSpeed() const noexcept;
   void dropItem(std::size_t i) noexcept;
   void throwItem(std::size_t i) noexcept;
   void passTime(TimePeriod numTurns) noexcept;

@@ -28,6 +28,29 @@ export namespace Rnd {
   auto get(Distribution auto& dist){
     return dist(rndState);
   }
+  template <std::integral T>
+  auto uniform_int(T min, T max){
+    std::uniform_int_distribution<T> dist(min,max);
+    return get(dist);
+  }
+  auto rnd(std::integral auto n){
+    return uniform_int(0,n-1);
+  }
+  template <std::floating_point T, bool EndOpen = false>
+  auto uniform_real(T min, T max){
+    std::uniform_real_distribution<T> dist(min,max);
+    double res = get(dist);
+    if constexpr (EndOpen){
+      if(res==max){
+        res = std::nextafter(max,min);
+      }
+    }
+    return res;
+  }
+  template <std::floating_point T = double, bool EndOpen = false>
+  double uniform_01(){
+    return uniform_real<T,EndOpen>(0,1);
+  }
   auto callable(Distribution auto& dist){
     return [&dist](){return dist(rndState);};
   }
@@ -35,3 +58,4 @@ export namespace Rnd {
     std::ranges::shuffle(arr,rndState);
   }
 } // namespace Rnd
+
