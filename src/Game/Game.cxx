@@ -506,6 +506,34 @@ constexpr void GameState::broadcastMonsterAttack(HitReturn hitInfo, const Monste
   broadcastEvent(attacker.getLoc().mapPos,inform);
 }
 
+Dir monsterPath(const GameState& state, const Monster& start, Location end){
+  struct WorldFloorWrapper {
+    const WorldFloor &floor;
+    [[nodiscard]] int extent(int n) const noexcept {
+      switch (n) {
+      case 0:
+        return floor.rows();
+      case 1:
+        return floor.cols();
+      default:
+        std::unreachable();
+      }
+    }
+    [[nodiscard]] bool operator[](int row, int col) const noexcept {
+      auto tile = floor.getTile(Position{col,row});
+      return tile.monster.isNull() && tile.objects.empty() && tile.terrainType==TerrainType::Empty;
+    }
+  };
+  auto [cPos,floor] = start.getLoc();
+  if(end.mapPos!=floor){ // at some point add ability to travel to different floor
+    return Dir{0,0};
+  }
+  if(Position::chessboard(cPos,end.pos)<=1){
+    return end.pos-cPos;
+  }
+  return FindPath::findPath(WorldFloorWrapper(state.getFloor(floor)),cPos,end.pos);
+}
+
 constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   const WorldFloor &cfloor = state.getFloor(loc_.mapPos);
   const Position nPos = loc_.pos + d;
@@ -530,17 +558,15 @@ TimePeriod Monster::goToTarget(GameState &state, MonsterId targetId) noexcept {
   return pathTo(state, target.getLoc(), true);
 }
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
-  if (target.mapPos != getLoc().mapPos) { // At some point add ability to target enemy on another floor.
+  auto movePlan = monsterPath(state,*this,target);
+  if(movePlan==Dir{0,0}){
     return reThink();
   }
   const Position tPos = target.pos;
   const Position cPos = getLoc().pos;
-  const auto dist = Position::chessboard(tPos, cPos);
-  if (dist == 0) {
-    return reThink();
-  }
-  if (dist == 1) {
-    const TimePeriod tTaken = generalMove(state, tPos - cPos, attack ? MoveMode::fight() : MoveMode::move());
+  const Position gPos = cPos+movePlan;
+  if (gPos == tPos) {
+    const TimePeriod tTaken = generalMove(state, movePlan, attack ? MoveMode::fight() : MoveMode::move());
     if (tTaken.future()) {
       return tTaken;
     }
@@ -551,9 +577,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexc
     state.printDebug("If it is possible logic should probably be reworked.");
     return reThink();
   }
-  // FindPath()
-  // To Do add actual path finding
-  const TimePeriod tTaken = generalMove(state, capDir(tPos - cPos), MoveMode::move());
+  const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::move());
   if (tTaken.future()) {
     return tTaken;
   }

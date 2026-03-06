@@ -1,4 +1,3 @@
-import std;
 import Common;
 using TestResult = int;
 constexpr TestResult FailedTest = 1;
@@ -44,18 +43,17 @@ bool testMap(std::string_view map, int height, int width, int expectedLen) {
     Position cSpot = start;
     while(len < expectedLen && cSpot!=end){
       auto dir = FindPath::findPath(mapView, cSpot, end);
-      std::cout << dir << '\n';
         if(dir!=capDir(dir)){
-          std::cout << dir << '\n';
             std::cout << "Tried jumping larger distance\n";
             return false;
         }
         cSpot+=dir;
+        std::cout << cSpot << '\n';
         if(!cSpot.within({width-1,height-1})){
             std::cout << "Tried exiting map\n";
             return false;
         }
-        if(!mapView[cSpot.y,cSpot.x]){
+        if(cSpot != end && !mapView[cSpot.y,cSpot.x]){
             std::cout << "Tried walking into wall\n";
             return false;
         }
@@ -78,8 +76,9 @@ s  \
 xx \
 e  \
 ";
-  if (testMap(map, 3, 3, 4)) {
-    return PassedTest;
+
+  if (!testMap(map, 3, 3, 4)) {
+    return FailedTest;
   }
-  return FailedTest;
+  return PassedTest;
 }

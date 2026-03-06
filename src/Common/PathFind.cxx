@@ -3,16 +3,22 @@ import :Location;
 import :Static2DArr;
 import std;
 
+template<class T>
+concept Bool2dArr = requires(const T& map, int a, int b) {
+ {map.extent(a)} -> std::convertible_to<int>;
+ {map[a,b]} -> std::same_as<bool>;
+};
 using Dy2D = std::extents<int, std::dynamic_extent, std::dynamic_extent>;
 export namespace FindPath {
-template <class LayoutPolicy, class AccessorPolicy>
-[[nodiscard]] constexpr Dir findPath(std::mdspan<bool, Dy2D, LayoutPolicy, AccessorPolicy> map, Position start, Position goal, int maxDist = std::numeric_limits<int>::max()) {
+template <Bool2dArr MapType>
+[[nodiscard]] constexpr Dir findPath(MapType map, Position start, Position goal, int maxDist = std::numeric_limits<int>::max()) {
   const int height = map.extent(0);
   const int width = map.extent(1);
   auto mapP = [&map, width, height](Position p) -> bool {
     return p.within({width-1,height-1}) && map[p.y, p.x];
   };
-  if (Position::chessboard(goal, start) <= 1) {
+  const int initDist = Position::chessboard(goal, start);
+  if (initDist <= 1) {
     return mapP(goal) ? goal - start : Dir{0, 0};
   }
   Static2DArr<std::int8_t> origin(height, width);
@@ -24,7 +30,7 @@ template <class LayoutPolicy, class AccessorPolicy>
   originP(start) = -1;
   std::vector<Position> checking;
   std::vector<Position> toCheck;
-  int bestDist = Position::chessboard(start, goal);
+  int bestDist = initDist;
   std::int8_t bestDir = -1;
   auto checkSpot = [&mapP, &originP, &toCheck, &bestDist, &bestDir, goal](Position pos, std::int8_t dir) {
     if (!mapP(pos) || originP(pos) != NoDir) {
