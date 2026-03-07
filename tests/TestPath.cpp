@@ -1,6 +1,6 @@
 import Common;
 using TestResult = int;
-constexpr TestResult FailedTest = 1;
+// constexpr TestResult FailedTest = 1;
 constexpr TestResult PassedTest = 0;
 struct Accessor {
 public:
@@ -13,9 +13,9 @@ public:
 };
 using spanT = std::mdspan<bool, std::extents<int, std::dynamic_extent, std::dynamic_extent>, std::layout_right, Accessor>;
 
-bool testMap(std::string_view map, int height, int width, int expectedLen) {
+constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
     if (static_cast<int>(map.size()) != height * width) {
-      std::cout << "Map size " << map.size() << " does not match dims " << height << " x " << width << '\n';
+      // std::cout << "Map size " << map.size() << " does not match dims " << height << " x " << width << '\n';
       return false;
     }
     Position start{-1, -1};
@@ -31,11 +31,11 @@ bool testMap(std::string_view map, int height, int width, int expectedLen) {
       }
     }
     if (start == Position{-1, -1}) {
-      std::cout << "No start in map\n";
+      // std::cout << "No start in map\n";
       return false;
     }
     if (end == Position{-1, -1}) {
-      std::cout << "No end in map\n";
+      // std::cout << "No end in map\n";
       return false;
     }
     int len = 0;
@@ -44,41 +44,37 @@ bool testMap(std::string_view map, int height, int width, int expectedLen) {
     while(len < expectedLen && cSpot!=end){
       auto dir = FindPath::findPath(mapView, cSpot, end);
         if(dir!=capDir(dir)){
-            std::cout << "Tried jumping larger distance\n";
+            // std::cout << "Tried jumping larger distance\n";
             return false;
         }
         cSpot+=dir;
-        std::cout << cSpot << '\n';
         if(!cSpot.within({width-1,height-1})){
-            std::cout << "Tried exiting map\n";
+            // std::cout << "Tried exiting map\n";
             return false;
         }
         if(cSpot != end && !mapView[cSpot.y,cSpot.x]){
-            std::cout << "Tried walking into wall\n";
+            // std::cout << "Tried walking into wall\n";
             return false;
         }
         len++;
     }
     if(cSpot!=end){
-        std::cout << "Did not reach end in time\n";
+        // std::cout << "Did not reach end in time\n";
         return false;
     }
     if(len!=expectedLen){
-        std::cout << "Got to end faster than should be possible (likily an error with test)\n";
+        // std::cout << "Got to end faster than should be possible (likily an error with test)\n";
         return false;
     }
     return true;
 }
 
-TestResult main(int /*unused*/, char ** /*unused*/) {
-  std::string_view map = "\
+static_assert(testMap("\
 s  \
 xx \
 e  \
-";
+", 3, 3, 4));
 
-  if (!testMap(map, 3, 3, 4)) {
-    return FailedTest;
-  }
+TestResult main(int /*unused*/, char ** /*unused*/) {
   return PassedTest;
 }

@@ -324,7 +324,6 @@ private:
   static bool exists;
 };
 bool CursesRAII::exists = false;
-
 export std::pair<int, int> getMaxDims() { return {getmaxy(stdscr), getmaxx(stdscr)}; }
 
 template <class T>

@@ -94,11 +94,15 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   return out;
 }
 
+[[nodiscard]] constexpr auto abs(auto n) noexcept{
+  return n < 0 ? -n : n;
+}
+
 export class Position {
 public:
   [[nodiscard]] constexpr Position(int xI, int yI) noexcept : x(xI), y(yI) {}
   [[nodiscard]] static constexpr std::size_t chessboard(Position l1, Position l2) noexcept {
-    return std::max(std::abs(l1.x - l2.x), std::abs(l1.y - l2.y));
+    return std::max(abs(l1.x - l2.x), abs(l1.y - l2.y));
   }
   constexpr bool operator==(const Position &pos) const = default;
   [[nodiscard]] constexpr Position up(int d = 1) const noexcept { return {x, y - d}; }

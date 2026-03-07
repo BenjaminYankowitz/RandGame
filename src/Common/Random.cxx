@@ -34,7 +34,7 @@ export namespace Rnd {
     return get(dist);
   }
   auto rnd(std::integral auto n){
-    return uniform_int(0,n-1);
+    return uniform_int<decltype(n)>(0,n-1);
   }
   template <std::floating_point T, bool EndOpen = false>
   auto uniform_real(T min, T max){

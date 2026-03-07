@@ -10,3 +10,10 @@ add_executable(ConstexprTests ConstexprTests.cpp)
 target_link_libraries(ConstexprTests PRIVATE Common)
 
 add_test(NAME ConstexprTests COMMAND ConstexprTests)
+
+
+
+add_executable(SmallVectorTests SmallVectorTests.cpp)
+target_link_libraries(SmallVectorTests PRIVATE Common)
+
+add_test(NAME SmallVectorTests COMMAND SmallVectorTests)

@@ -58,12 +58,18 @@ public:
     return impl_.size();
   }
   [[nodiscard]] constexpr bool empty() const noexcept {
-    return size() == 0;
+    return impl_.empty();
   }
   [[nodiscard]] constexpr Object &operator[](std::size_t i) {
+    if(i>=size()){
+      std::cerr << "obj non const\n";
+    }
     return *impl_[i];
   }
   [[nodiscard]] constexpr const Object &operator[](std::size_t i) const {
+    if(i>=size()){
+      std::cerr << "obj const\n";
+    }
     return *impl_[i];
   }
   [[nodiscard]] constexpr iterator begin() noexcept {
@@ -79,6 +85,9 @@ public:
     return const_iterator(impl_.data() + impl_.size());
   }
   [[nodiscard]] constexpr std::unique_ptr<Object> remove(std::size_t i) {
+    if(i>=size()){
+      std::cerr << "remove from obj\n";
+    }
     std::unique_ptr<Object> ptr = std::move(impl_[i]);
     if (i + 1 != impl_.size()) {
       impl_[i] = std::move(impl_.back());
@@ -172,8 +181,7 @@ public:
     if (validDirs == 0) {
       return TimePeriod(4);
     }
-    std::uniform_int_distribution<std::size_t> dist(0, validDirs - 1);
-    const std::size_t index = Rnd::get(dist);
+    const std::size_t index = Rnd::rnd(validDirs);
     TimePeriod ret = generalMove(state, IntToDir[index], MoveMode::move());
     if (ret.future()) {
       return ret;
@@ -309,7 +317,7 @@ private:
 
 WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
   WorldFloor ret(xDim, yDim);
-  // DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16,4);
+  DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16,4);
   return ret;
 }
 

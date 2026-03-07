@@ -21,5 +21,6 @@ int main() {
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
   }
+  std::cout << "so long and thanks for all the fish\n";
   return 0;
 }
