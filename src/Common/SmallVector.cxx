@@ -22,7 +22,7 @@ public:
     auto dist = std::distance(first,last);
     reserve(dist);
     for(auto i = first; i!=last; i++){
-      unchecked_emplace_back(i);
+      unchecked_emplace_back(*i);
     }
   }
   template <class R>
@@ -35,6 +35,7 @@ public:
   }
   constexpr SmallVector(std::initializer_list<value_type> il) noexcept(std::is_nothrow_copy_constructible_v<value_type>) : SmallVector(il.begin(),il.end()){}
   constexpr SmallVector &operator=(SmallVector &&x) noexcept{
+    destroyRegion();
     data_ = std::move(x.data_);
     return *this;
   };
@@ -110,6 +111,7 @@ public:
   }
   constexpr void clear() noexcept {
     destroyRegion();
+    if (!noPtr()) getSizeRef() = 0;
   }
   constexpr void resize(size_type sz) noexcept{
     if(sz<size()){
@@ -183,9 +185,6 @@ public:
   }
   template <class... Args>
   constexpr void unchecked_emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<value_type, Args...>){
-    if(noPtr()){
-      std::cerr << "emplaceback\n";
-    }
     std::construct_at(getPtr(getSizeRef()++),std::forward<Args>(args)...);
   }
   std::unique_ptr<ArrT> data_;

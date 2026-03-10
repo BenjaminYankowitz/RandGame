@@ -1,24 +1,6 @@
+#include <gtest/gtest.h>
 import Common;
 //NOLINTBEGIN(readability-function-cognitive-complexity)
-
-using TestResult = int;
-constexpr TestResult FailedTest = 1;
-constexpr TestResult PassedTest = 0;
-
-#define REQUIRE(expresion) \
-  do {                     \
-    if (!(expresion)) {      \
-      std::cout << #expresion << '\n'; \
-      return false;        \
-    }                      \
-  } while (false)
-
-#define RUNTEST(test) \
-  do {                     \
-    if (!(test<int>() && test<AdvancedStruct>())) {      \
-      return FailedTest;        \
-    }                      \
-  } while (false)
 
 struct AdvancedStruct {
   AdvancedStruct() noexcept : AdvancedStruct(0) {};
@@ -67,136 +49,396 @@ template<class T>
 }
 
 template <class T>
-constexpr bool initialize() {
+constexpr bool initializeConstexpr() {
   SmallVector<T> vec;
-  REQUIRE(vec.size() == 0);
-  REQUIRE(vec.empty());
+  if (vec.size() != 0) return false;
+  if (!vec.empty()) return false;
   return true;
 }
-static_assert(initialize<int>());
+static_assert(initializeConstexpr<int>());
 
 template <class T>
-bool push1_back() {
+void push1_back() {
   {
     SmallVector<T> vec;
       vec.push_back(T{23});
-      REQUIRE(vec[0]==23);
-      REQUIRE(vec.size()==1);
-      REQUIRE(!vec.empty());
-      REQUIRE(checkActiveVal<T>(1));
+      EXPECT_EQ(vec[0], 23);
+      EXPECT_EQ(vec.size(), 1u);
+      EXPECT_FALSE(vec.empty());
+      EXPECT_TRUE(checkActiveVal<T>(1));
   }
-  return checkActiveVal<T>(0);
+  EXPECT_TRUE(checkActiveVal<T>(0));
 }
+
 template <class T>
-bool push2_back_manualReserve() {
+void push2_back_manualReserve() {
   {
     SmallVector<T> vec;
       vec.push_back(T{23});
       vec.reserve(2);
-      REQUIRE(vec[0]==23);
-      REQUIRE(vec.size()==1);
-      REQUIRE(checkActiveVal<T>(1));
+      EXPECT_EQ(vec[0], 23);
+      EXPECT_EQ(vec.size(), 1u);
+      EXPECT_TRUE(checkActiveVal<T>(1));
       vec.push_back(T{52});
-      REQUIRE(vec[0]==23);
-      REQUIRE(vec[1]==52);
-      REQUIRE(vec.size()==2);
-      REQUIRE(!vec.empty());
-      REQUIRE(checkActiveVal<T>(2));
+      EXPECT_EQ(vec[0], 23);
+      EXPECT_EQ(vec[1], 52);
+      EXPECT_EQ(vec.size(), 2u);
+      EXPECT_FALSE(vec.empty());
+      EXPECT_TRUE(checkActiveVal<T>(2));
   }
-  return checkActiveVal<T>(0);
+  EXPECT_TRUE(checkActiveVal<T>(0));
 }
 
 template <class T>
-bool push_many_back() {
+void push_many_back() {
   constexpr int Number = 2;
   constexpr int Base = 3;
   {
     SmallVector<T> vec;
     for(auto i : std::ranges::views::iota(0,Number)){
       vec.push_back(T{i+Base});
-      REQUIRE(vec[i]==(i+Base));
-      REQUIRE(vec.size()==std::size_t(i+1));
-      REQUIRE(!vec.empty());
-      REQUIRE(checkActiveVal<T>(i+1));
+      EXPECT_EQ(vec[i], (i+Base));
+      EXPECT_EQ(vec.size(), std::size_t(i+1));
+      EXPECT_FALSE(vec.empty());
+      EXPECT_TRUE(checkActiveVal<T>(i+1));
     }
     if constexpr (std::same_as<int,T>)
-      REQUIRE(std::ranges::equal(vec,std::ranges::views::iota(Base,Base+Number)));
+      EXPECT_TRUE(std::ranges::equal(vec,std::ranges::views::iota(Base,Base+Number)));
   }
-  return checkActiveVal<T>(0);
+  EXPECT_TRUE(checkActiveVal<T>(0));
 }
 
 template <class T>
-bool reservePreventsReAlloc() {
+void reservePreventsReAlloc() {
   {
     SmallVector<T> vec;
     vec.reserve(5);
-    REQUIRE(vec.capacity() >= 5);
-    REQUIRE(checkActiveVal<T>(0));
+    EXPECT_GE(vec.capacity(), 5u);
+    EXPECT_TRUE(checkActiveVal<T>(0));
     vec.push_back(T{23});
     auto ptr = &vec[0];
     vec.push_back(T{91});
     vec.push_back(T{3});
     vec.push_back(T{28});
     vec.push_back(T{29});
-    REQUIRE(ptr==&vec[0]);
-    REQUIRE(vec.size() == 5);
-    REQUIRE(checkActiveVal<T>(5));
-    REQUIRE(vec[0] == 23);
-    REQUIRE(vec[1] == 91);
-    REQUIRE(vec[2] == 3);
-    REQUIRE(vec[3] == 28);
-    REQUIRE(vec[4] == 29);
+    EXPECT_EQ(ptr, &vec[0]);
+    EXPECT_EQ(vec.size(), 5u);
+    EXPECT_TRUE(checkActiveVal<T>(5));
+    EXPECT_EQ(vec[0], 23);
+    EXPECT_EQ(vec[1], 91);
+    EXPECT_EQ(vec[2], 3);
+    EXPECT_EQ(vec[3], 28);
+    EXPECT_EQ(vec[4], 29);
   }
-  return checkActiveVal<T>(0);
+  EXPECT_TRUE(checkActiveVal<T>(0));
 }
-// SmallVector()
-// constexpr explicit SmallVector(size_type n)
-// template <class InputIterator>
-// constexpr SmallVector(InputIterator first, InputIterator last)
-// template <class R>
-// constexpr SmallVector(std::from_range_t /*unused*/, R &&rg)
-// constexpr SmallVector(SmallVector &&x) noexcept
-// constexpr ~SmallVector()
-// constexpr SmallVector(std::initializer_list<value_type> il)
-// constexpr SmallVector &operator=(SmallVector &&x)
-// [[nodiscard]] constexpr iterator begin()
-// [[nodiscard]] constexpr const_iterator begin()
-// [[nodiscard]] constexpr iterator end()
-// [[nodiscard]] constexpr const_iterator end()
-// [[nodiscard]] constexpr const_iterator cbegin()
-// [[nodiscard]] constexpr const_iterator cend()
-// [[nodiscard]] constexpr size_type size()
-// [[nodiscard]] constexpr static size_type max_size()
-// [[nodiscard]] constexpr size_type capacity()
-// [[nodiscard]] constexpr bool empty()
-// constexpr void reserve(size_type n)
-// constexpr void shrink_to_fit()
-// [[nodiscard]] constexpr auto& operator[](this auto&& self, size_type n)
-// [[nodiscard]] constexpr auto& front(this auto&& self)
-// [[nodiscard]] constexpr auto& back(this auto&& self)
-// [[nodiscard]] constexpr auto data(this auto&& self)
 
-// constexpr void push_back(const value_type &x)
-// constexpr void push_back(value_type &&x)
-// template <class... Args>
-// constexpr value_type& emplace_back(Args &&...args)
-// constexpr void pop_back()
-// constexpr void clear()
-// constexpr void resize(size_type sz)
-// constexpr void swap(SmallVector & other)
-
-int main() {
-  try{
-  RUNTEST(initialize);
-  RUNTEST(push1_back);
-  RUNTEST(push2_back_manualReserve);
-  RUNTEST(push_many_back);
-  RUNTEST(reservePreventsReAlloc);
-  } catch(const std::exception& e){
-    std::cout << e.what() << '\n';
-    return FailedTest;
+template <class T>
+void emplace_back_test() {
+  {
+    SmallVector<T> vec;
+    auto& ref1 = vec.emplace_back(42);
+    EXPECT_EQ(ref1, 42);
+    EXPECT_EQ(vec.size(), 1u);
+    EXPECT_TRUE(checkActiveVal<T>(1));
+    auto& ref2 = vec.emplace_back(99);
+    EXPECT_EQ(ref2, 99);
+    EXPECT_EQ(vec[0], 42);
+    EXPECT_EQ(vec.size(), 2u);
+    EXPECT_TRUE(checkActiveVal<T>(2));
   }
-  return PassedTest;
+  EXPECT_TRUE(checkActiveVal<T>(0));
 }
+
+template <class T>
+void pop_back_test() {
+  {
+    SmallVector<T> vec;
+    vec.push_back(T{10});
+    vec.push_back(T{20});
+    vec.push_back(T{30});
+    EXPECT_TRUE(checkActiveVal<T>(3));
+    vec.pop_back();
+    EXPECT_EQ(vec.size(), 2u);
+    EXPECT_EQ(vec[0], 10);
+    EXPECT_EQ(vec[1], 20);
+    EXPECT_TRUE(checkActiveVal<T>(2));
+    vec.pop_back();
+    EXPECT_EQ(vec.size(), 1u);
+    EXPECT_EQ(vec[0], 10);
+    EXPECT_TRUE(checkActiveVal<T>(1));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void clear_test() {
+  {
+    SmallVector<T> vec;
+    vec.push_back(T{1});
+    vec.push_back(T{2});
+    vec.push_back(T{3});
+    EXPECT_TRUE(checkActiveVal<T>(3));
+    vec.clear();
+    EXPECT_EQ(vec.size(), 0u);
+    EXPECT_TRUE(vec.empty());
+    EXPECT_TRUE(checkActiveVal<T>(0));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void resize_test() {
+  {
+    SmallVector<T> vec;
+    vec.resize(3);
+    EXPECT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 0);
+    EXPECT_EQ(vec[1], 0);
+    EXPECT_EQ(vec[2], 0);
+    EXPECT_TRUE(checkActiveVal<T>(3));
+    vec.resize(1);
+    EXPECT_EQ(vec.size(), 1u);
+    EXPECT_EQ(vec[0], 0);
+    EXPECT_TRUE(checkActiveVal<T>(1));
+    auto oldSize = vec.size();
+    vec.resize(oldSize);
+    EXPECT_EQ(vec.size(), oldSize);
+    EXPECT_TRUE(checkActiveVal<T>(1));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void front_back_test() {
+  {
+    SmallVector<T> vec;
+    vec.push_back(T{10});
+    vec.push_back(T{20});
+    vec.push_back(T{30});
+    EXPECT_EQ(vec.front(), 10);
+    EXPECT_EQ(vec.back(), 30);
+    EXPECT_TRUE(checkActiveVal<T>(3));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void data_test() {
+  {
+    SmallVector<T> vec;
+    EXPECT_EQ(vec.data(), nullptr);
+    vec.push_back(T{42});
+    EXPECT_NE(vec.data(), nullptr);
+    EXPECT_EQ(*vec.data(), 42);
+    EXPECT_TRUE(checkActiveVal<T>(1));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void iterator_test() {
+  {
+    SmallVector<T> vec;
+    EXPECT_EQ(vec.begin(), vec.end());
+    EXPECT_EQ(vec.cbegin(), vec.cend());
+    vec.push_back(T{1});
+    vec.push_back(T{2});
+    vec.push_back(T{3});
+    EXPECT_EQ(std::distance(vec.begin(), vec.end()), 3);
+    int expected = 1;
+    for (const auto& elem : vec) {
+      EXPECT_EQ(elem, expected);
+      expected++;
+    }
+    EXPECT_TRUE(checkActiveVal<T>(3));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void swap_test() {
+  {
+    SmallVector<T> a;
+    a.push_back(T{1});
+    a.push_back(T{2});
+    SmallVector<T> b;
+    b.push_back(T{10});
+    b.push_back(T{20});
+    b.push_back(T{30});
+    EXPECT_TRUE(checkActiveVal<T>(5));
+    a.swap(b);
+    EXPECT_EQ(a.size(), 3u);
+    EXPECT_EQ(a[0], 10);
+    EXPECT_EQ(a[1], 20);
+    EXPECT_EQ(a[2], 30);
+    EXPECT_EQ(b.size(), 2u);
+    EXPECT_EQ(b[0], 1);
+    EXPECT_EQ(b[1], 2);
+    EXPECT_TRUE(checkActiveVal<T>(5));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void move_constructor_test() {
+  {
+    SmallVector<T> original;
+    original.push_back(T{5});
+    original.push_back(T{10});
+    EXPECT_TRUE(checkActiveVal<T>(2));
+    SmallVector<T> moved(std::move(original));
+    EXPECT_EQ(moved.size(), 2u);
+    EXPECT_EQ(moved[0], 5);
+    EXPECT_EQ(moved[1], 10);
+    EXPECT_TRUE(original.empty());
+    EXPECT_TRUE(checkActiveVal<T>(2));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void move_assignment_test() {
+  {
+    SmallVector<T> src;
+    src.push_back(T{7});
+    src.push_back(T{14});
+    SmallVector<T> dst;
+    dst.push_back(T{99});
+    EXPECT_TRUE(checkActiveVal<T>(3));
+    dst = std::move(src);
+    EXPECT_EQ(dst.size(), 2u);
+    EXPECT_EQ(dst[0], 7);
+    EXPECT_EQ(dst[1], 14);
+    EXPECT_TRUE(src.empty());
+    EXPECT_TRUE(checkActiveVal<T>(2));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void initializer_list_constructor_test() {
+  {
+    SmallVector<T> vec{T{1}, T{2}, T{3}};
+    EXPECT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+    EXPECT_TRUE(checkActiveVal<T>(3));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void size_constructor_test() {
+  {
+    SmallVector<T> vec(5);
+    EXPECT_EQ(vec.size(), 5u);
+    for (std::size_t i = 0; i < 5; i++) {
+      EXPECT_EQ(vec[i], 0);
+    }
+    EXPECT_TRUE(checkActiveVal<T>(5));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void shrink_to_fit_test() {
+  {
+    SmallVector<T> vec;
+    vec.reserve(100);
+    EXPECT_GE(vec.capacity(), 100u);
+    vec.push_back(T{1});
+    vec.push_back(T{2});
+    vec.push_back(T{3});
+    vec.shrink_to_fit();
+    EXPECT_EQ(vec.capacity(), 3u);
+    EXPECT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+    EXPECT_TRUE(checkActiveVal<T>(3));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void reserve_exact_test() {
+  {
+    SmallVector<T> vec;
+    vec.reserveExact(10);
+    EXPECT_EQ(vec.capacity(), 10u);
+    EXPECT_EQ(vec.size(), 0u);
+    EXPECT_TRUE(checkActiveVal<T>(0));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+template <class T>
+void reallocation_test() {
+  {
+    SmallVector<T> vec;
+    constexpr int Count = 20;
+    for (int i = 0; i < Count; i++) {
+      vec.push_back(T{i + 1});
+      EXPECT_EQ(vec.size(), std::size_t(i + 1));
+      EXPECT_TRUE(checkActiveVal<T>(i + 1));
+    }
+    for (int i = 0; i < Count; i++) {
+      EXPECT_EQ(vec[i], i + 1);
+    }
+    EXPECT_TRUE(checkActiveVal<T>(Count));
+  }
+  EXPECT_TRUE(checkActiveVal<T>(0));
+}
+
+TEST(SmallVectorTests, InitializeInt) {
+  SmallVector<int> vec;
+  EXPECT_EQ(vec.size(), 0u);
+  EXPECT_TRUE(vec.empty());
+}
+TEST(SmallVectorTests, InitializeAdvanced) {
+  SmallVector<AdvancedStruct> vec;
+  EXPECT_EQ(vec.size(), 0u);
+  EXPECT_TRUE(vec.empty());
+}
+TEST(SmallVectorTests, Push1BackInt) { push1_back<int>(); }
+TEST(SmallVectorTests, Push1BackAdvanced) { push1_back<AdvancedStruct>(); }
+TEST(SmallVectorTests, Push2BackManualReserveInt) { push2_back_manualReserve<int>(); }
+TEST(SmallVectorTests, Push2BackManualReserveAdvanced) { push2_back_manualReserve<AdvancedStruct>(); }
+TEST(SmallVectorTests, PushManyBackInt) { push_many_back<int>(); }
+TEST(SmallVectorTests, PushManyBackAdvanced) { push_many_back<AdvancedStruct>(); }
+TEST(SmallVectorTests, ReservePreventsReAllocInt) { reservePreventsReAlloc<int>(); }
+TEST(SmallVectorTests, ReservePreventsReAllocAdvanced) { reservePreventsReAlloc<AdvancedStruct>(); }
+TEST(SmallVectorTests, EmplaceBackInt) { emplace_back_test<int>(); }
+TEST(SmallVectorTests, EmplaceBackAdvanced) { emplace_back_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, PopBackInt) { pop_back_test<int>(); }
+TEST(SmallVectorTests, PopBackAdvanced) { pop_back_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, ClearInt) { clear_test<int>(); }
+TEST(SmallVectorTests, ClearAdvanced) { clear_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, ResizeInt) { resize_test<int>(); }
+TEST(SmallVectorTests, ResizeAdvanced) { resize_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, FrontBackInt) { front_back_test<int>(); }
+TEST(SmallVectorTests, FrontBackAdvanced) { front_back_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, DataInt) { data_test<int>(); }
+TEST(SmallVectorTests, DataAdvanced) { data_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, IteratorInt) { iterator_test<int>(); }
+TEST(SmallVectorTests, IteratorAdvanced) { iterator_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, SwapInt) { swap_test<int>(); }
+TEST(SmallVectorTests, SwapAdvanced) { swap_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, MoveConstructorInt) { move_constructor_test<int>(); }
+TEST(SmallVectorTests, MoveConstructorAdvanced) { move_constructor_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, MoveAssignmentInt) { move_assignment_test<int>(); }
+TEST(SmallVectorTests, MoveAssignmentAdvanced) { move_assignment_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, InitializerListInt) { initializer_list_constructor_test<int>(); }
+TEST(SmallVectorTests, InitializerListAdvanced) { initializer_list_constructor_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, SizeConstructorInt) { size_constructor_test<int>(); }
+TEST(SmallVectorTests, SizeConstructorAdvanced) { size_constructor_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, ShrinkToFitInt) { shrink_to_fit_test<int>(); }
+TEST(SmallVectorTests, ShrinkToFitAdvanced) { shrink_to_fit_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, ReserveExactInt) { reserve_exact_test<int>(); }
+TEST(SmallVectorTests, ReserveExactAdvanced) { reserve_exact_test<AdvancedStruct>(); }
+TEST(SmallVectorTests, ReallocationInt) { reallocation_test<int>(); }
+TEST(SmallVectorTests, ReallocationAdvanced) { reallocation_test<AdvancedStruct>(); }
 
 //NOLINTEND(readability-function-cognitive-complexity)

@@ -61,15 +61,9 @@ public:
     return impl_.empty();
   }
   [[nodiscard]] constexpr Object &operator[](std::size_t i) {
-    if(i>=size()){
-      std::cerr << "obj non const\n";
-    }
     return *impl_[i];
   }
   [[nodiscard]] constexpr const Object &operator[](std::size_t i) const {
-    if(i>=size()){
-      std::cerr << "obj const\n";
-    }
     return *impl_[i];
   }
   [[nodiscard]] constexpr iterator begin() noexcept {
@@ -204,7 +198,6 @@ public:
   Monster(CreateKey /*unused*/, MonsterBody body, Location loc, MonsterId id, MonsterBrain brain) noexcept : 
   speed_(body.speed), loc_(loc), health_(body.health), damage_(body.damage),id_(id), brain_(brain), mClass_(body.mClass), alive_(body.alive){};
 private:
-  constexpr void seAlive(bool alive = true) noexcept { alive_ = alive; }
   constexpr void setDead(bool dead = true) noexcept { alive_ = !dead; }                                                                                          
   ObjectContainer inventory_;
   TimePeriod speed_;
@@ -454,7 +447,7 @@ GameState::GameState() noexcept {
   floorData_.push_back(createDungeon(DungeonWidth, DungeonHeight));
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
     const auto cFloor = FloorSpecifier(0);
-    while (true) {
+    while (pos!=Position(0,DungeonHeight+1)) {
       Location cLoc(pos, cFloor);
       if (getTerrainType(cLoc) != TerrainType::Empty || !getMonster(cLoc).isNull()) {
         pos.x++;

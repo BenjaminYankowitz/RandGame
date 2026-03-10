@@ -83,7 +83,7 @@ public:
   [[nodiscard]] constexpr size_type cols() const noexcept { return cols_; }
   [[nodiscard]] constexpr size_type size() const noexcept { return cols_ * rows_; }
   [[nodiscard]] constexpr bool inBounds(size_type row, size_type col) const noexcept{
-    return row>=0 && col>=0 && row < rows() && col < cols();
+    return row < rows() && col < cols();
   } 
   constexpr void fill(const value_type& v) const noexcept { 
     std::fill_n(data_.get(),size(),v);
