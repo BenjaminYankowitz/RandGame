@@ -213,7 +213,7 @@ private:
 
 template <>
 struct std::hash<Monster::ID> {
-  std::size_t operator()(Monster::ID s) const noexcept { return s.hash(); }
+  [[nodiscard]] constexpr std::size_t operator()(Monster::ID s) const noexcept { return s.hash(); }
 };
 
 class WorldTile {

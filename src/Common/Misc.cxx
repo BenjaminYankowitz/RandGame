@@ -45,8 +45,8 @@ public:
   constexpr explicit OptionalReference(T *ptr) noexcept : ptr_(ptr) {}
   constexpr explicit OptionalReference(T& value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;
-  [[nodiscard]] constexpr iterator begin() noexcept { return ptr_; }
-  [[nodiscard]] constexpr const_iterator begin() const noexcept { return ptr_; }
+  [[nodiscard]] constexpr iterator begin() noexcept { return iterator(ptr_); }
+  [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator(ptr_); }
   [[nodiscard]] constexpr iterator end() noexcept { return endIter(); }
   [[nodiscard]] constexpr const_iterator end() const noexcept { return endIter(); }
   [[nodiscard]] constexpr T &operator*() noexcept { return *ptr_; }
@@ -75,8 +75,8 @@ public:
   }
 
 private:
-  [[nodiscard]] constexpr T *endIter() const noexcept{
-    return has_value() ? ptr_ + 1 : nullptr;
+  [[nodiscard]] constexpr iterator endIter() const noexcept{
+    return iterator(has_value() ? ptr_ + 1 : nullptr);
   }
   T *ptr_ = nullptr;
 };

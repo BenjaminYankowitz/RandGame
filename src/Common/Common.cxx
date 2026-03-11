@@ -9,3 +9,4 @@ export import :Misc;
 export import :IteratorBase;
 export import :Static2DArr;
 export import :SmallVector;
+export import :LogStream;

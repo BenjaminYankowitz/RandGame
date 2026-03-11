@@ -32,3 +32,23 @@ add_test(NAME DiceTests COMMAND DiceTests)
 add_executable(SerializationLibTests SerializationLibTests.cpp)
 target_link_libraries(SerializationLibTests PRIVATE SerialzationLib GTest::gtest GTest::gtest_main)
 add_test(NAME SerializationLibTests COMMAND SerializationLibTests)
+
+add_executable(MiscTests MiscTests.cpp)
+target_link_libraries(MiscTests PRIVATE Common GTest::gtest GTest::gtest_main)
+add_test(NAME MiscTests COMMAND MiscTests)
+
+add_executable(GameTimeTests GameTimeTests.cpp)
+target_link_libraries(GameTimeTests PRIVATE GameTypes GTest::gtest GTest::gtest_main)
+add_test(NAME GameTimeTests COMMAND GameTimeTests)
+
+add_executable(MoveModeTests MoveModeTests.cpp)
+target_link_libraries(MoveModeTests PRIVATE GameTypes GTest::gtest GTest::gtest_main)
+add_test(NAME MoveModeTests COMMAND MoveModeTests)
+
+add_executable(MonsterConfigTests MonsterConfigTests.cpp)
+target_link_libraries(MonsterConfigTests PRIVATE MonsterClassConfig GTest::gtest GTest::gtest_main)
+add_test(NAME MonsterConfigTests COMMAND MonsterConfigTests)
+
+add_executable(MonsterIdTests MonsterIdTests.cpp)
+target_link_libraries(MonsterIdTests PRIVATE Game GTest::gtest GTest::gtest_main)
+add_test(NAME MonsterIdTests COMMAND MonsterIdTests)
