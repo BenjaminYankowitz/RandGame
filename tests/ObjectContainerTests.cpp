@@ -2,12 +2,14 @@
 import Game;
 import GameTypes;
 
-
-TEST(ObjectContainerTests, EmptyContainerState) {
+static_assert([] consteval {
   ObjectContainer container;
-  EXPECT_EQ(container.size(), 0u);
-  EXPECT_TRUE(container.empty());
-}
+  if (container.size() != 0u)
+    return false;
+  if (!container.empty())
+    return false;
+  return true;
+}());
 
 TEST(ObjectContainerTests, AddAndRemoveObject) {
   ObjectContainer container;
@@ -45,5 +47,5 @@ TEST(ObjectContainerTests, CombinableObjectsMerge) {
   container.addObject(std::make_unique<Object>(3, ObjectType::KingsCoin, Material::Gold));
   // Same type + material + both Normal artifact status => should merge
   EXPECT_EQ(container.size(), 1u);
-  EXPECT_EQ(container[0].count(), 4);  // 1 + 3
+  EXPECT_EQ(container[0].count(), 4); // 1 + 3
 }

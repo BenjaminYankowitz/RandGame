@@ -115,70 +115,86 @@ static_assert([] {
 }());
 
 // doIfValue dispatches correctly
-TEST(OptionalReference, DoIfValue) {
+static_assert([] consteval {
   int x = 42;
   OptionalReference<int> opt(x);
   bool called = false;
   opt.doIfValue([&](int &v) {
-    called = true;
-    EXPECT_EQ(v, 42);
+    if (v == 42)
+      called = true;
   });
-  EXPECT_TRUE(called);
+  if (!called)
+    return false;
 
   OptionalReference<int> empty;
   bool emptyCalled = false;
   empty.doIfValue([&](int &) { emptyCalled = true; });
-  EXPECT_FALSE(emptyCalled);
-}
+  if (emptyCalled)
+    return false;
+  return true;
+}());
 
 // doIfNoValue dispatches correctly
-TEST(OptionalReference, DoIfNoValue) {
+static_assert([] consteval {
   OptionalReference<int> empty;
   bool called = false;
   empty.doIfNoValue([&]() { called = true; });
-  EXPECT_TRUE(called);
+  if (!called)
+    return false;
 
   int x = 1;
   OptionalReference<int> opt(x);
   bool notCalled = false;
   opt.doIfNoValue([&]() { notCalled = true; });
-  EXPECT_FALSE(notCalled);
-}
+  if (notCalled)
+    return false;
+  return true;
+}());
 
 // doIf dispatches correctly
-TEST(OptionalReference, DoIf) {
+static_assert([] consteval {
   int x = 10;
   OptionalReference<int> opt(x);
   int result = opt.doIf([]() { return -1; }, [](int &v) { return v * 2; });
-  EXPECT_EQ(result, 20);
+  if (result != 20)
+    return false;
 
   OptionalReference<int> empty;
   int emptyResult = empty.doIf([]() { return -1; }, [](int &v) { return v * 2; });
-  EXPECT_EQ(emptyResult, -1);
-}
+  if (emptyResult != -1)
+    return false;
+  return true;
+}());
 
 // range for iterates over the value once if filled
-TEST(OptionalReference, RangeForFilled) {
+static_assert([] consteval {
   int n = 7;
   OptionalReference<int> opt(n);
   bool itered = false;
-  for(auto& v : opt){
-    EXPECT_EQ(v,7);
-    EXPECT_EQ(&v,&n);
-    EXPECT_FALSE(itered);
+  for (auto &v : opt) {
+    if (v != 7)
+      return false;
+    if (&v != &n)
+      return false;
+    if (itered)
+      return false;
     itered = true;
-    v=8;
-    EXPECT_EQ(n,8);
+    v = 8;
+    if (n != 8)
+      return false;
   }
-}
-// range for iterates over nothing if not filled
-TEST(OptionalReference, RangeForNotFilled) {
-  OptionalReference<int> opt;
-  for(auto& _ : opt){
-    ADD_FAILURE();
-  }
-}
+  return true;
+}());
 
+// range for iterates over nothing if not filled
+static_assert([] consteval {
+  OptionalReference<int> opt;
+  for (auto &v : opt) {
+    (void)v;
+    return false;
+  }
+  return true;
+}());
 
 // ============================================================
 // MustInit
