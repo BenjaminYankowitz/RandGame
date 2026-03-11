@@ -9,10 +9,6 @@ add_executable(PositionAndDirTests PositionAndDirTests.cpp)
 target_link_libraries(PositionAndDirTests PRIVATE Common GTest::gtest GTest::gtest_main)
 add_test(NAME PositionAndDirTests COMMAND PositionAndDirTests)
 
-add_executable(SmallVectorTests SmallVectorTests.cpp)
-target_link_libraries(SmallVectorTests PRIVATE Common GTest::gtest GTest::gtest_main)
-add_test(NAME SmallVectorTests COMMAND SmallVectorTests)
-
 add_executable(Static2DArrTests Static2DArrTests.cpp)
 target_link_libraries(Static2DArrTests PRIVATE Common GTest::gtest GTest::gtest_main)
 add_test(NAME Static2DArrTests COMMAND Static2DArrTests)

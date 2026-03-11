@@ -6,7 +6,7 @@ import MonsterClassConfig;
 
 export class Object {
 public:
-  Object(int count, ObjectType type, Material mat) noexcept : count_(count), type_(type), mat_(mat) {}
+  constexpr Object(int count, ObjectType type, Material mat) noexcept : count_(count), type_(type), mat_(mat) {}
   [[nodiscard]] constexpr bool isCombinable() const noexcept {
     return artifactStatus_ == ArtifactId::Normal;
   }
@@ -90,7 +90,7 @@ public:
   }
 
 private:
-  SmallVector<std::unique_ptr<Object>> impl_;
+  std::vector<std::unique_ptr<Object>> impl_;
 };
 
 export class GameState;
