@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "TestHeader.h"
 import SerializationLib;
 import std;
 
@@ -21,7 +21,7 @@ TEST(SerializationLibTests, SerializeAndDeserializeMultiple) {
 
   ss.seekg(0);
   int ra = SerializationLib::fromStream<int>(ss);
-  double rb = SerializationLib::fromStream<double>(ss);
+  auto rb = SerializationLib::fromStream<double>(ss);
   EXPECT_EQ(ra, a);
   EXPECT_DOUBLE_EQ(rb, b);
 }

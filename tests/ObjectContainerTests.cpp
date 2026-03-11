@@ -1,6 +1,7 @@
-#include <gtest/gtest.h>
+#include "TestHeader.h"
 import Game;
 import GameTypes;
+import std;
 
 static_assert([] consteval {
   ObjectContainer container;

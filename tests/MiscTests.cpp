@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "TestHeader.h"
 import Common;
 
 // #define TEST(a,b) void a##b()
@@ -129,9 +129,7 @@ static_assert([] consteval {
   OptionalReference<int> empty;
   bool emptyCalled = false;
   empty.doIfValue([&](int &) { emptyCalled = true; });
-  if (emptyCalled)
-    return false;
-  return true;
+  return !emptyCalled;
 }());
 
 // doIfNoValue dispatches correctly
@@ -146,9 +144,7 @@ static_assert([] consteval {
   OptionalReference<int> opt(x);
   bool notCalled = false;
   opt.doIfNoValue([&]() { notCalled = true; });
-  if (notCalled)
-    return false;
-  return true;
+  return !notCalled;
 }());
 
 // doIf dispatches correctly
@@ -161,9 +157,7 @@ static_assert([] consteval {
 
   OptionalReference<int> empty;
   int emptyResult = empty.doIf([]() { return -1; }, [](int &v) { return v * 2; });
-  if (emptyResult != -1)
-    return false;
-  return true;
+  return emptyResult == -1;
 }());
 
 // range for iterates over the value once if filled
@@ -189,12 +183,19 @@ static_assert([] consteval {
 // range for iterates over nothing if not filled
 static_assert([] consteval {
   OptionalReference<int> opt;
-  for (auto &v : opt) {
+  for (auto &v : opt) { //NOLINT(readability-use-anyofallof)
     (void)v;
     return false;
   }
   return true;
 }());
+
+// all of does not see anything if not filled
+static_assert([] consteval {
+  OptionalReference<int> opt;
+  return std::ranges::all_of(opt,[](int&){return false;});
+}());
+
 
 // ============================================================
 // MustInit

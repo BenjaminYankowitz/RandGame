@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
+#include "TestHeader.h"
 import Game;
+import std;
 
 // ============================================================
 // Monster::ID - constexpr tests

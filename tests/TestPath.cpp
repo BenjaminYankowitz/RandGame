@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "TestHeader.h"
 import Common;
 
 struct Accessor {
