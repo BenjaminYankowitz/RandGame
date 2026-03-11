@@ -248,18 +248,11 @@ public:
 
   [[nodiscard]] constexpr auto getTile(Position pos) noexcept { return WorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto getTile(Position pos) const noexcept { return ConstWorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
+  [[nodiscard]] constexpr auto isOpenTerrain(Position pos) const noexcept {
+    return inBounds(pos) && getTerrainType(pos) == TerrainType::Empty;
+  }
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
-    if (!inBounds(pos)) {
-      return false;
-    }
-    auto [_, destMonsterId, destTerrainType] = getTile(pos);
-    if (destTerrainType != TerrainType::Empty) {
-      return false;
-    }
-    if (!destMonsterId.isNull()) {
-      return false;
-    }
-    return true;
+    return isOpenTerrain(pos) && getMonster(pos).isNull();
   }
   constexpr WorldFloor(std::size_t x, std::size_t y) noexcept : ObjectsArr_(y, x), MonsterArr_(y, x), TerrainTypeArr_(y, x) {}
   [[nodiscard]] constexpr std::size_t rows() const noexcept { return ObjectsArr_.rows(); }
@@ -593,13 +586,10 @@ constexpr TimePeriod Monster::takeItem(GameState &state, ObjectContainer &contai
 constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode) noexcept {
   Position nPos = loc_.pos + d;
   WorldFloor &cfloor = state.getFloor(loc_.mapPos);
-  if (!cfloor.inBounds(nPos)) {
+  if(!cfloor.isOpenTerrain(nPos)){
     return TimePeriod(0);
   }
-  auto [_, destMonster, destTerrainType] = cfloor.getTile(nPos);
-  if (destTerrainType != TerrainType::Empty) {
-    return TimePeriod(0);
-  }
+  auto destMonster = cfloor.getMonster(nPos);
   if (destMonster.isNull() && mode.isMove()) {
     ID &currentSpot = cfloor.getMonster(loc_.pos);
     destMonster = currentSpot;
