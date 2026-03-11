@@ -8,7 +8,7 @@ double Smoothstep(double x, double a, double b) {
 template <std::size_t N>
 class MathVector;
 template <std::size_t N>
-std::ostream &operator<<(std::ostream &out, MathVector<N> &vec);
+std::ostream &operator<<(std::ostream &out, const MathVector<N> &vec);
 template <std::size_t N>
 class MathVector {
   static_assert(N>0);
@@ -42,7 +42,7 @@ public:
   }
   std::array<double, N> impl_;
 
-  friend std::ostream &operator<< <N>(std::ostream &, MathVector<N> &vec);
+  friend std::ostream &operator<< <N>(std::ostream &, const MathVector<N> &vec);
 };
 template <std::size_t N>
 std::ostream &operator<<(std::ostream &out, const MathVector<N> &vec) {

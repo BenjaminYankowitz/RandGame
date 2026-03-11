@@ -39,7 +39,7 @@ struct BufferOverflow : public WindowFailure {
     char *bufferLoc = bufferBegin;
     char *bufferEnd = bufferBegin + buffer.size();
     auto addStr = [&bufferLoc, bufferBegin](std::string_view str) {
-      const std::size_t chrPrint = std::max<std::size_t>(str.size(), buffer.size() - std::distance(bufferBegin, bufferLoc));
+      const std::size_t chrPrint = std::min<std::size_t>(str.size(), buffer.size() - std::distance(bufferBegin, bufferLoc));
       if (chrPrint == 0) {
         return;
       }

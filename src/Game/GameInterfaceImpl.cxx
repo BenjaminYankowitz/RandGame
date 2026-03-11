@@ -59,9 +59,9 @@ class EventViewerTranslator : public EventViewer {
       impl_->exception(e);
     } catch(...){}
   }
-  void monsterAttack(HitReturn hitreturn, const Monster& attacker, const Monster& attacked) noexcept final {
+  void monsterAttack(const Monster::HitReturn& hitreturn, const Monster& attacker, const Monster& attacked) noexcept final {
     try {
-      impl_->monsterAttack({hitreturn.killed},MonsterInterface(attacker),MonsterInterface(attacked));
+      impl_->monsterAttack({static_cast<bool>(hitreturn.killed)},MonsterInterface(attacker),MonsterInterface(attacked));
     } catch (const std::exception& e){
       impl_->exception(e);
     } catch(...){}
@@ -130,7 +130,7 @@ void GameInterface::dropItem(std::size_t i) noexcept {
   if (i >= invent.size()) {
     return;
   }
-  gs_->passTime(gs_->getPlayer().dropItem(*gs_, i));
+  passTime(gs_->getPlayer().dropItem(*gs_, i));
 }
 
 void GameInterface::throwItem(std::size_t i) noexcept {

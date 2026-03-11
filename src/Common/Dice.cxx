@@ -30,8 +30,12 @@ class SingleTypeGroup {
       stringViewToNumber(writtenExplanation.substr(dLoc + 1), faces_);
     }
   }
-  constexpr SingleTypeGroup(std::uint16_t faces, std::uint16_t number) noexcept : faces_(faces), number_(number){}
-  constexpr SingleTypeGroup() noexcept :faces_(0), number_(0){}
+  constexpr SingleTypeGroup(std::uint16_t faces, std::uint16_t number) : faces_(faces), number_(number){
+    if(faces==0){
+      throw std::invalid_argument{"Cannot have a zero sided die"};
+    }
+  }
+  constexpr SingleTypeGroup() noexcept :faces_(1), number_(0){}
   [[nodiscard]] std::size_t operator()() const noexcept {
     std::uniform_int_distribution<std::size_t> dist(1,faces_);
     auto view = std::views::repeat(MonoState{},number_);

@@ -32,6 +32,19 @@ static_assert([] consteval {
   return true;
 }());
 
+// Bug #4: Default SingleTypeGroup creates uniform_int_distribution(1, 0) (UB)
+// A Group with fewer than MaxTypes die types leaves default-constructed
+// SingleTypeGroup slots (faces_=0, number_=0). Group::operator() calls
+// operator() on all slots, constructing an invalid distribution.
+TEST(DiceTests, DefaultSingleTypeGroupDoesNotCauseUB) {
+  auto d = "1d6"_dice;
+  for (int i = 0; i < 100; i++) {
+    auto val = d();
+    EXPECT_GE(val, 1u);
+    EXPECT_LE(val, 6u);
+  }
+}
+
 // Trivial test so CTest registers the binary
 TEST(DiceTests, DiceInRange) {
   auto d = "2d4+3d6+5"_dice;

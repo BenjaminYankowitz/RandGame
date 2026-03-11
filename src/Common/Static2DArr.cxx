@@ -58,7 +58,6 @@ public:
     for(auto row : list){
       for(std::size_t nCol : std::ranges::views::iota(static_cast<size_type>(0),size)){
         (*this)[nRow,nCol] = row[nCol];
-        nCol++;
       }
       nRow++;
     }
@@ -86,7 +85,7 @@ public:
   [[nodiscard]] constexpr bool inBounds(size_type row, size_type col) const noexcept{
     return row < rows() && col < cols();
   } 
-  constexpr void fill(const value_type& v) const noexcept { 
+  constexpr void fill(const value_type& v) noexcept { 
     std::fill_n(data_.get(),size(),v);
   }
 private:
