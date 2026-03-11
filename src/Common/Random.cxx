@@ -54,6 +54,10 @@ export namespace Rnd {
   auto callable(Distribution auto& dist){
     return [&dist](){return dist(rndState);};
   }
+  bool flip(double prob = 0.5){
+    std::bernoulli_distribution dist(prob);
+    return get(dist);
+  }
   void shuffle(auto& arr){
     std::ranges::shuffle(arr,rndState);
   }

@@ -133,7 +133,7 @@ void GameInterface::dropItem(std::size_t i) noexcept {
   passTime(gs_->getPlayer().dropItem(*gs_, i));
 }
 
-void GameInterface::throwItem(std::size_t i) noexcept {
+void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
   if(!gs_->getPlayer().isAlive()){
     return;
   }
@@ -141,6 +141,7 @@ void GameInterface::throwItem(std::size_t i) noexcept {
   if (i >= invent.size()) {
     return;
   }
+  passTime(gs_->getPlayer().throwItem(*gs_, i, dir));
 }
 void GameInterface::passTime(TimePeriod numTurns) noexcept {
   if(!gs_->getPlayer().isAlive()){

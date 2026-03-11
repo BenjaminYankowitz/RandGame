@@ -16,8 +16,8 @@ public:
   }
   IteratorImpl() = default;
   constexpr IteratorImpl(const IteratorImpl&) = default;
-  template <class ORefValueT, class ORetValueT,ORetValueT(*OF)(ORefValueT&)>
-  constexpr IteratorImpl(IteratorImpl<ORefValueT,Parent,ORetValueT,OF> other) noexcept : impl_(other.impl_){}; //NOLINT(google-explicit-constructor)
+  template <class ORetValueT,ORetValueT(*OF)(RefValueT&)>
+  constexpr IteratorImpl(IteratorImpl<std::remove_const_t<RefValueT>,Parent,ORetValueT,OF> other) noexcept : impl_(other.impl_){}; //NOLINT(google-explicit-constructor)
   constexpr IteratorImpl &operator++() noexcept { return operator+=(1); }
   constexpr IteratorImpl operator++(int) noexcept {
     auto cp = *this;

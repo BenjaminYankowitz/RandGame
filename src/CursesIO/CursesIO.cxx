@@ -432,7 +432,7 @@ bool pickUpItem(GameInterface &gState, ActionMod & /*mod*/) {
 bool throwItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index != NoItem) {
-    gState.throwItem(index);
+    gState.throwItem(index, Dir());
   }
   return true;
 }
