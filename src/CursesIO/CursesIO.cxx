@@ -602,20 +602,20 @@ void CursesEventViewer::debug(std::string_view message) {
 void CursesEventViewer::exception(const std::exception &exception) noexcept {
   const auto time = parent_->getTime().impl;
   std::fstream logfile("log.txt", std::ios_base::out | std::ios_base::app);
-  logfile.exceptions(std::fstream::goodbit);
-  logfile << time << ": " << exception.what() << '\n';
   if (!logfile.is_open()) {
     std::cerr << "Unhandeled exception, and log file does not open\n"
               << time << ": " << exception.what() << '\n';
     std::exit(1);
   }
+  logfile << time << ": " << exception.what() << '\n';
   if (logfile.bad()) {
     std::cerr << "I/O error while reading - badbit is true\n"
               << exception.what() << '\n';
     std::exit(1);
   } else if (logfile.fail()) {
-    std::cerr << "#4. Non-integer data encountered - failbit is true\n"
+    std::cerr << "Logical error on i/o operation - failbit is true\n"
               << exception.what() << '\n';
+    std::exit(1);
   }
   logfile.sync();
 }

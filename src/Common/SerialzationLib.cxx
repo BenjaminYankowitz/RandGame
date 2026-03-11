@@ -39,13 +39,13 @@ std::size_t serialize(std::ostream & out, const Serializeable auto&... inputs) {
   return (toStream(out,inputs)+...);
 }
 
-std::size_t deserialize(std::istream & in, const Serializeable auto&... inputs) {
+std::size_t deserialize(std::istream & in, Serializeable auto&... inputs) {
   auto readAndGetSize = [&in](auto &toFill){
     std::size_t sz;
-    toFill = fromStream<decltype(toFill)>(in,sz);
+    toFill = fromStream<std::remove_reference_t<decltype(toFill)>>(in,sz);
     return sz;
   };
-  return (readAndGetSize(in,inputs)+...);
+  return (readAndGetSize(inputs)+...);
 }
 
 } // namespace SerializationLib

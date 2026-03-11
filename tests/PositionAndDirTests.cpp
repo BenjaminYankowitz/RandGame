@@ -1,19 +1,6 @@
 #include <gtest/gtest.h>
 import Common;
 
-// ============================================================
-// Compile-time static_asserts
-// ============================================================
-
-// -- boxDir answer key & boxDirs range equality --
-constexpr static std::array<Dir, 8> AnswerKey = std::to_array<Dir>(
-    {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
-
-static_assert(std::ranges::all_of(std::views::iota(0, 8), [](std::int8_t dirN) {
-  return AnswerKey[dirN] == Dir::getBoxDir(dirN);
-}));
-
-static_assert(std::ranges::equal(AnswerKey, Dir::boxDirs()));
 
 // -- Dir Construction & noMove --
 static_assert(Dir().dx == 0);
@@ -26,6 +13,7 @@ static_assert(!Dir(1, 0).noMove());
 static_assert(!Dir(0, 1).noMove());
 static_assert(!Dir(-1, -1).noMove());
 static_assert(!Dir(100, -200).noMove());
+static_assert(std::ranges::none_of(Dir::boxDirs(),[](Dir d){return d.noMove();}));
 
 // -- Dir Cardinals --
 static_assert(Dir::up() == Dir(0, -1));
@@ -33,39 +21,23 @@ static_assert(Dir::down() == Dir(0, 1));
 static_assert(Dir::left() == Dir(-1, 0));
 static_assert(Dir::right() == Dir(1, 0));
 
-// -- Dir boxDirs / getBoxDir --
-static_assert([] {
-  int count = 0;
-  for ([[maybe_unused]] auto d : Dir::boxDirs())
-    ++count;
-  return count == 8;
-}());
-
-static_assert([] {
-  std::array<Dir, 8> dirs{};
-  int n = 0;
-  for (auto d : Dir::boxDirs())
-    dirs[n++] = d;
-  for (std::size_t i = 0; i < 8; ++i)
-    for (std::size_t j = i + 1; j < 8; ++j)
-      if (dirs[i] == dirs[j])
-        return false;
-  return true;
-}());
-
-static_assert([] {
-  for (auto d : Dir::boxDirs())
-    if (d.noMove())
-      return false;
-  return true;
-}());
-
 // -- Dir Equality --
 static_assert(Dir(1, 2) == Dir(1, 2));
 static_assert(Dir(-3, 0) == Dir(-3, 0));
 static_assert(Dir(1, 0) != Dir(2, 0));
 static_assert(Dir(0, 1) != Dir(0, 2));
 static_assert(Dir(1, 2) != Dir(3, 4));
+
+// -- boxDir answer key & boxDirs range equality --
+constexpr static auto AnswerKey = std::to_array<Dir>(
+    {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
+
+static_assert(std::ranges::all_of(std::views::iota(0, 8), [](std::int8_t dirN) {
+  return AnswerKey[dirN] == Dir::getBoxDir(dirN);
+}));
+
+static_assert(std::ranges::equal(AnswerKey, Dir::boxDirs()));
+
 
 // -- Position Construction & Equality --
 static_assert(Position(10, -20).x == 10);
@@ -156,28 +128,20 @@ static_assert(capDir(Dir(3, -7)) == Dir(1, -1));
 static_assert(capDir(Dir(-2, 4)) == Dir(-1, 1));
 
 // -- Integration --
-static_assert([] {
-  Position start(50, 50);
-  for (auto d : Dir::boxDirs()) {
-    Position moved = start + d;
-    if (moved == start)
-      return false;
-    Position returned = moved - d;
-    if (returned != start)
-      return false;
-  }
-  return true;
-}());
+static_assert(
+    std::ranges::all_of(Dir::boxDirs(), [](Dir d) {
+      static constexpr Position Start(50, 50);
+      Position moved = Start + d;
+      Position returned = moved - d;
+      return moved != Start && returned == Start;
+    }));
 
-static_assert([] {
-  Position origin(0, 0);
-  for (auto d : Dir::boxDirs()) {
-    Position neighbor = origin + d;
-    if (Position::chessboard(origin, neighbor) != 1u)
-      return false;
-  }
-  return true;
-}());
+static_assert(
+    std::ranges::all_of(Dir::boxDirs(), [](Dir d) {
+      constexpr static Position Origin(23, 78);
+      Position neighbor = Origin + d;
+      return Position::chessboard(Origin, neighbor) == 1u;
+    }));
 
 static_assert([] {
   Position a(10, 20);

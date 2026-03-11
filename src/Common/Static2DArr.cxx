@@ -42,7 +42,7 @@ class Static2DArr {
   using iterator = IteratorImpl<value_type, Static2DArr>;
   using const_iterator = IteratorImpl<const value_type, Static2DArr>;
   private:
-  using arr_t = T[];//NOLINT(modernize-avoid-c-arrays)
+  using arr_t = value_type[];//NOLINT(modernize-avoid-c-arrays)
   template<class U>
   struct PiteratorImpl{};
   template<>
@@ -52,12 +52,13 @@ class Static2DArr {
   template<class U>
   using piterator = PiteratorImpl<std::remove_reference_t<U>>::type;
 public:
-  constexpr Static2DArr(std::initializer_list<std::initializer_list<T>> list) noexcept : Static2DArr(list.size(),list.begin()->size()){
+  template<size_type size>
+  constexpr Static2DArr(std::initializer_list<value_type[size]> list) noexcept : Static2DArr(list.size(),size){ // NOLINT(modernize-avoid-c-arrays)
     std::size_t nRow = 0;
     for(auto row : list){
-      std::size_t nCol = 0;
-      for(auto i : row){
-        (*this)[nRow,nCol] = i;
+      for(std::size_t nCol : std::ranges::views::iota(static_cast<size_type>(0),size)){
+        (*this)[nRow,nCol] = row[nCol];
+        nCol++;
       }
       nRow++;
     }

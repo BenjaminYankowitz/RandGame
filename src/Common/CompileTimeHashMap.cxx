@@ -49,7 +49,7 @@ consteval std::size_t getHashMapLen() {
         done = false;
         break;
       }
-      used[index] = true;
+      used[index] = i.key;
     }
   }
   return len;

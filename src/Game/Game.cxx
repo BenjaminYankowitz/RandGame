@@ -78,10 +78,7 @@ public:
   [[nodiscard]] constexpr const_iterator end() const noexcept {
     return const_iterator(impl_.data() + impl_.size());
   }
-  [[nodiscard]] constexpr std::unique_ptr<Object> remove(std::size_t i) {
-    if(i>=size()){
-      std::cerr << "remove from obj\n";
-    }
+  [[nodiscard]] constexpr std::unique_ptr<Object> remove(std::size_t i) noexcept{
     std::unique_ptr<Object> ptr = std::move(impl_[i]);
     if (i + 1 != impl_.size()) {
       impl_[i] = std::move(impl_.back());
@@ -247,7 +244,7 @@ public:
   ACCESSORS_WORLD_FLOOR(Objects)
   ACCESSORS_WORLD_FLOOR(Monster)
   ACCESSORS_WORLD_FLOOR(TerrainType)
-#undef Accessors_WorldFloor
+#undef ACCESSORS_WORLD_FLOOR
 
   [[nodiscard]] constexpr auto getTile(Position pos) noexcept { return WorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto getTile(Position pos) const noexcept { return ConstWorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }

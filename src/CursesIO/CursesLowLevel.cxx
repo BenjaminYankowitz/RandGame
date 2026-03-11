@@ -17,7 +17,7 @@ export namespace IOExceptions {
 struct IOModuleException : std::exception {
 };
 struct WindowFailure : public IOModuleException {};
-struct EraseFailue : public WindowFailure {
+struct EraseFailure : public WindowFailure {
   [[nodiscard]] const char *what() const noexcept override { return "Erase Failure"; }
 };
 struct PrintFailure : public WindowFailure {
@@ -413,7 +413,7 @@ public:
   WindowWrapper(int width, int height, int xoffset, int yoffset) noexcept : impl_(newwin(height, width, yoffset, xoffset)), width_(width), height_(height), xoffset_(xoffset), yoffset_(yoffset) {}
   void clear() const {
     if (werase(impl_.get()) == ERR) {
-      throw EraseFailue{};
+      throw EraseFailure{};
     }
   }
   void UpdateScreen() {
@@ -477,7 +477,7 @@ public:
   }
   void place(NumberC auto num) {
     if(wprintw(impl_.get(),FormatSpecifer<decltype(num)>::Specifer,num)==ERR){
-      // IDK
+      throw PrintFailure{};
     }
   }
   [[nodiscard]] int cursorX() const noexcept { return getcurx(impl_.get()); }
@@ -488,7 +488,6 @@ private:
     if (waddnwstr(impl_.get(), str.data(), static_cast<int>(str.size())) == ERR) {
       throw PrintFailure{};
     }
-    moveCursor(cursorX() + static_cast<int>(str.size()), cursorY());
   }
   void place_impl(std::string_view str) {
     if (waddnstr(impl_.get(), str.data(), static_cast<int>(str.size())) == ERR) {
@@ -563,7 +562,7 @@ public:
     impl_.clear();
     makeBox();
   }
-  [[nodiscard]] std::size_t leftOnLine() const noexcept { return prntWidth() - impl_.cursorX(); }
+  [[nodiscard]] std::size_t leftOnLine() const noexcept { return std::max(prntWidth() - impl_.cursorX(),0); }
 
 private:
   void makeBox() {
