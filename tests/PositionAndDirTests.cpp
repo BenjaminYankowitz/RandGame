@@ -1,7 +1,6 @@
 #include "TestHeader.h"
 import Common;
 
-
 // -- Dir Construction & noMove --
 static_assert(Dir().dx == 0);
 static_assert(Dir().dy == 0);
@@ -13,13 +12,24 @@ static_assert(!Dir(1, 0).noMove());
 static_assert(!Dir(0, 1).noMove());
 static_assert(!Dir(-1, -1).noMove());
 static_assert(!Dir(100, -200).noMove());
-static_assert(std::ranges::none_of(Dir::boxDirs(),[](Dir d){return d.noMove();}));
+static_assert(std::ranges::none_of(Dir::boxDirs(), [](Dir d) { return d.noMove(); }));
 
 // -- Dir Cardinals --
 static_assert(Dir::up() == Dir(0, -1));
 static_assert(Dir::down() == Dir(0, 1));
 static_assert(Dir::left() == Dir(-1, 0));
 static_assert(Dir::right() == Dir(1, 0));
+
+// -- Dir Unary Negation --
+static_assert(-Dir(1, 2) == Dir(-1, -2));
+static_assert(-Dir(-3, 0) == Dir(3, 0));
+static_assert(-Dir(0, 0) == Dir(0, 0));
+static_assert(-Dir(0, -5) == Dir(0, 5));
+static_assert(-Dir(-4, 7) == Dir(4, -7));
+static_assert(!(-Dir(1, 1)).noMove());
+static_assert((-Dir(0, 0)).noMove());
+static_assert(-(-Dir(3, -2)) == Dir(3, -2));
+static_assert(std::ranges::all_of(Dir::boxDirs(), [](Dir d) { return -(-d) == d; }));
 
 // -- Dir Equality --
 static_assert(Dir(1, 2) == Dir(1, 2));
@@ -37,7 +47,6 @@ static_assert(std::ranges::all_of(std::views::iota(0, 8), [](std::int8_t dirN) {
 }));
 
 static_assert(std::ranges::equal(AnswerKey, Dir::boxDirs()));
-
 
 // -- Position Construction & Equality --
 static_assert(Position(10, -20).x == 10);

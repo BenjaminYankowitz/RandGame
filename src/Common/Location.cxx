@@ -70,6 +70,7 @@ public:
     return {1, 0};
   };
   bool operator==(const Dir &pos) const = default;
+  [[nodiscard]] constexpr Dir operator-() const noexcept { return {-dx, -dy}; }
   [[nodiscard]] constexpr static const BoxIterable &boxDirs() {
     return BoxIteratorInst;
   }
@@ -128,7 +129,7 @@ export struct PathIterable {
     [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
   };
   [[nodiscard]] constexpr PathIter begin() const noexcept {
-    return {{0, 0}, e};
+    return ++PathIter{{0, 0}, e};
   }
   [[nodiscard]] constexpr PathIter end() const noexcept {
     return ++PathIter{
