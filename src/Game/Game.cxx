@@ -109,6 +109,7 @@ private:
 
 public:
   struct HitReturn {
+    MustInit<Health> damageDone;
     std::unique_ptr<Monster> killed;
   };
 
@@ -753,7 +754,7 @@ constexpr std::unique_ptr<Monster> Monster::kill(GameState &state) noexcept {
 Monster::HitReturn Monster::hitBy(GameState &state, AttackInfo info) noexcept {
   health_ -= info.damage;
   if (health_ > 0) {
-    return {nullptr};
+    return {info.damage,nullptr};
   }
-  return {kill(state)};
+  return {info.damage,kill(state)};
 }

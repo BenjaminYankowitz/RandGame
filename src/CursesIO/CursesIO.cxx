@@ -730,7 +730,11 @@ void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface gra
 }
 
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
-  printWith_ << attacker << " " << (info.killed ? "killed" : "hit") << " " << attacked << '\n';
+  printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ' << attacked;
+  if(info.damageDone){
+    printWith_ << ' ' << (info.killed ? "by dealing" : "for") << ' ' << *info.damageDone << " damage";
+  }
+  printWith_ << '\n';
 }
 
 void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {

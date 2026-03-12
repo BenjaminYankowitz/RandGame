@@ -74,6 +74,7 @@ private:
 export class EventViewerInteface {
 public:
   struct HitInfo{
+    std::optional<Health> damageDone;
     bool killed;
   };
   virtual void itemPickup(MonsterInterface grabber, ObjectInterface grabbed) = 0;

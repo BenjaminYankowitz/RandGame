@@ -61,7 +61,7 @@ class EventViewerTranslator : public EventViewer {
   }
   void monsterHitMonster(const Monster::HitReturn& hitreturn, const Monster& attacker, const Monster& attacked) noexcept final {
     try {
-      impl_->monsterHitMonster({static_cast<bool>(hitreturn.killed)},MonsterInterface(attacker),MonsterInterface(attacked));
+      impl_->monsterHitMonster({hitreturn.damageDone,!!hitreturn.killed},MonsterInterface(attacker),MonsterInterface(attacked));
     } catch (const std::exception& e){
       impl_->exception(e);
     } catch(...){}
