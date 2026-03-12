@@ -296,32 +296,32 @@ std::string_view getName(MonsterInterface monster) noexcept {
   }
 }
 
-// constexpr Dir keyToDir(chtype key) noexcept {
-//   switch (key) {
-//   case SpecialChar::Left:
-//   case 'h':
-//     return Dir(-1, 0);
-//   case SpecialChar::Down:
-//   case 'j':
-//     return Dir(0, 1);
-//   case SpecialChar::Up:
-//   case 'k':
-//     return Dir(0, -1);
-//   case SpecialChar::Right:
-//   case 'l':
-//     return Dir(1, 0);
-//   case 'y':
-//     return Dir(-1, -1);
-//   case 'u':
-//     return Dir(1, -1);
-//   case 'b':
-//     return Dir(-1, 1);
-//   case 'n':
-//     return Dir(1, 1);
-//   default:
-//     return Dir();
-//   }
-// }
+constexpr Dir keyToDir(chtype key) noexcept {
+  switch (key) {
+  case SpecialChar::Left:
+  case 'h':
+    return {-1, 0};
+  case SpecialChar::Down:
+  case 'j':
+    return {0, 1};
+  case SpecialChar::Up:
+  case 'k':
+    return {0, -1};
+  case SpecialChar::Right:
+  case 'l':
+    return {1, 0};
+  case 'y':
+    return {-1, -1};
+  case 'u':
+    return {1, -1};
+  case 'b':
+    return {-1, 1};
+  case 'n':
+    return {1, 1};
+  default:
+    return {};
+  }
+}
 
 // static BoxedWindow *EventWindow;
 
@@ -383,9 +383,138 @@ private:
   bool changeDigitLast_ = false;
   std::size_t count_ = NoCount;
 };
+namespace IOModule {
+export class Interface;
+}
+using IOModule::Interface;
 
+using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
+class PrintToViewer : public streambufT {
+public:
+  explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
+  Interface *parent_;
+
+protected:
+  std::streamsize xsputn(const char_type *s, std::streamsize count) final;
+
+private:
+  std::string buffer_;
+};
+class CursesEventViewer final : public EventViewerInteface {
+public:
+  explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
+  void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
+  void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
+  void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
+  void debug(std::string_view message) final;
+  void exception(const std::exception &exception) noexcept final;
+
+private:
+  PrintToViewer viewer_;
+  std::ostream printWith_;
+};
+
+namespace Actions {
+  using ActionType = bool (*)(GameInterface &, IOModule::Interface&, ActionMod &);
+  [[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept;
+}
+export namespace IOModule {
+class Interface {
+public:
+  Interface() : printToViewer_(this) {
+    eventWindow_ = BoxedWindow(0, 0, 0, 0);
+    mainWindow_ = BoxedWindow(0, 0, 0, 0);
+    inventWindow_ = BoxedWindow(0, 0, 0, 0);
+    statusWindow_ = BoxedWindow(0, 0, 0, 0);
+    oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
+  }
+  ~Interface() {
+    Logging::log.rdbuf(oldBuffer_);
+  }
+  void createTiedGameInterface() noexcept {
+    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
+  }
+  void tieGameInterface(std::unique_ptr<GameInterface> gState) {
+    gState_ = std::move(gState);
+    gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
+  }
+  [[nodiscard]] std::unique_ptr<GameInterface> getGameInterface() noexcept {
+    return std::move(gState_);
+  }
+  void updateGameScreen() {
+    Raii_.setCursorState(0);
+    mainWindow_.clear();
+    const auto &currentMap = gState_->getFloor(gState_->getLocation().mapPos);
+    int Mapwidth = static_cast<int>(currentMap.cols());
+    int MapHeight = static_cast<int>(currentMap.rows());
+    auto [height, width] = getMaxDims();
+    const int mainWindowHeight = height - 6 - MapHeight;
+    eventWindow_.setDims(Mapwidth, mainWindowHeight - 2);
+    mainWindow_.move(0, mainWindowHeight);
+    mainWindow_.setDims(Mapwidth, MapHeight);
+    inventWindow_.move(Mapwidth + 2, 0);
+    inventWindow_.setDims(width - Mapwidth - 4, height - 2);
+    statusWindow_.move(0, height - 4);
+    statusWindow_.setDims(Mapwidth, 2);
+    for (int y = 0; y < MapHeight; y++) {
+      mainWindow_.moveCursor(0, y);
+      for (int x = 0; x < Mapwidth; x++) {
+        mainWindow_ << TileToSymbol(currentMap, {x, y});
+      }
+    }
+    ObjectContainerInterface playerInvent = gState_->lookAtInventory();
+    displayInvent(inventWindow_, playerInvent);
+    mainWindow_.updateScreen();
+    statusWindow_.clear();
+    statusWindow_.moveCursor(0, 0);
+    statusWindow_ << "Health: "sv << gState_->getHealth();
+    statusWindow_.updateScreen();
+    displayEvents(eventWindow_, eventLog_);
+    // eventWindow_.updateScreen();
+  }
+  [[nodiscard]] bool doAction() {
+    chtype userInput = CursesRAII::getChar();
+    const auto func = Actions::getActionFromInput(userInput);
+
+    mod_.betweenRounds();
+    if (func == nullptr) {
+      return true;
+    }
+    return func(*gState_,*this, mod_);
+  }
+  void addEvent(std::string str) noexcept {
+    eventLog_.emplace_back(std::move(str));
+  }
+  [[nodiscard]] GameTime getTime() const noexcept {
+    return gState_->getTime();
+  }
+  bool showSelection(Position pos){
+    Raii_.setCursorState(1);
+    if(mainWindow_.inBounds(pos.x,pos.y)){
+      mainWindow_.moveCursor(pos.x, pos.y);
+      mainWindow_.updateScreen();
+      return true;
+    }
+    return false;
+  }
+private:
+  [[no_unique_address]] CursesRAII Raii_;
+  BoxedWindow mainWindow_;
+  BoxedWindow inventWindow_;
+  BoxedWindow statusWindow_;
+  BoxedWindow eventWindow_;
+  ActionMod mod_;
+  std::vector<std::string> eventLog_;
+  std::unique_ptr<GameInterface> gState_;
+  streambufT *oldBuffer_;
+  PrintToViewer printToViewer_;
+};
+} // namespace IOModule
+
+namespace Actions {
+  
 template <int Dx, int Dy>
-constexpr bool movePlayer(GameInterface &gState, ActionMod &modifer) noexcept {
+constexpr bool movePlayer(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod &modifer) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
   gState.generalMove(D, modifer.getMoveMode());
@@ -415,7 +544,7 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
     displayInvent(window, interface);
   }
   while (true) {
-    auto userInput = getChar();
+    auto userInput = CursesRAII::getChar();
     if (userInput == SpecialChar::Escape) {
       return NoItem;
     }
@@ -425,17 +554,17 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
   }
 }
 
-bool toggleMoveMode(GameInterface & /*gState*/, ActionMod &mod) {
+bool toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::move());
   return true;
 }
 
-bool toggleFightMode(GameInterface & /*gState*/, ActionMod &mod) {
+bool toggleFightMode(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::fight());
   return true;
 }
 
-bool pickUpItem(GameInterface &gState, ActionMod & /*mod*/) {
+bool pickUpItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) {
   std::size_t index = getItemFromInterface(gState.lookAtFloor());
   if (index != NoItem) {
     gState.pickUpItem(index);
@@ -443,15 +572,34 @@ bool pickUpItem(GameInterface &gState, ActionMod & /*mod*/) {
   return true;
 }
 
-bool throwItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
-  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
-  if (index != NoItem) {
-    gState.throwItem(index, Dir());
+std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface& iterface) noexcept{
+  auto pos = gState.getLocation().pos;
+  iterface.showSelection(pos);
+  while(true){
+    auto cmnd = CursesRAII::getChar();
+    if(cmnd == SpecialChar::Escape)
+      return {};
+    if(cmnd == '.')
+      return pos;
+    auto dir=keyToDir(cmnd);
+    if(iterface.showSelection(pos+dir)){
+      pos+=dir;
+    }
   }
+}
+
+bool throwItem(GameInterface &gState,IOModule::Interface& iterface, ActionMod & /*mod*/) noexcept {
+  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
+  if (index == NoItem) 
+    return true;
+  auto target = chooseTile(gState, iterface);
+  if(!target)
+    return true;
+  gState.throwItem(index, (*target)-gState.getLocation().pos);
   return true;
 }
 
-bool dropItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
+bool dropItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index != NoItem) {
     gState.dropItem(index);
@@ -459,24 +607,23 @@ bool dropItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
   return true;
 }
 
-bool passTime(GameInterface &gState, ActionMod &mod) noexcept {
+bool passTime(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & mod) noexcept {
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
   return true;
 }
 
 template <int n>
-bool addDigit(GameInterface & /*gState*/, ActionMod &mod) {
+bool addDigit(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
   static_assert(n >= 0 && n <= 9);
   mod.addDigit(n);
   return true;
 }
 
-bool quit(GameInterface &gState, ActionMod & /*mod*/) noexcept {
+bool quit(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) noexcept {
   gState.exit();
   return false;
 }
 
-using ActionType = bool (*)(GameInterface &, ActionMod &);
 static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
     {SpecialChar::Left, movePlayer<-1, 0>},
     {'h', movePlayer<-1, 0>},
@@ -513,122 +660,12 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
     {SpecialChar::Backspace, quit},
 });
 
-constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
-constexpr std::size_t CmndMpSize = CmndMp.size();
-namespace IOModule {
-export class Interface;
+[[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept {
+  static constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
+  return CmndMp.get(input);
 }
-using IOModule::Interface;
 
-using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
-class PrintToViewer : public streambufT {
-public:
-  explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
-  Interface *parent_;
-
-protected:
-  std::streamsize xsputn(const char_type *s, std::streamsize count) final;
-
-private:
-  std::string buffer_;
-};
-class CursesEventViewer final : public EventViewerInteface {
-public:
-  explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
-  void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
-  void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
-  void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
-  void debug(std::string_view message) final;
-  void exception(const std::exception &exception) noexcept final;
-
-private:
-  PrintToViewer viewer_;
-  std::ostream printWith_;
-};
-
-export namespace IOModule {
-class Interface {
-public:
-  Interface() : printToViewer_(this) {
-    eventWindow_ = BoxedWindow(0, 0, 0, 0);
-    mainWindow_ = BoxedWindow(0, 0, 0, 0);
-    inventWindow_ = BoxedWindow(0, 0, 0, 0);
-    statusWindow_ = BoxedWindow(0, 0, 0, 0);
-    oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
-  }
-  ~Interface() {
-    Logging::log.rdbuf(oldBuffer_);
-  }
-  void createTiedGameInterface() noexcept {
-    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
-  }
-  void tieGameInterface(std::unique_ptr<GameInterface> gState) {
-    gState_ = std::move(gState);
-    gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
-  }
-  [[nodiscard]] std::unique_ptr<GameInterface> getGameInterface() noexcept {
-    return std::move(gState_);
-  }
-  void updateGameScreen() {
-    mainWindow_.clear();
-    const auto &currentMap = gState_->getFloor(gState_->getLocation().mapPos);
-    int Mapwidth = static_cast<int>(currentMap.cols());
-    int MapHeight = static_cast<int>(currentMap.rows());
-    auto [height, width] = getMaxDims();
-    const int mainWindowHeight = height - 6 - MapHeight;
-    eventWindow_.setDims(Mapwidth, mainWindowHeight - 2);
-    mainWindow_.move(0, mainWindowHeight);
-    mainWindow_.setDims(Mapwidth, MapHeight);
-    inventWindow_.move(Mapwidth + 2, 0);
-    inventWindow_.setDims(width - Mapwidth - 4, height - 2);
-    statusWindow_.move(0, height - 4);
-    statusWindow_.setDims(Mapwidth, 2);
-    for (int y = 0; y < MapHeight; y++) {
-      mainWindow_.moveCursor(0, y);
-      for (int x = 0; x < Mapwidth; x++) {
-        mainWindow_ << TileToSymbol(currentMap, {x, y});
-      }
-    }
-    ObjectContainerInterface playerInvent = gState_->lookAtInventory();
-    displayInvent(inventWindow_, playerInvent);
-    mainWindow_.updateScreen();
-    statusWindow_.clear();
-    statusWindow_.moveCursor(0, 0);
-    statusWindow_ << "Health: "sv << gState_->getHealth();
-    statusWindow_.updateScreen();
-    displayEvents(eventWindow_, eventLog_);
-    // eventWindow_.updateScreen();
-  }
-  [[nodiscard]] bool doAction() {
-    chtype userInput = getChar();
-    const auto func = CmndMp.get(userInput);
-
-    mod_.betweenRounds();
-    if (func == nullptr) {
-      return true;
-    }
-    return func(*gState_, mod_);
-  }
-  void addEvent(std::string str) noexcept {
-    eventLog_.emplace_back(std::move(str));
-  }
-  [[nodiscard]] GameTime getTime() const noexcept {
-    return gState_->getTime();
-  }
-
-private:
-  [[no_unique_address]] CursesRAII Raii_;
-  BoxedWindow mainWindow_;
-  BoxedWindow inventWindow_;
-  BoxedWindow statusWindow_;
-  BoxedWindow eventWindow_;
-  ActionMod mod_;
-  std::vector<std::string> eventLog_;
-  std::unique_ptr<GameInterface> gState_;
-  streambufT *oldBuffer_;
-  PrintToViewer printToViewer_;
-};
-} // namespace IOModule
+}  // namespace Actions
 
 std::ostream &operator<<(std::ostream &out, GameTime time) {
   return out << time.impl;

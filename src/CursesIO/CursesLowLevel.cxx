@@ -253,7 +253,7 @@ void initColors() noexcept {
   }
 }
 
-export auto getChar() noexcept { return getch(); }
+
 
 export class CursesRAII {
 public:
@@ -278,6 +278,10 @@ public:
     exists = false;
     endwin();
   }
+  static auto getChar() noexcept { return getch(); }
+  static int setCursorState(int n){
+  return curs_set(n);
+}
 
 private:
   static bool exists;
@@ -302,7 +306,7 @@ public:
       throw ScreenUpdateFailure{};
     }
   }
-  bool Move(int x, int y) {
+  bool move(int x, int y) {
     if (x == xoffset_ && y == yoffset_) {
       return false;
     }
@@ -327,16 +331,12 @@ public:
     }
     return true;
   }
-  [[nodiscard]] constexpr int GetWidth() const noexcept { return width_; }
-  [[nodiscard]] constexpr int GetHeight() const noexcept { return height_; }
-  [[nodiscard]] constexpr int GetXoffset() const noexcept { return xoffset_; }
-  [[nodiscard]] constexpr int GetYoffset() const noexcept { return yoffset_; }
+  [[nodiscard]] int GetWidth() const noexcept { return width_; }
+  [[nodiscard]] int GetHeight() const noexcept { return height_; }
+  [[nodiscard]] int GetXoffset() const noexcept { return xoffset_; }
+  [[nodiscard]] int GetYoffset() const noexcept { return yoffset_; }
   void moveCursor(int x, int y) {
     if (wmove(impl_.get(), y, x) == ERR) {
-      if (y >= GetHeight() || x >= GetWidth()) {
-        std::cout << y << ',' << x << ',' << GetHeight() << ',' << GetWidth() << '\n';
-        std::exit(1);
-      }
       throw MoveCursorFailure{};
     }
   }
@@ -427,7 +427,7 @@ export class BoxedWindow {
 public:
   BoxedWindow() noexcept = default;
   BoxedWindow(BoxedWindow &&other) noexcept
-      : impl_(std::move(other.impl_)), streamBuf_(this), ostream_(&streamBuf_) {}
+      : impl_(std::move(other.impl_)){}
   BoxedWindow &operator=(BoxedWindow &&other) noexcept {
     impl_ = std::move(other.impl_);
     return *this;
@@ -453,6 +453,7 @@ public:
   }
   [[nodiscard]] int cursorX() const noexcept { return impl_.cursorX() - 1; }
   [[nodiscard]] int cursorY() const noexcept { return impl_.cursorY() - 1; }
+  [[nodiscard]] bool inBounds(int x, int y) const{ return x >= 0 && y>=0 && x <= prntWidth() && y <= prntHeight();}
   void moveCursor(int x, int y) { return impl_.moveCursor(x + 1, y + 1); }
   BoxedWindow &operator<<(auto sym) {
     place(sym);
@@ -460,7 +461,7 @@ public:
   }
 
   void updateScreen() { impl_.UpdateScreen(); }
-  void move(int x, int y) { impl_.Move(x, y); }
+  void move(int x, int y) { impl_.move(x, y); }
   [[nodiscard]] constexpr int prntWidth() const noexcept { return impl_.GetWidth() - 2; }
   [[nodiscard]] constexpr int prntHeight() const noexcept { return impl_.GetHeight() - 2; }
   void clear() {

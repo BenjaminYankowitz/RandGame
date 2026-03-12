@@ -50,3 +50,5 @@ bazel-*
 .cache/
 .ninja_*
 compile_commands.json
+
+.clangd

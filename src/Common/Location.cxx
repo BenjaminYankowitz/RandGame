@@ -106,14 +106,15 @@ export struct PathIterable {
       return ret;
     }
     constexpr PathIter &operator++() noexcept {
-      auto v1 = static_cast<std::int64_t>(c.dx) * e.dy;
-      auto v2 = static_cast<std::int64_t>(c.dy) * e.dx;
+      auto v1 = std::abs(static_cast<std::int64_t>(c.dx) * e.dy);
+      auto v2 = std::abs(static_cast<std::int64_t>(c.dy) * e.dx);
       if (v1 > v2) {
-        c.dx++;
-      } else if (v1 == v2 && (std::is_constant_evaluated() || Rnd::flip())) {
-        c.dx++;
+        c.dx+=capDir(e).dx;
+      } else if (v1 == v2) {
+        c.dx+=capDir(e).dx;
+        c.dy+=capDir(e).dy;
       } else {
-        c.dy++;
+        c.dy+=capDir(e).dy;
       }
       return *this;
     }
@@ -126,7 +127,7 @@ export struct PathIterable {
     return {{0, 0}, e};
   }
   [[nodiscard]] constexpr PathIter end() const noexcept {
-    return {
+    return ++PathIter{
         e,
         e,
     };
