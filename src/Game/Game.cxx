@@ -159,32 +159,33 @@ public:
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Monster> kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
-  [[nodiscard]] TimePeriod goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
-    std::array IntToDir = {
-        Dir(-1, -1), Dir(-1, 0), Dir(-1, 1), Dir(0, -1),
-        Dir(0, 1), Dir(1, -1), Dir(1, 0), Dir(1, 1)};
-    auto *const endIter = std::ranges::remove_if(IntToDir, [this, &state](Dir d) {
-                            return !isOpenMove(state, d);
-                          }).begin();
-    const std::size_t validDirs = std::distance(IntToDir.begin(), endIter);
-    if (validDirs == 0) {
-      return TimePeriod(4);
-    }
-    const std::size_t index = Rnd::rnd(validDirs);
-    TimePeriod ret = generalMove(state, IntToDir[index], MoveMode::move());
-    if (ret.future()) {
-      return ret;
-    }
-    return TimePeriod(4);
-  }
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, NoTarget /*unused*/) noexcept;
   [[nodiscard]] TimePeriod goToTarget(GameState &state, ID targetId) noexcept;
   [[nodiscard]] TimePeriod goToTarget(GameState &state, Location target) noexcept {
     return pathTo(state, target, false);
   }
   [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, bool attack) noexcept;
-  [[nodiscard]] TimePeriod reThink() noexcept {
-    target_ = NoTarget{};
-    return TimePeriod(1);
+  enum class ReThinkReason {
+    CanNotMove,
+    TargetDead,
+    CanNotPathToTarget,
+    ReachedDestination,
+    FailedAttack,
+    Unknown,
+  };
+  [[nodiscard]] TimePeriod reThink(ReThinkReason  reason) noexcept {
+    switch (reason) {
+      using enum ReThinkReason;
+      case CanNotMove:
+      case CanNotPathToTarget:
+      case FailedAttack:
+      case Unknown:
+      return TimePeriod(10);
+      case TargetDead:
+      case ReachedDestination:
+      target_ = NoTarget{};
+      return TimePeriod(1);      
+    }
   }
   [[nodiscard]] constexpr TimePeriod takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept;
   [[nodiscard]] constexpr TimePeriod dropItem(GameState &state, std::size_t i) noexcept;
@@ -326,15 +327,7 @@ public:
 
 template <class T, class Container, class Compare>
 void clearQueue(std::priority_queue<T, Container, Compare> &queue) noexcept {
-  using QueueT = std::priority_queue<T, Container, Compare>;
-  struct Child : public QueueT {
-    using QueueT::c;
-    explicit Child(QueueT &&queue) : QueueT{std::move(queue)} {}
-    void clear() noexcept {
-      c.clear();
-    }
-  };
-  Child{std::move(queue)}.clear();
+  std::priority_queue<T, Container, Compare> oq = std::move(queue);
 }
 
 export class GameState {
@@ -543,10 +536,30 @@ Dir monsterPath(const GameState &state, const Monster &start, Location end) {
 constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   return state.getFloor(loc_.mapPos).isOpenTile(loc_.pos + d);
 }
+[[nodiscard]] TimePeriod Monster::goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
+    std::array IntToDir = {
+        Dir(-1, -1), Dir(-1, 0), Dir(-1, 1), Dir(0, -1),
+        Dir(0, 1), Dir(1, -1), Dir(1, 0), Dir(1, 1)};
+    auto *const endIter = std::ranges::remove_if(IntToDir, [this, &state](Dir d) {
+                            return !isOpenMove(state, d);
+                          }).begin();
+    const std::size_t validDirs = std::distance(IntToDir.begin(), endIter);
+    if (validDirs == 0) {
+      return reThink(ReThinkReason::CanNotMove);
+    }
+    const std::size_t index = Rnd::rnd(validDirs);
+    TimePeriod ret = generalMove(state, IntToDir[index], MoveMode::move());
+    if (ret.future()) {
+      return ret;
+    }
+    state.printDebug("Failed to move to a place which should be moveable to");
+    return reThink(ReThinkReason::CanNotMove);
+  }
+
 TimePeriod Monster::goToTarget(GameState &state, ID targetId) noexcept {
   auto mMonster = state.tryGetMonster(targetId);
   if (!mMonster) {
-    return reThink();
+    return reThink(ReThinkReason::TargetDead);
   }
   Monster &target = *mMonster;
   return pathTo(state, target.getLoc(), true);
@@ -554,7 +567,7 @@ TimePeriod Monster::goToTarget(GameState &state, ID targetId) noexcept {
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
   auto movePlan = monsterPath(state, *this, target);
   if (movePlan == Dir{0, 0}) {
-    return reThink();
+    return reThink(ReThinkReason::CanNotPathToTarget);
   }
   const Position tPos = target.pos;
   const Position cPos = getLoc().pos;
@@ -565,17 +578,17 @@ TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexc
       return tTaken;
     }
     if (!attack) {
-      return reThink();
+      return reThink(ReThinkReason::CanNotPathToTarget);
     }
     state.printDebug("Attack attempted but no time taken. This should not be possible.");
     state.printDebug("If it is possible logic should probably be reworked.");
-    return reThink();
+    return reThink(ReThinkReason::FailedAttack);
   }
   const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::move());
   if (tTaken.future()) {
     return tTaken;
   }
-  return reThink();
+  return reThink(ReThinkReason::ReachedDestination);
 }
 constexpr TimePeriod Monster::takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept {
   static constexpr std::size_t PickUpItemSpeedFraction = 10;
@@ -589,7 +602,7 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode
   if(!cfloor.isOpenTerrain(nPos)){
     return TimePeriod(0);
   }
-  auto destMonster = cfloor.getMonster(nPos);
+  auto& destMonster = cfloor.getMonster(nPos);
   if (destMonster.isNull() && mode.isMove()) {
     ID &currentSpot = cfloor.getMonster(loc_.pos);
     destMonster = currentSpot;
@@ -625,50 +638,16 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
-  return std::visit([&state, this](auto target) { return goToTarget(state, target); }, target_);
+  TimePeriod timeTaken = std::visit([&state, this](auto target) { return goToTarget(state, target); }, target_);
+  if(!isAlive()){
+    return TimePeriod(0);
+  }
+  if(timeTaken.future()){
+    return timeTaken;
+  }
+  state.printDebug("time taken to runAI is 0");
+  return reThink(ReThinkReason::Unknown);
 }
-
-struct PathIterable {
-  struct PathIter {
-    using difference_type = std::ptrdiff_t;
-    Dir c;
-    Dir e;
-    constexpr PathIter operator++(int) noexcept {
-      PathIter ret = *this;
-      ++(*this);
-      return ret;
-    }
-    constexpr PathIter &operator++() noexcept {
-      auto v1 = static_cast<std::int64_t>(c.dx) * e.dy;
-      auto v2 = static_cast<std::int64_t>(c.dy) * e.dx;
-      if (v1 > v2) {
-        c.dx++;
-      } else if (v1 == v2 && (std::is_constant_evaluated() || Rnd::flip())) {
-        c.dx++;
-      } else {
-        c.dy++;
-      }
-      return *this;
-    }
-    [[nodiscard]] constexpr Dir operator*() const noexcept {
-      return c;
-    }
-    [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
-  };
-  [[nodiscard]] constexpr PathIter begin() const noexcept {
-    return {{0, 0}, e};
-  }
-  [[nodiscard]] constexpr PathIter end() const noexcept {
-    return {
-        e,
-        e,
-    };
-  }
-  Dir e;
-};
-
-template <>
-const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
 
 constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept {
   static constexpr std::size_t DropItemSpeedFraction = 10;

@@ -1,4 +1,5 @@
 export module Common:Location;
+import :Random;
 import std;
 
 export class Dir {
@@ -93,6 +94,49 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   out << '(' << dir.dx << ',' << dir.dy << ")";
   return out;
 }
+
+export struct PathIterable {
+  struct PathIter {
+    using difference_type = std::ptrdiff_t;
+    Dir c;
+    Dir e;
+    constexpr PathIter operator++(int) noexcept {
+      PathIter ret = *this;
+      ++(*this);
+      return ret;
+    }
+    constexpr PathIter &operator++() noexcept {
+      auto v1 = static_cast<std::int64_t>(c.dx) * e.dy;
+      auto v2 = static_cast<std::int64_t>(c.dy) * e.dx;
+      if (v1 > v2) {
+        c.dx++;
+      } else if (v1 == v2 && (std::is_constant_evaluated() || Rnd::flip())) {
+        c.dx++;
+      } else {
+        c.dy++;
+      }
+      return *this;
+    }
+    [[nodiscard]] constexpr Dir operator*() const noexcept {
+      return c;
+    }
+    [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
+  };
+  [[nodiscard]] constexpr PathIter begin() const noexcept {
+    return {{0, 0}, e};
+  }
+  [[nodiscard]] constexpr PathIter end() const noexcept {
+    return {
+        e,
+        e,
+    };
+  }
+  Dir e;
+};
+
+template <>
+const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
+
 
 [[nodiscard]] constexpr auto abs(auto n) noexcept{
   return n < 0 ? -n : n;

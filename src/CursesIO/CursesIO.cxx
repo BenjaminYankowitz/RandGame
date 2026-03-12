@@ -498,6 +498,9 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
 
     {SpecialChar::Backspace, quit},
 });
+
+constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
+constexpr std::size_t CmndMpSize = CmndMp.size();
 namespace IOModule {
 export class Interface;
 }
@@ -514,16 +517,44 @@ private:
   Interface *parent_;
 };
 
-constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
-constexpr std::size_t CmndMpSize = CmndMp.size();
+using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
+class PrintToViewer : public streambufT {
+public:
+  explicit PrintToViewer(std::unique_ptr<EventViewerInteface> parent) noexcept : parent_(std::move(parent)){}
+protected:
+  std::streamsize xsputn(const char_type *s, std::streamsize count) final {
+    std::string_view input(s,count);
+    std::size_t currentStart = 0;
+    while(true){
+      auto nextNewLine = input.find('\n',currentStart);
+      if(nextNewLine==std::string_view::npos){
+        buffer_+=input.substr(currentStart);
+        break;
+      }
+      buffer_+=input.substr(currentStart,nextNewLine-currentStart);
+      parent_->debug(std::move(buffer_));
+      buffer_.clear();
+      currentStart = nextNewLine+1;
+    }
+    return count;
+  }
+
+private:
+  std::string buffer_;
+  std::unique_ptr<EventViewerInteface> parent_;
+};
 export namespace IOModule {
 class Interface {
 public:
-  Interface() {
+  Interface() : printToViewer_(PrintToViewer(std::make_unique<CursesEventViewer>(*this))) {
     eventWindow_ = BoxedWindow(0, 0, 0, 0);
     mainWindow_ = BoxedWindow(0, 0, 0, 0);
     inventWindow_ = BoxedWindow(0, 0, 0, 0);
     statusWindow_ = BoxedWindow(0, 0, 0, 0);
+    oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
+  }
+  ~Interface(){
+    Logging::log.rdbuf(oldBuffer_);
   }
   void createTiedGameInterface() noexcept {
     gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(*this));
@@ -591,13 +622,16 @@ private:
   ActionMod mod_;
   std::vector<std::string> eventLog_;
   std::unique_ptr<GameInterface> gState_;
+  streambufT* oldBuffer_;
+  PrintToViewer printToViewer_;
 };
 } // namespace IOModule
 
 void CursesEventViewer::debug(std::string_view message) {
-  std::stringstream stream;
-  stream << parent_->getTime().impl << ": " << message;
-  parent_->addEvent(stream.str());
+  std::string ret = std::to_string(parent_->getTime().impl);
+  ret+= ": ";
+  ret+= message;
+  parent_->addEvent(std::move(ret));
 }
 void CursesEventViewer::exception(const std::exception &exception) noexcept {
   const auto time = parent_->getTime().impl;
