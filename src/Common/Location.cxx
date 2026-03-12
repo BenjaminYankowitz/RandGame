@@ -48,9 +48,9 @@ export class Dir {
 
 public:
   [[nodiscard]] constexpr static Dir getBoxDir(int n) {
-  if(n<0 || n>=8){
-    std::unreachable();
-  }
+    if (n < 0 || n >= 8) {
+      std::unreachable();
+    }
     const int k = n + (n >= 4 ? 1 : 0);
     return {k % 3 - 1, k / 3 - 1};
   }
@@ -95,6 +95,10 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   return out;
 }
 
+[[nodiscard]] constexpr auto abs(auto n) noexcept {
+  return n < 0 ? -n : n;
+}
+
 export struct PathIterable {
   struct PathIter {
     using difference_type = std::ptrdiff_t;
@@ -106,15 +110,15 @@ export struct PathIterable {
       return ret;
     }
     constexpr PathIter &operator++() noexcept {
-      auto v1 = std::abs(static_cast<std::int64_t>(c.dx) * e.dy);
-      auto v2 = std::abs(static_cast<std::int64_t>(c.dy) * e.dx);
-      if (v1 > v2) {
-        c.dx+=capDir(e).dx;
+      auto v1 = abs(static_cast<std::int64_t>(c.dx) * e.dy);
+      auto v2 = abs(static_cast<std::int64_t>(c.dy) * e.dx);
+      if (v1 < v2) {
+        c.dx += capDir(e).dx;
       } else if (v1 == v2) {
-        c.dx+=capDir(e).dx;
-        c.dy+=capDir(e).dy;
+        c.dx += capDir(e).dx;
+        c.dy += capDir(e).dy;
       } else {
-        c.dy+=capDir(e).dy;
+        c.dy += capDir(e).dy;
       }
       return *this;
     }
@@ -138,11 +142,6 @@ export struct PathIterable {
 template <>
 const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
 
-
-[[nodiscard]] constexpr auto abs(auto n) noexcept{
-  return n < 0 ? -n : n;
-}
-
 export class Position {
 public:
   [[nodiscard]] constexpr Position(int xI, int yI) noexcept : x(xI), y(yI) {}
@@ -165,7 +164,7 @@ public:
   int y;
 };
 
-static_assert(Position{2,1}.within({2,2}));
+static_assert(Position{2, 1}.within({2, 2}));
 
 export constexpr Position &operator+=(Position &pos, Dir dir) noexcept {
   pos.x += dir.dx;

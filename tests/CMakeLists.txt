@@ -51,3 +51,7 @@ add_test(NAME MonsterConfigTests COMMAND MonsterConfigTests)
 add_executable(MonsterIdTests MonsterIdTests.cpp)
 target_link_libraries(MonsterIdTests PRIVATE Game TestHeader)
 add_test(NAME MonsterIdTests COMMAND MonsterIdTests)
+
+add_executable(PathIterableTests PathIterableTests.cpp)
+target_link_libraries(PathIterableTests PRIVATE Common TestHeader)
+add_test(NAME PathIterableTests COMMAND PathIterableTests)
