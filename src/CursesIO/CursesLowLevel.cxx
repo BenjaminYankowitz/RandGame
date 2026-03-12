@@ -1,18 +1,18 @@
 module;
-#include <cstdint>
-#include <utility>
-#include <iostream>
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cstdint>
+#include <cursesw.h>
+#include <exception>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <string_view>
-#include <exception>
-#include <cursesw.h>
+#include <utility>
 export module CursesLowLevel;
 namespace CursesLowLevel {
-alignas(32) static thread_local std::array<std::byte, 1024> buffer; //NOLINT
+alignas(32) static thread_local std::array<std::byte, 1024> buffer; // NOLINT
 export namespace IOExceptions {
 struct IOModuleException : std::exception {
 };
@@ -191,14 +191,14 @@ constexpr attr_t getColorModifer(Color front, Color back) noexcept {
 }
 
 export namespace Modifier {
-  constexpr attr_t Standout = WA_STANDOUT;
-  constexpr attr_t Normal = WA_NORMAL;
-}
+constexpr attr_t Standout = WA_STANDOUT;
+constexpr attr_t Normal = WA_NORMAL;
+} // namespace Modifier
 
 export class Symbol {
 public:
   constexpr Symbol() noexcept = default;
-  constexpr Symbol(chtype c) noexcept : character_(c), attributes_(Modifier::Normal), frontColor_(White), backColor_(Black){}; // NOLINT
+  constexpr Symbol(chtype c) noexcept : character_(c), attributes_(Modifier::Normal), frontColor_(White), backColor_(Black) {}; // NOLINT
   [[nodiscard]] constexpr chtype print() const noexcept { return character_; }
   constexpr void setFrontColor(Color c) noexcept {
     frontColor_ = c;
@@ -211,7 +211,7 @@ public:
   constexpr void addModifier(chtype mod) noexcept { attributes_ |= mod; }
   constexpr void removeModifer(chtype mod) noexcept { attributes_ &= ~mod; }
   [[nodiscard]] constexpr attr_t modifers() const noexcept { return attributes_ | getColorModifer(frontColor_, backColor_); }
-  [[nodiscard]] constexpr int color() const noexcept {return getColorId(frontColor_,backColor_);}
+  [[nodiscard]] constexpr int color() const noexcept { return getColorId(frontColor_, backColor_); }
 
 private:
   chtype character_;
@@ -221,10 +221,10 @@ private:
 };
 #undef NCURSES_ACS
 [[nodiscard]] constexpr chtype NCURSES_ACS(char c) noexcept { return A_ALTCHARSET + static_cast<chtype>(c); }
-[[nodiscard]] consteval chtype operator""_toch(const char* str, unsigned long len) {
-  std::array<char,4> data = {};
+[[nodiscard]] consteval chtype operator""_toch(const char *str, unsigned long len) {
+  std::array<char, 4> data = {};
   data.fill(0);
-  std::ranges::copy_n(str,len,data.rbegin());
+  std::ranges::copy_n(str, len, data.rbegin());
   return std::bit_cast<chtype>(data);
 }
 export namespace SpecialChar {
@@ -238,28 +238,29 @@ constexpr chtype Backspace = KEY_BACKSPACE;
 enum class Directions {
   None = 0,
   Up = 1,
-  Down = Up<<1,
-  Left = Down<<1,
-  Right = Left<<1 
+  Down = Up << 1,
+  Left = Down << 1,
+  Right = Left << 1
 };
-[[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept{
-  return static_cast<Directions>(std::to_underlying(d1)|std::to_underlying(d2));
+[[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept {
+  return static_cast<Directions>(std::to_underlying(d1) | std::to_underlying(d2));
 }
-constexpr Directions& operator|=(Directions& d1, Directions d2) noexcept{
+constexpr Directions &operator|=(Directions &d1, Directions d2) noexcept {
   d1 = d1 | d2;
   return d1;
 }
-constexpr auto Walls = [](){ //NOLINT says Walls is unused even though it is exported
+constexpr auto Walls = []() {// NOLINT says Walls is unused even though it is exported
   class RetType {
-    public:
-    [[nodiscard]] constexpr chtype& operator[](Directions dir) noexcept {
+  public:
+    [[nodiscard]] constexpr chtype &operator[](Directions dir) noexcept {
       return impl_[std::to_underlying(dir)];
     }
     [[nodiscard]] constexpr chtype operator[](Directions dir) const noexcept {
       return impl_[std::to_underlying(dir)];
     }
-    private:
-    std::array<chtype,(1<<4)> impl_;
+
+  private:
+    std::array<chtype, (1 << 4)> impl_;
   };
   using enum Directions;
   RetType ret;
@@ -283,8 +284,6 @@ constexpr auto Walls = [](){ //NOLINT says Walls is unused even though it is exp
   return ret;
 }();
 } // namespace SpecialChar
-
-
 
 void initColors() noexcept {
   for (NCURSES_COLOR_T back = 0; back < NumBaseColor; back++) {
@@ -334,82 +333,9 @@ constexpr std::string_view numInBuffer(NumberC auto num) noexcept {
   return std::string_view(bufferData, std::to_chars(bufferData, bufferData + buffer.size(), num).ptr);
 }
 
-template<class T>
-struct FormatSpecifer{
-  static_assert(false);
-};
-
-template<>
-struct FormatSpecifer<signed char>{
-  static constexpr const char *Specifer = "%hhd";
-};
-
-template<>
-struct FormatSpecifer<unsigned char>{
-  static constexpr const char *Specifer = "%hhu";
-};
-
-template<>
-struct FormatSpecifer<signed short>{ //NOLINT
-  static constexpr const char *Specifer = "%hd";
-};
-
-template<>
-struct FormatSpecifer<unsigned short>{ //NOLINT
-  static constexpr const char *Specifer = "%hu";
-};
-
-template<>
-struct FormatSpecifer<int>{
-  static constexpr const char *Specifer = "%d";
-};
-
-template<>
-struct FormatSpecifer<unsigned>{
-  static constexpr const char *Specifer = "%u";
-};
-
-template<>
-struct FormatSpecifer<long>{ //NOLINT
-  static constexpr const char *Specifer = "%ld";
-};
-
-template<>
-struct FormatSpecifer<unsigned long>{ //NOLINT
-  static constexpr const char *Specifer = "%lu";
-};
-
-template<>
-struct FormatSpecifer<long long>{ //NOLINT
-  static constexpr const char *Specifer = "%lld";
-};
-
-template<>
-struct FormatSpecifer<unsigned long long>{ //NOLINT
-  static constexpr const char *Specifer = "%llu";
-};
-
-template<>
-struct FormatSpecifer<float>{
-  static constexpr const char *Specifer = "%g";
-};
-
-template<>
-struct FormatSpecifer<double>{
-  static constexpr const char *Specifer = "%g";
-};
-
-template<>
-struct FormatSpecifer<long double>{
-  static constexpr const char *Specifer = "%Lg";
-};
-
-
-
-
 export class WindowWrapper {
 public:
-  constexpr WindowWrapper() noexcept : impl_(nullptr), width_(0), height_(0), xoffset_(0), yoffset_(0){};
+  constexpr WindowWrapper() noexcept : impl_(nullptr), width_(0), height_(0), xoffset_(0), yoffset_(0) {};
   WindowWrapper(int width, int height, int xoffset, int yoffset) noexcept : impl_(newwin(height, width, yoffset, xoffset)), width_(width), height_(height), xoffset_(xoffset), yoffset_(yoffset) {}
   void clear() const {
     if (werase(impl_.get()) == ERR) {
@@ -452,7 +378,7 @@ public:
   [[nodiscard]] constexpr int GetYoffset() const noexcept { return yoffset_; }
   void moveCursor(int x, int y) {
     if (wmove(impl_.get(), y, x) == ERR) {
-      if(y>=GetHeight()||x>=GetWidth()){
+      if (y >= GetHeight() || x >= GetWidth()) {
         std::cout << y << ',' << x << ',' << GetHeight() << ',' << GetWidth() << '\n';
         std::exit(1);
       }
@@ -462,11 +388,11 @@ public:
   void place(chtype c) {
     place(Symbol(c));
   }
-  void place(Symbol c) { 
-      cchar_t ct;
-      std::array<wchar_t,2> chars = {c.print(),0};
-      setcchar(&ct, chars.data(), c.modifers(), c.color(), nullptr);
-      wadd_wch(impl_.get(), &ct);
+  void place(Symbol c) {
+    cchar_t ct;
+    std::array<wchar_t, 2> chars = {c.print(), 0};
+    setcchar(&ct, chars.data(), c.modifers(), c.color(), nullptr);
+    wadd_wch(impl_.get(), &ct);
   }
   template <class CharT>
   void place(std::basic_string_view<CharT> str) {
@@ -474,11 +400,6 @@ public:
       return;
     }
     place_impl(str);
-  }
-  void place(NumberC auto num) {
-    if(wprintw(impl_.get(),FormatSpecifer<decltype(num)>::Specifer,num)==ERR){
-      throw PrintFailure{};
-    }
   }
   [[nodiscard]] int cursorX() const noexcept { return getcurx(impl_.get()); }
   [[nodiscard]] int cursorY() const noexcept { return getcury(impl_.get()); }
@@ -495,11 +416,11 @@ private:
     }
   }
   void place_impl(std::basic_string_view<Symbol> str) {
-    for(auto i : str){
+    for (auto i : str) {
       place(i);
     }
   }
-  using ptrTyp = std::unique_ptr<WINDOW, decltype([](WINDOW* w){delwin(w);})>;
+  using ptrTyp = std::unique_ptr<WINDOW, decltype([](WINDOW *w) { delwin(w); })>;
   ptrTyp impl_;
   int width_;
   int height_;
@@ -527,9 +448,30 @@ concept PrintableChar = Printable<T> && static_cast<bool>(!IsViewS<T>{});
 
 export using Symbol_string_view = std::basic_string_view<Symbol>;
 static_assert(Printable<Symbol_string_view>);
+
+export class BoxedWindow;
+
+class WindowStreamBuf : public std::streambuf {
+public:
+  explicit WindowStreamBuf(BoxedWindow *parent) noexcept : parent_(parent) {}
+
+protected:
+  std::streamsize xsputn(const char_type *s, std::streamsize count) override;
+  int_type overflow(int_type ch) override;
+
+private:
+  BoxedWindow *parent_;
+};
+
 export class BoxedWindow {
 public:
-  constexpr BoxedWindow() noexcept = default;
+  BoxedWindow() noexcept = default;
+  BoxedWindow(BoxedWindow &&other) noexcept
+      : impl_(std::move(other.impl_)), streamBuf_(this), ostream_(&streamBuf_) {}
+  BoxedWindow &operator=(BoxedWindow &&other) noexcept {
+    impl_ = std::move(other.impl_);
+    return *this;
+  }
   BoxedWindow(int width, int height, int xoffset, int yoffset) : impl_(width + 2, height + 2, xoffset, yoffset) {
     makeBox();
     updateScreen();
@@ -541,7 +483,7 @@ public:
   }
   void place(PrintableChar auto sym) { impl_.place(sym); }
   void place(PrintableView auto view) { impl_.place(view.substr(0, leftOnLine())); }
-  void place(const char* str){place(std::string_view(str));}
+  void place(const char *str) { place(std::string_view(str)); }
   void place(int x, int y, Printable auto sym) {
     moveCursor(x, y);
     place(sym);
@@ -553,6 +495,7 @@ public:
     place(sym);
     return *this;
   }
+  operator std::ostream &() { return ostream_; } //NOLINT(google-explicit-constructor)
 
   void updateScreen() { impl_.UpdateScreen(); }
   void move(int x, int y) { impl_.Move(x, y); }
@@ -562,7 +505,7 @@ public:
     impl_.clear();
     makeBox();
   }
-  [[nodiscard]] std::size_t leftOnLine() const noexcept { return std::max(prntWidth() - impl_.cursorX(),0); }
+  [[nodiscard]] std::size_t leftOnLine() const noexcept { return std::max(prntWidth() - impl_.cursorX(), 0); }
 
 private:
   void makeBox() {
@@ -590,5 +533,21 @@ private:
     }
   }
   WindowWrapper impl_;
+  WindowStreamBuf streamBuf_{this};
+  std::ostream ostream_{&streamBuf_};
 };
-}  // namespace CursesLowLevel
+
+std::streamsize WindowStreamBuf::xsputn(const char_type *s, std::streamsize count) {
+  parent_->place(std::string_view(s, static_cast<std::size_t>(count)));
+  return count;
+}
+
+auto WindowStreamBuf::overflow(int_type ch) -> int_type {
+  if (ch != traits_type::eof()) {
+    char c = traits_type::to_char_type(ch);
+    parent_->place(std::string_view(&c, 1));
+  }
+  return ch;
+}
+
+} // namespace CursesLowLevel

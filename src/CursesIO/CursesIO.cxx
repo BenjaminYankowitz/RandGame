@@ -55,19 +55,19 @@ constexpr bool inArray(const std::array<T, size> &arr, const T &v) noexcept {
 }
 
 class Word {
-  public:
+public:
   std::string_view word;
   bool weirdAn = false;
 };
 
 class Noun : public Word {
-  public:
-  std::string_view weirdPlural{}; //NOLINT(readability-redundant-member-init)
+public:
+  std::string_view weirdPlural{}; // NOLINT(readability-redundant-member-init)
 };
 
 class Adjective : public Word {};
 
-[[nodiscard]] constexpr bool usesAn(Word word) noexcept{
+[[nodiscard]] constexpr bool usesAn(Word word) noexcept {
   return word.weirdAn != inArray(Vowels, word.word[0]);
 }
 
@@ -75,7 +75,7 @@ class PrintableObject {
   using DescriptorsType = std::array<Adjective, 4>;
 
 public:
-  constexpr explicit PrintableObject(Noun name, std::size_t count = 1) noexcept : name_{name}, count_{count}{}
+  constexpr explicit PrintableObject(Noun name, std::size_t count = 1) noexcept : name_{name}, count_{count} {}
   constexpr void addDescriptor(Adjective descriptor) noexcept { descriptors_[numDescriptors_++] = descriptor; }
   constexpr void setUseThe() { useThe_ = true; }
   constexpr void setCount(std::size_t count) { count_ = count; }
@@ -109,15 +109,14 @@ private:
   bool useThe_ = false;
 };
 
-template <class Printer>
-Printer &operator<<(Printer &out, const PrintableObject &obj) noexcept {
+std::ostream &operator<<(std::ostream &out, const PrintableObject &obj) noexcept {
   if (obj.getCount() == 1) {
     out << obj.getSingularPrefix();
   } else {
     out << obj.getCount();
   }
   out << ' ';
-  for (const auto& word : obj.getDescriptors()) {
+  for (const auto &word : obj.getDescriptors()) {
     out << word.word << ' ';
   }
   std::string_view word;
@@ -161,7 +160,7 @@ Printer &operator<<(Printer &out, const PrintableObject &obj) noexcept {
   }
 }
 
-[[nodiscard]] Noun toName(TerrainType terrain){
+[[nodiscard]] Noun toName(TerrainType terrain) {
   switch (terrain) {
   case TerrainType::Empty:
     return {{"empty spot"}};
@@ -176,11 +175,10 @@ Printer &operator<<(Printer &out, const PrintableObject &obj) noexcept {
   return printer;
 }
 
-
 [[nodiscard]] PrintableObject toPrintAbleObject(ObjectInterface obj) noexcept {
   const Noun ObjName = toName(obj);
   const Adjective matDescriptor = getMatAdj(obj);
-  PrintableObject printer(ObjName,obj.count());
+  PrintableObject printer(ObjName, obj.count());
   printer.addDescriptor(matDescriptor);
   if (obj.artifactStatus() != ArtifactId::Normal) {
     printer.setUseThe();
@@ -188,8 +186,7 @@ Printer &operator<<(Printer &out, const PrintableObject &obj) noexcept {
   return printer;
 }
 
-template <class Printer>
-Printer &operator<<(Printer &str, const ObjectInterface &obj) noexcept {
+std::ostream &operator<<(std::ostream &str, const ObjectInterface &obj) noexcept {
   return str << toPrintAbleObject(obj);
 }
 
@@ -242,29 +239,29 @@ Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexcept {
   case Empty:
     return '.';
   case Wall:
-    auto getType = [floor](Position pos){
-      return floor.inBounds(pos) && floor.getTile(pos).terrainType==Wall;
+    auto getType = [floor](Position pos) {
+      return floor.inBounds(pos) && floor.getTile(pos).terrainType == Wall;
     };
-    auto check = [&getType,pos](Dir dir){
-      if(!getType(pos+dir)){
+    auto check = [&getType, pos](Dir dir) {
+      if (!getType(pos + dir)) {
         return false;
       }
-      auto [dx,dy] = dir;
-      Dir oDir(dy,dx);
+      auto [dx, dy] = dir;
+      Dir oDir(dy, dx);
       // return true;
-      return !(getType(pos+oDir)&&getType(pos-oDir)&&getType(pos+dir+oDir)&&getType(pos+dir-oDir));
+      return !(getType(pos + oDir) && getType(pos - oDir) && getType(pos + dir + oDir) && getType(pos + dir - oDir));
     };
     using enum SpecialChar::Directions;
     SpecialChar::Directions dir = None;
-    if(check(Dir::up()))
-      dir|=Up;
-    if(check(Dir::down()))
-      dir|=Down;
-    if(check(Dir::left()))
-      dir|=Left;
-    if(check(Dir::right()))
-      dir|=Right;
-    if(dir==None && getType(pos.up())){
+    if (check(Dir::up()))
+      dir |= Up;
+    if (check(Dir::down()))
+      dir |= Down;
+    if (check(Dir::left()))
+      dir |= Left;
+    if (check(Dir::right()))
+      dir |= Right;
+    if (dir == None && getType(pos.up())) {
       return ' ';
     }
     return SpecialChar::Walls[dir];
@@ -280,7 +277,7 @@ Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
   if (!tile.objects.empty()) {
     return ObjectToSymbol(tile.objects.back());
   }
-  return TerrainTypeToSymbol(floor,pos);
+  return TerrainTypeToSymbol(floor, pos);
 }
 
 std::string_view getName(MonsterInterface monster) noexcept {
@@ -352,32 +349,33 @@ void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
 }
 
 class ActionMod {
-  public:
+public:
   [[nodiscard]] constexpr MoveMode getMoveMode() noexcept {
     return moveMode_;
   }
   [[nodiscard]] constexpr std::size_t getCount(std::size_t defaultV = 1) const noexcept {
-    if(count_==NoCount){
+    if (count_ == NoCount) {
       return defaultV;
     }
     return count_;
   }
   constexpr std::size_t addDigit(int n) noexcept {
-    changeDigitLast_=true;
-    if(count_==NoCount){
+    changeDigitLast_ = true;
+    if (count_ == NoCount) {
       return count_ = n;
     }
-   return count_ = count_*10+n;
+    return count_ = count_ * 10 + n;
   }
-  constexpr void toggleMoveMode(MoveMode mode) noexcept{
-    moveMode_^=mode;
+  constexpr void toggleMoveMode(MoveMode mode) noexcept {
+    moveMode_ ^= mode;
   }
   constexpr void betweenRounds() noexcept {
-    if(!changeDigitLast_){
-      count_=NoCount;
+    if (!changeDigitLast_) {
+      count_ = NoCount;
     }
     changeDigitLast_ = false;
   }
+
 private:
   static constexpr std::size_t NoCount = std::numeric_limits<std::size_t>::max();
   static constexpr MoveMode DefaultMoveMode = MoveMode::move() | MoveMode::fight();
@@ -421,7 +419,7 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
     if (userInput == SpecialChar::Escape) {
       return NoItem;
     }
-    if (userInput >= 'a' && userInput  < 'a'+static_cast<std::int64_t>(interface.size())) {
+    if (userInput >= 'a' && userInput < 'a' + static_cast<std::int64_t>(interface.size())) {
       return userInput - 'a';
     }
   }
@@ -461,14 +459,14 @@ bool dropItem(GameInterface &gState, ActionMod & /*mod*/) noexcept {
   return true;
 }
 
-bool passTime(GameInterface &gState, ActionMod & mod) noexcept {
+bool passTime(GameInterface &gState, ActionMod &mod) noexcept {
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
   return true;
 }
 
-template<int n>
-bool addDigit(GameInterface & /*gState*/, ActionMod &mod){
-  static_assert(n>=0 && n<=9);
+template <int n>
+bool addDigit(GameInterface & /*gState*/, ActionMod &mod) {
+  static_assert(n >= 0 && n <= 9);
   mod.addDigit(n);
   return true;
 }
@@ -495,7 +493,7 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
 
     {'F', toggleFightMode},
     {'m', toggleMoveMode},
-    
+
     {'0', addDigit<0>},
     {'1', addDigit<1>},
     {'2', addDigit<2>},
@@ -525,8 +523,9 @@ using IOModule::Interface;
 using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
 class PrintToViewer : public streambufT {
 public:
-  explicit PrintToViewer(Interface*  parent) noexcept : parent_(parent){}
-  Interface* parent_;
+  explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
+  Interface *parent_;
+
 protected:
   std::streamsize xsputn(const char_type *s, std::streamsize count) final;
 
@@ -535,12 +534,13 @@ private:
 };
 class CursesEventViewer final : public EventViewerInteface {
 public:
-  explicit CursesEventViewer(Interface* parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
+  explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
   void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
   void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
   void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
   void debug(std::string_view message) final;
   void exception(const std::exception &exception) noexcept final;
+
 private:
   PrintToViewer viewer_;
   std::ostream printWith_;
@@ -556,7 +556,7 @@ public:
     statusWindow_ = BoxedWindow(0, 0, 0, 0);
     oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
   }
-  ~Interface(){
+  ~Interface() {
     Logging::log.rdbuf(oldBuffer_);
   }
   void createTiedGameInterface() noexcept {
@@ -586,7 +586,7 @@ public:
     for (int y = 0; y < MapHeight; y++) {
       mainWindow_.moveCursor(0, y);
       for (int x = 0; x < Mapwidth; x++) {
-        mainWindow_ << TileToSymbol(currentMap,{x,y});
+        mainWindow_ << TileToSymbol(currentMap, {x, y});
       }
     }
     ObjectContainerInterface playerInvent = gState_->lookAtInventory();
@@ -625,18 +625,17 @@ private:
   ActionMod mod_;
   std::vector<std::string> eventLog_;
   std::unique_ptr<GameInterface> gState_;
-  streambufT* oldBuffer_;
+  streambufT *oldBuffer_;
   PrintToViewer printToViewer_;
 };
 } // namespace IOModule
 
-std::ostream& operator<<(std::ostream& out, GameTime time){
+std::ostream &operator<<(std::ostream &out, GameTime time) {
   return out << time.impl;
 }
 
-
-std::ostream& operator<<(std::ostream& out, MonsterInterface monster){
-  if(monster.isPlayer()){
+std::ostream &operator<<(std::ostream &out, MonsterInterface monster) {
+  if (monster.isPlayer()) {
     out << "you";
   } else {
     out << "a " << getName(monster);
@@ -663,7 +662,6 @@ std::streamsize PrintToViewer::xsputn(const char_type *s, std::streamsize count)
   }
   return count;
 }
-
 
 void CursesEventViewer::debug(std::string_view message) {
   printWith_ << message << '\n';
@@ -701,6 +699,5 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
 void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {
   printWith_ << attacker << " hit " << toPrintAbleObject(attacked) << '\n';
 }
-
 
 // 𐁀
