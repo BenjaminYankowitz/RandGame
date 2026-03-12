@@ -155,7 +155,8 @@ public:
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
   constexpr void informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept;
-  constexpr void informMonsterAttack(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
+  constexpr void informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
+  constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept;
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Monster> kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
@@ -307,9 +308,14 @@ private:
     GameState *state_;
     std::vector<Monster::ID> *arr_;
   };
+  // template<typename T, std::size_t N>
+  
   friend constexpr bool operator==(EventListenersIterable::EventListenerSentinal end, EventListenersIterable::EventListenerIterator iter) noexcept;
   static_assert(std::input_or_output_iterator<EventListenersIterable::EventListenerIterator>);
 };
+
+template<>
+constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIterable> = true; //NOLINT
 
 WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
   WorldFloor ret(xDim, yDim);
@@ -320,7 +326,8 @@ WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
 export class EventViewer {
 public:
   virtual void itemPickup(const Monster &grabber, const Object &grabbed) noexcept = 0;
-  virtual void monsterAttack(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
+  virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
+  virtual void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
   virtual ~EventViewer() {};
 };
@@ -399,15 +406,19 @@ public:
   }
   constexpr void broadcastEvent(FloorSpecifier floor, auto &&func) noexcept;
   constexpr void broadcastItemPickup(const Monster &monster, const Object &object) noexcept;
-  constexpr void broadcastMonsterAttack(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept;
+  constexpr void broadcastMonsterHitMonster(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept;
+  constexpr void broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept;
   void printDebug(std::string_view v) noexcept {
     eventViewer_->debug(v);
   }
   void printItemPickup(const Monster &monster, const Object &object) noexcept {
     eventViewer_->itemPickup(monster, object);
   }
-  void printMonsterAttack(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
-    eventViewer_->monsterAttack(hitinfo, attacker, attacked);
+  void printMonsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
+    eventViewer_->monsterHitMonster(hitinfo, attacker, attacked);
+  }
+  void printMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
+    eventViewer_->monsterHitWall(attacker, attacked);
   }
   [[nodiscard]] Monster &getPlayer() noexcept {
     return getMonster(player_);
@@ -497,12 +508,19 @@ constexpr void GameState::broadcastItemPickup(const Monster &monster, const Obje
   });
 }
 
-constexpr void GameState::broadcastMonsterAttack(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept {
+constexpr void GameState::broadcastMonsterHitMonster(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept {
   auto inform = [this, &hitInfo, &attacker, &attacked](Monster &viewer) {
-    viewer.informMonsterAttack(*this, hitInfo, attacker, attacked);
+    viewer.informMonsterHitMonster(*this, hitInfo, attacker, attacked);
   };
   if (attacked.isAlive() && !attacked.caresEvent())
     inform(attacked);
+  broadcastEvent(attacker.getLoc().mapPos, inform);
+}
+
+constexpr void GameState::broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
+  auto inform = [this, &attacker, &attacked](Monster &viewer) {
+    viewer.informMonsterHitWall(*this, attacker, attacked);
+  };
   broadcastEvent(attacker.getLoc().mapPos, inform);
 }
 
@@ -624,15 +642,25 @@ constexpr void Monster::informItemPickup(GameState &state, const Monster &grabbe
     target_ = grabber.getId();
   }
 }
-constexpr void Monster::informMonsterAttack(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
+
+constexpr void Monster::informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
   if (isPlayer()) {
-    state.printMonsterAttack(hitinfo, attacker, attacked);
+    state.printMonsterHitMonster(hitinfo, attacker, attacked);
     return;
   }
   if (attacked == *this) {
     target_ = attacker.getId();
   }
 }
+
+constexpr void Monster::informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept { //NOLINT(readability-make-member-function-const)
+  if (isPlayer()) {
+    state.printMonsterHitWall(attacker, attacked);
+    return;
+  }
+}
+
+
 
 TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
@@ -655,20 +683,30 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
   state.getObjects(getLoc()).addObject(std::move(obj));
   return getSpeed() / DropItemSpeedFraction;
 }
-constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir) noexcept {
-  static constexpr std::size_t ThrowItemSpeedFraction = 1;
-  auto obj = removeFromInvent(i);
+
+constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, const Monster& source, Dir dir){
   Dir lastDir;
-  auto [mapPos, floorId] = getLoc();
+  auto [mapPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
   for (Dir cDir : PathIterable{dir} | std::views::drop(1)) {
     Position cSpot = mapPos + cDir;
     if (!floor.isOpenTile(cSpot)) {
+      if(floor.isOpenTerrain(cSpot)){
+        Monster& target = state.getMonster(floor.getMonster(cSpot));
+        Monster::AttackInfo info{4};
+        auto hitReturn = target.hitBy(state, info);
+        state.broadcastMonsterHitMonster(hitReturn, source, target);
+      }
       break;
     }
     lastDir = cDir;
   }
   floor.getObjects(mapPos + lastDir).addObject(std::move(obj));
+}
+
+constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir) noexcept {
+  static constexpr std::size_t ThrowItemSpeedFraction = 1;
+  sendItemFlying(state,removeFromInvent(i),*this,dir);
   return getSpeed() / ThrowItemSpeedFraction;
 }
 constexpr TimePeriod Monster::dropEverthing(GameState &state) noexcept {
@@ -681,7 +719,7 @@ constexpr TimePeriod Monster::dropEverthing(GameState &state) noexcept {
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
   const auto ret = target.hitBy(state, {damage_()});
-  state.broadcastMonsterAttack(ret, *this, target);
+  state.broadcastMonsterHitMonster(ret, *this, target);
   return getSpeed();
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {

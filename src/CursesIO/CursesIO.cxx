@@ -110,15 +110,15 @@ private:
 };
 
 template <class Printer>
-Printer &operator<<(Printer &str, const PrintableObject &obj) noexcept {
+Printer &operator<<(Printer &out, const PrintableObject &obj) noexcept {
   if (obj.getCount() == 1) {
-    str << obj.getSingularPrefix();
+    out << obj.getSingularPrefix();
   } else {
-    str << obj.getCount();
+    out << obj.getCount();
   }
-  str << ' ';
+  out << ' ';
   for (const auto& word : obj.getDescriptors()) {
-    str << word.word << ' ';
+    out << word.word << ' ';
   }
   std::string_view word;
   std::string_view plural;
@@ -131,8 +131,8 @@ Printer &operator<<(Printer &str, const PrintableObject &obj) noexcept {
       plural = obj.getNamePluralSuffix();
     }
   }
-  str << word << plural;
-  return str;
+  out << word << plural;
+  return out;
 }
 
 [[nodiscard]] Noun toName(ObjectInterface obj) noexcept {
@@ -160,6 +160,22 @@ Printer &operator<<(Printer &str, const PrintableObject &obj) noexcept {
     return {"wooden"};
   }
 }
+
+[[nodiscard]] Noun toName(TerrainType terrain){
+  switch (terrain) {
+  case TerrainType::Empty:
+    return {{"empty spot"}};
+  case TerrainType::Wall:
+    return {{"wall"}};
+  }
+}
+
+[[nodiscard]] PrintableObject toPrintAbleObject(TerrainType terrain) noexcept {
+  const Noun ObjName = toName(terrain);
+  PrintableObject printer(ObjName);
+  return printer;
+}
+
 
 [[nodiscard]] PrintableObject toPrintAbleObject(ObjectInterface obj) noexcept {
   const Noun ObjName = toName(obj);
@@ -506,47 +522,34 @@ export class Interface;
 }
 using IOModule::Interface;
 
-class CursesEventViewer final : public EventViewerInteface {
-public:
-  explicit CursesEventViewer(Interface &parent) noexcept : parent_(&parent) {}
-  void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
-  void monsterAttack(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
-  void debug(std::string_view message) final;
-  void exception(const std::exception &exception) noexcept final;
-private:
-  Interface *parent_;
-};
-
 using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
 class PrintToViewer : public streambufT {
 public:
-  explicit PrintToViewer(std::unique_ptr<EventViewerInteface> parent) noexcept : parent_(std::move(parent)){}
+  explicit PrintToViewer(Interface*  parent) noexcept : parent_(parent){}
+  Interface* parent_;
 protected:
-  std::streamsize xsputn(const char_type *s, std::streamsize count) final {
-    std::string_view input(s,count);
-    std::size_t currentStart = 0;
-    while(true){
-      auto nextNewLine = input.find('\n',currentStart);
-      if(nextNewLine==std::string_view::npos){
-        buffer_+=input.substr(currentStart);
-        break;
-      }
-      buffer_+=input.substr(currentStart,nextNewLine-currentStart);
-      parent_->debug(std::move(buffer_));
-      buffer_.clear();
-      currentStart = nextNewLine+1;
-    }
-    return count;
-  }
+  std::streamsize xsputn(const char_type *s, std::streamsize count) final;
 
 private:
   std::string buffer_;
-  std::unique_ptr<EventViewerInteface> parent_;
 };
+class CursesEventViewer final : public EventViewerInteface {
+public:
+  explicit CursesEventViewer(Interface* parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
+  void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
+  void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
+  void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
+  void debug(std::string_view message) final;
+  void exception(const std::exception &exception) noexcept final;
+private:
+  PrintToViewer viewer_;
+  std::ostream printWith_;
+};
+
 export namespace IOModule {
 class Interface {
 public:
-  Interface() : printToViewer_(PrintToViewer(std::make_unique<CursesEventViewer>(*this))) {
+  Interface() : printToViewer_(this) {
     eventWindow_ = BoxedWindow(0, 0, 0, 0);
     mainWindow_ = BoxedWindow(0, 0, 0, 0);
     inventWindow_ = BoxedWindow(0, 0, 0, 0);
@@ -557,11 +560,11 @@ public:
     Logging::log.rdbuf(oldBuffer_);
   }
   void createTiedGameInterface() noexcept {
-    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(*this));
+    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
   }
   void tieGameInterface(std::unique_ptr<GameInterface> gState) {
     gState_ = std::move(gState);
-    gState_->setEventViewer(std::make_unique<CursesEventViewer>(*this));
+    gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
   }
   [[nodiscard]] std::unique_ptr<GameInterface> getGameInterface() noexcept {
     return std::move(gState_);
@@ -627,14 +630,47 @@ private:
 };
 } // namespace IOModule
 
-void CursesEventViewer::debug(std::string_view message) {
-  std::string ret = std::to_string(parent_->getTime().impl);
-  ret+= ": ";
-  ret+= message;
-  parent_->addEvent(std::move(ret));
+std::ostream& operator<<(std::ostream& out, GameTime time){
+  return out << time.impl;
 }
+
+
+std::ostream& operator<<(std::ostream& out, MonsterInterface monster){
+  if(monster.isPlayer()){
+    out << "you";
+  } else {
+    out << "a " << getName(monster);
+  }
+  return out;
+}
+
+std::streamsize PrintToViewer::xsputn(const char_type *s, std::streamsize count) {
+  std::string_view input(s, count);
+  std::size_t currentStart = 0;
+  while (true) {
+    auto nextNewLine = input.find('\n', currentStart);
+    if (nextNewLine == std::string_view::npos) {
+      buffer_ += input.substr(currentStart);
+      break;
+    }
+    buffer_ += input.substr(currentStart, nextNewLine - currentStart);
+    std::string ret = std::to_string(parent_->getTime().impl);
+    ret += ": ";
+    ret += buffer_;
+    parent_->addEvent(std::move(ret));
+    buffer_.clear();
+    currentStart = nextNewLine + 1;
+  }
+  return count;
+}
+
+
+void CursesEventViewer::debug(std::string_view message) {
+  printWith_ << message << '\n';
+}
+
 void CursesEventViewer::exception(const std::exception &exception) noexcept {
-  const auto time = parent_->getTime().impl;
+  const auto time = viewer_.parent_->getTime().impl;
   std::fstream logfile("log.txt", std::ios_base::out | std::ios_base::app);
   if (!logfile.is_open()) {
     std::cerr << "Unhandeled exception, and log file does not open\n"
@@ -654,32 +690,17 @@ void CursesEventViewer::exception(const std::exception &exception) noexcept {
   logfile.sync();
 }
 
-std::ostream& operator<<(std::ostream& out, GameTime time){
-  return out << time.impl;
-}
-
-
-std::ostream& operator<<(std::ostream& out, MonsterInterface monster){
-  if(monster.isPlayer()){
-    out << "you";
-  } else {
-    out << "a " << getName(monster);
-  }
-  return out;
-}
-
 void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface grabed) {
-  std::stringstream stream;
-  stream << parent_->getTime() << ": " << grabber << " picked up " << grabed;
-  parent_->addEvent(stream.str());
+  printWith_ << grabber << " picked up " << grabed << '\n';
 }
 
-
-void CursesEventViewer::monsterAttack(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
-  std::stringstream stream;
-  const std::string_view verb = info.killed ? "killed" : "hit";
-  stream << parent_->getTime() << ": " << attacker << " " << verb << " " << attacked;
-  parent_->addEvent(stream.str());
+void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
+  printWith_ << attacker << " " << (info.killed ? "killed" : "hit") << " " << attacked << '\n';
 }
+
+void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {
+  printWith_ << attacker << " hit " << toPrintAbleObject(attacked) << '\n';
+}
+
 
 // 𐁀

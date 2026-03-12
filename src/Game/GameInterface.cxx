@@ -78,7 +78,8 @@ public:
   };
   virtual void itemPickup(MonsterInterface grabber, ObjectInterface grabbed) = 0;
   virtual void debug(std::string_view message) = 0;
-  virtual void monsterAttack(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
+  virtual void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
+  virtual void monsterHitWall(MonsterInterface attacker, TerrainType) = 0;
   virtual void exception(const std::exception& e) noexcept = 0;
   virtual ~EventViewerInteface(){};
 };
