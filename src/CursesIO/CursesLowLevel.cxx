@@ -1,18 +1,15 @@
 module;
 #include <algorithm>
 #include <array>
-#include <charconv>
 #include <cstdint>
 #include <cursesw.h>
 #include <exception>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <string_view>
 #include <utility>
 export module CursesLowLevel;
 namespace CursesLowLevel {
-alignas(32) static thread_local std::array<std::byte, 1024> buffer; // NOLINT
 export namespace IOExceptions {
 struct IOModuleException : std::exception {
 };
@@ -31,43 +28,6 @@ struct MoveCursorFailure : public WindowFailure {
 };
 struct ReadDataFailure : public WindowFailure {
   [[nodiscard]] const char *what() const noexcept override { return "Failed to read line of data"; }
-};
-struct BufferOverflow : public WindowFailure {
-  explicit BufferOverflow(std::size_t needed) noexcept : needed_(needed) {}
-  [[nodiscard]] const char *what() const noexcept override {
-    char *const bufferBegin = reinterpret_cast<char *>(buffer.data());
-    char *bufferLoc = bufferBegin;
-    char *bufferEnd = bufferBegin + buffer.size();
-    auto addStr = [&bufferLoc, bufferBegin](std::string_view str) {
-      const std::size_t chrPrint = std::min<std::size_t>(str.size(), buffer.size() - std::distance(bufferBegin, bufferLoc));
-      if (chrPrint == 0) {
-        return;
-      }
-      std::memcpy(bufferLoc, str.data(), chrPrint);
-      bufferLoc += chrPrint;
-    };
-    auto addNum = [&bufferLoc, bufferEnd](std::size_t n) {
-      if (bufferLoc == bufferEnd) {
-        return;
-      }
-      char *nBufferLoc = std::to_chars(bufferLoc, bufferEnd, n).ptr;
-      bufferLoc = nBufferLoc;
-    };
-    addStr("Buffer too small only has ");
-    addNum(buffer.size());
-    addStr(" Bytes but ");
-    addNum(needed_);
-    addStr("Bytes needed\n");
-    if (bufferLoc != bufferEnd) {
-      *bufferLoc = '\0';
-    } else {
-      *(bufferEnd - 1) = '\0';
-    }
-    return bufferBegin;
-  }
-
-private:
-  std::size_t needed_;
 };
 struct BoxResizeFailure : public WindowFailure {
   [[nodiscard]] const char *what() const noexcept override { return "Tried to resize Box and failed"; }
@@ -328,11 +288,6 @@ export std::pair<int, int> getMaxDims() { return {getmaxy(stdscr), getmaxx(stdsc
 template <class T>
 concept NumberC = (std::integral<T> || std::floating_point<T>) && !std::same_as<T, char>;
 
-constexpr std::string_view numInBuffer(NumberC auto num) noexcept {
-  char *const bufferData = reinterpret_cast<char *>(buffer.data());
-  return std::string_view(bufferData, std::to_chars(bufferData, bufferData + buffer.size(), num).ptr);
-}
-
 export class WindowWrapper {
 public:
   constexpr WindowWrapper() noexcept : impl_(nullptr), width_(0), height_(0), xoffset_(0), yoffset_(0) {};
@@ -385,10 +340,10 @@ public:
       throw MoveCursorFailure{};
     }
   }
-  void place(chtype c) {
+  void place(std::same_as<chtype> auto c) {
     place(Symbol(c));
   }
-  void place(Symbol c) {
+  void place(std::same_as<Symbol> auto c) {
     cchar_t ct;
     std::array<wchar_t, 2> chars = {c.print(), 0};
     setcchar(&ct, chars.data(), c.modifers(), c.color(), nullptr);
@@ -434,6 +389,9 @@ concept Printable = requires(WindowWrapper &w, T a) {
   { w.place(a) };
 };
 
+template<class T>
+concept NPrintable = !Printable<T>;
+
 template <class T>
 struct IsViewS : public std::false_type {};
 
@@ -446,8 +404,10 @@ concept PrintableView = Printable<T> && static_cast<bool>(IsViewS<T>{});
 template <class T>
 concept PrintableChar = Printable<T> && static_cast<bool>(!IsViewS<T>{});
 
+
 export using Symbol_string_view = std::basic_string_view<Symbol>;
 static_assert(Printable<Symbol_string_view>);
+static_assert(NPrintable<int>);
 
 export class BoxedWindow;
 
@@ -484,6 +444,9 @@ public:
   void place(PrintableChar auto sym) { impl_.place(sym); }
   void place(PrintableView auto view) { impl_.place(view.substr(0, leftOnLine())); }
   void place(const char *str) { place(std::string_view(str)); }
+  void place(NPrintable auto const & obj){
+    ostream_ << obj;
+  }
   void place(int x, int y, Printable auto sym) {
     moveCursor(x, y);
     place(sym);
@@ -491,11 +454,10 @@ public:
   [[nodiscard]] int cursorX() const noexcept { return impl_.cursorX() - 1; }
   [[nodiscard]] int cursorY() const noexcept { return impl_.cursorY() - 1; }
   void moveCursor(int x, int y) { return impl_.moveCursor(x + 1, y + 1); }
-  BoxedWindow &operator<<(Printable auto sym) {
+  BoxedWindow &operator<<(auto sym) {
     place(sym);
     return *this;
   }
-  operator std::ostream &() { return ostream_; } //NOLINT(google-explicit-constructor)
 
   void updateScreen() { impl_.UpdateScreen(); }
   void move(int x, int y) { impl_.Move(x, y); }
