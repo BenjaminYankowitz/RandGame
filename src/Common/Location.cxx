@@ -60,16 +60,16 @@ public:
   [[nodiscard]] constexpr static Dir up() noexcept {
     return {0, -1};
   };
-  [[nodiscard]] constexpr static Dir down() {
+  [[nodiscard]] constexpr static Dir down() noexcept {
     return {0, 1};
   };
-  [[nodiscard]] constexpr static Dir left() {
+  [[nodiscard]] constexpr static Dir left() noexcept {
     return {-1, 0};
   };
-  [[nodiscard]] constexpr static Dir right() {
+  [[nodiscard]] constexpr static Dir right() noexcept {
     return {1, 0};
   };
-  bool operator==(const Dir &pos) const = default;
+  [[nodiscard]] constexpr bool operator==(const Dir &pos) const = default;
   [[nodiscard]] constexpr Dir operator-() const noexcept { return {-dx, -dy}; }
   [[nodiscard]] constexpr static const BoxIterable &boxDirs() {
     return BoxIteratorInst;

@@ -8,6 +8,7 @@ module;
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <ranges>
 export module CursesLowLevel;
 namespace CursesLowLevel {
 export namespace IOExceptions {
@@ -482,7 +483,7 @@ private:
     impl_.moveCursor(prntWidth() + 1, prntHeight() + 1);
     impl_.place(L'┘');
     impl_.moveCursor(1, 0);
-    for (int i0 = 0; i0 < 2; i0++) {
+    for (auto _ : std::views::iota(0,2)) {
       for (int i = 1; i < prntWidth() + 1; i++) {
         impl_.place(L'─');
       }

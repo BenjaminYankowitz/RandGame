@@ -29,6 +29,13 @@ static_assert([] {
   return t.impl == 20;
 }());
 
+// operator*= returns reference (chaining)
+static_assert([] {
+  TimePeriod t(60);
+  (t *= 2) *= 3;
+  return t.impl == 60*2*3;
+}());
+
 // operator/
 static_assert((TimePeriod(20) / 4).impl == 5);
 
@@ -39,10 +46,21 @@ static_assert([] {
   return t.impl == 5;
 }());
 
+// operator/= returns reference (chaining)
+static_assert([] {
+  TimePeriod t(60);
+  (t /= 2) /= 3;
+  return t.impl == 10;
+}());
+
 // operator<=>
 static_assert(TimePeriod(5) < TimePeriod(10));
 static_assert(TimePeriod(10) > TimePeriod(5));
 static_assert(!(TimePeriod(5) > TimePeriod(5)));
+
+// operator==
+static_assert(TimePeriod(5) == TimePeriod(5));
+static_assert(!(TimePeriod(5) == TimePeriod(6)));
 
 // operator--
 static_assert([] {
@@ -74,6 +92,13 @@ static_assert(GameTime().impl == 0);
 static_assert([] {
   GameTime g;
   GameTime g2 = g + TimePeriod(5);
+  return g2.impl == 5;
+}());
+
+// const GameTime + TimePeriod
+static_assert([] {
+  const GameTime g{};
+  auto g2 = g + TimePeriod(5);
   return g2.impl == 5;
 }());
 

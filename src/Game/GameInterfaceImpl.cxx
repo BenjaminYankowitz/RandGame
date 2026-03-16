@@ -16,8 +16,6 @@ Health MonsterInterface::getHealth() const noexcept { return monster_->getHealth
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(monster_->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 
-
-
 WorldTileInterface toInterface(const GameState &gameState, ConstWorldTile tile) noexcept {
   MonsterInterface mInter(tile.monster.isNull() ? nullptr : &gameState.getMonster(tile.monster));
   WorldTileInterface ret(ObjectContainerInterface(tile.objects), mInter, tile.terrainType);
@@ -25,7 +23,7 @@ WorldTileInterface toInterface(const GameState &gameState, ConstWorldTile tile) 
 }
 
 WorldFloorInterface::WorldFloorInterface(const GameState &gameState, const WorldFloor &floor) noexcept : gameState_(&gameState), floor_(&floor) {}
-WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept { return toInterface(*gameState_,floor_->getTile(pos)); }
+WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept { return toInterface(*gameState_, floor_->getTile(pos)); }
 std::size_t WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
 std::size_t WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
 bool WorldFloorInterface::inBounds(Position pos) const { return floor_->inBounds(pos); }
@@ -37,59 +35,62 @@ ObjectInterface ObjectContainerInterface::front() const noexcept { return Object
 ObjectInterface ObjectContainerInterface::back() const noexcept { return ObjectInterface(container_->back()); }
 ObjectInterface ObjectContainerInterface::operator[](std::size_t i) const noexcept { return ObjectInterface((*container_)[i]); }
 
-
-GameInterface::GameInterface(std::unique_ptr<EventViewerInteface>  viewer) noexcept : gs_(std::make_unique<GameState>()) {
+GameInterface::GameInterface(std::unique_ptr<EventViewerInterface> viewer) noexcept : gs_(std::make_unique<GameState>()) {
   setEventViewer(std::move(viewer));
 }
 
 class EventViewerTranslator : public EventViewer {
-  public:
-  explicit EventViewerTranslator(std::unique_ptr<EventViewerInteface> impl) noexcept : impl_(std::move(impl)) {}
-  void itemPickup(const Monster& grabber,const  Object& grabbed) noexcept final {
+public:
+  explicit EventViewerTranslator(std::unique_ptr<EventViewerInterface> impl) noexcept : impl_(std::move(impl)) {}
+  void itemPickup(const Monster &grabber, const Object &grabbed) noexcept final {
     try {
-      impl_->itemPickup(MonsterInterface(grabber),ObjectInterface(grabbed));
-    } catch (const std::exception& e){
+      impl_->itemPickup(MonsterInterface(grabber), ObjectInterface(grabbed));
+    } catch (const std::exception &e) {
       impl_->exception(e);
-    } catch(...){}
+    } catch (...) {
+    }
   }
-   void debug(std::string_view message) noexcept final {
+  void debug(std::string_view message) noexcept final {
     try {
       impl_->debug(message);
-    } catch (const std::exception& e){
+    } catch (const std::exception &e) {
       impl_->exception(e);
-    } catch(...){}
+    } catch (...) {
+    }
   }
-  void monsterHitMonster(const Monster::HitReturn& hitreturn, const Monster& attacker, const Monster& attacked) noexcept final {
+  void monsterHitMonster(const Monster::HitReturn &hitreturn, const Monster &attacker, const Monster &attacked) noexcept final {
     try {
-      impl_->monsterHitMonster({hitreturn.damageDone,!!hitreturn.killed},MonsterInterface(attacker),MonsterInterface(attacked));
-    } catch (const std::exception& e){
+      impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, MonsterInterface(attacker), MonsterInterface(attacked));
+    } catch (const std::exception &e) {
       impl_->exception(e);
-    } catch(...){}
+    } catch (...) {
+    }
   }
-  void monsterHitWall(const Monster& attacker, TerrainType attacked) noexcept final {
+  void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept final {
     try {
-      impl_->monsterHitWall(MonsterInterface(attacker),attacked);
-    } catch (const std::exception& e){
+      impl_->monsterHitWall(MonsterInterface(attacker), attacked);
+    } catch (const std::exception &e) {
       impl_->exception(e);
-    } catch(...){}
+    } catch (...) {
+    }
   }
-  private:
-  std::unique_ptr<EventViewerInteface> impl_;
+
+private:
+  std::unique_ptr<EventViewerInterface> impl_;
 };
 
-
-void GameInterface::setEventViewer(std::unique_ptr<EventViewerInteface> viewer) noexcept {
+void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept {
   gs_->setEventViewer(std::make_unique<EventViewerTranslator>(std::move(viewer)));
 }
 void GameInterface::exit() noexcept {}
 void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
-  if(!gs_->getPlayer().isAlive()){
+  if (!gs_->getPlayer().isAlive()) {
     return;
   }
   passTime(gs_->getPlayer().generalMove(*gs_, capDir(d), mode));
 }
 void GameInterface::pickUpItem(std::size_t selected) noexcept {
-  if(!gs_->getPlayer().isAlive()){
+  if (!gs_->getPlayer().isAlive()) {
     return;
   }
   ObjectContainer &floorItems = gs_->getObjects(gs_->getPlayer().getLoc());
@@ -130,7 +131,7 @@ TimePeriod GameInterface::getSpeed() const noexcept {
 }
 
 void GameInterface::dropItem(std::size_t i) noexcept {
-  if(!gs_->getPlayer().isAlive()){
+  if (!gs_->getPlayer().isAlive()) {
     return;
   }
   const auto &invent = gs_->getPlayer().viewInventory();
@@ -141,7 +142,7 @@ void GameInterface::dropItem(std::size_t i) noexcept {
 }
 
 void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
-  if(!gs_->getPlayer().isAlive()){
+  if (!gs_->getPlayer().isAlive()) {
     return;
   }
   const ObjectContainer &invent = gs_->getPlayer().viewInventory();
@@ -151,7 +152,7 @@ void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
   passTime(gs_->getPlayer().throwItem(*gs_, i, dir));
 }
 void GameInterface::passTime(TimePeriod numTurns) noexcept {
-  if(!gs_->getPlayer().isAlive()){
+  if (!gs_->getPlayer().isAlive()) {
     return;
   }
   gs_->passTime(numTurns);

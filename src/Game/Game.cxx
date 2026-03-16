@@ -4,95 +4,6 @@ import DungeonMaker;
 import GameTypes;
 import MonsterClassConfig;
 
-export class Object {
-public:
-  constexpr Object(int count, ObjectType type, Material mat) noexcept : count_(count), type_(type), mat_(mat) {}
-  [[nodiscard]] constexpr bool isCombinable() const noexcept {
-    return artifactStatus_ == ArtifactId::Normal;
-  }
-  [[nodiscard]] constexpr bool canCombine(const Object &other) const noexcept {
-    return other.type_ == type_ && other.mat_ == mat_ && isCombinable() && other.isCombinable();
-  }
-  constexpr void combine(std::unique_ptr<Object> other) noexcept {
-    count_ += other->count_;
-  }
-  [[nodiscard]] constexpr int count() const noexcept { return count_; }
-  [[nodiscard]] constexpr ObjectType type() const noexcept { return type_; }
-  [[nodiscard]] constexpr Material mat() const noexcept { return mat_; }
-  [[nodiscard]] constexpr ArtifactId artifactStatus() const noexcept { return artifactStatus_; }
-
-private:
-  int count_;
-  ObjectType type_;
-  Material mat_;
-  ArtifactId artifactStatus_ = ArtifactId::Normal;
-};
-
-export class ObjectContainer {
-  using iterator = IteratorImpl<std::unique_ptr<Object>, ObjectContainer, Object &, [](std::unique_ptr<Object> &p) -> Object & { return *p; }>;
-  using const_iterator = IteratorImpl<const std::unique_ptr<Object>, ObjectContainer, const Object &, [](const std::unique_ptr<Object> &p) -> const Object & { return *p; }>;
-
-public:
-  ObjectContainer() = default;
-  ObjectContainer(ObjectContainer &) = delete;
-  ObjectContainer(ObjectContainer &&) = default;
-  constexpr void addObject(std::unique_ptr<Object> obj) noexcept {
-    auto v = std::ranges::find_if(*this, [&obj = *obj](const Object &oObj) { return obj.canCombine(oObj); });
-    if (v != end()) {
-      v->combine(std::move(obj));
-    } else {
-      impl_.push_back(std::move(obj));
-    }
-  }
-  [[nodiscard]] constexpr std::size_t size() const noexcept {
-    return impl_.size();
-  }
-  [[nodiscard]] constexpr bool empty() const noexcept {
-    return impl_.empty();
-  }
-  [[nodiscard]] constexpr Object &operator[](std::size_t i) {
-    return *impl_[i];
-  }
-  [[nodiscard]] constexpr const Object &operator[](std::size_t i) const {
-    return *impl_[i];
-  }
-  [[nodiscard]] constexpr iterator begin() noexcept {
-    return iterator(impl_.data());
-  }
-  [[nodiscard]] constexpr const_iterator begin() const noexcept {
-    return const_iterator(impl_.data());
-  }
-  [[nodiscard]] constexpr iterator end() noexcept {
-    return iterator(impl_.data() + impl_.size());
-  }
-  [[nodiscard]] constexpr const_iterator end() const noexcept {
-    return const_iterator(impl_.data() + impl_.size());
-  }
-  [[nodiscard]] constexpr std::unique_ptr<Object> remove(std::size_t i) noexcept {
-    std::unique_ptr<Object> ptr = std::move(impl_[i]);
-    if (i + 1 != impl_.size()) {
-      impl_[i] = std::move(impl_.back());
-    }
-    impl_.pop_back();
-    return ptr;
-  }
-  [[nodiscard]] constexpr Object &front() noexcept {
-    return operator[](0);
-  }
-  [[nodiscard]] constexpr const Object &front() const noexcept {
-    return operator[](0);
-  }
-  [[nodiscard]] constexpr Object &back() noexcept {
-    return operator[](size() - 1);
-  }
-  [[nodiscard]] constexpr const Object &back() const noexcept {
-    return operator[](size() - 1);
-  }
-
-private:
-  std::vector<std::unique_ptr<Object>> impl_;
-};
-
 export class GameState;
 
 export class Monster {
@@ -330,7 +241,7 @@ public:
   virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
   virtual void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
-  virtual ~EventViewer() {};
+  virtual ~EventViewer() = default;
 };
 
 template <class T, class Container, class Compare>
@@ -754,7 +665,7 @@ constexpr std::unique_ptr<Monster> Monster::kill(GameState &state) noexcept {
 Monster::HitReturn Monster::hitBy(GameState &state, AttackInfo info) noexcept {
   health_ -= info.damage;
   if (health_ > 0) {
-    return {info.damage,nullptr};
+    return {info.damage, nullptr};
   }
-  return {info.damage,kill(state)};
+  return {info.damage, kill(state)};
 }

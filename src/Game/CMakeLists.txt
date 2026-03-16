@@ -22,12 +22,12 @@ target_sources(Game
             
 target_link_libraries(Game PUBLIC DungeonMaker Common MonsterClassConfig GameTypes)
 
-add_library(GameInterface STATIC)  
-target_sources(Game
+add_library(GameInterface STATIC)
+target_sources(GameInterface
 	PUBLIC
-		FILE_SET CXX_MODULES FILES 
+		FILE_SET CXX_MODULES FILES
       	GameInterface.cxx
-	PRIVATE 
+	PRIVATE
 		GameInterfaceImpl.cxx)
-            
-target_link_libraries(GameInterface Private Game Common)
+
+target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE Game)

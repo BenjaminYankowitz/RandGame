@@ -2,7 +2,6 @@
 import SerializationLib;
 import std;
 
-
 TEST(SerializationLibTests, SerializeAndDeserializeSingleInt) {
   std::stringstream ss;
   int original = 42;
@@ -32,7 +31,7 @@ TEST(SerializationLibTests, SerializeableConceptCheck) {
   static_assert(SerializationLib::Serializeable<char>);
 }
 
-TEST(SerializationLibTests, DeserializeIsBroken) {
+TEST(SerializationLibTests, DeserializeRoundTrip) {
   std::stringstream ss;
   int a = 10;
   double b = 2.5;
@@ -40,7 +39,7 @@ TEST(SerializationLibTests, DeserializeIsBroken) {
   ss.seekg(0);
   int ra;
   double rb;
-  SerializationLib::deserialize(ss, ra, rb); 
+  SerializationLib::deserialize(ss, ra, rb);
   EXPECT_EQ(ra, a);
   EXPECT_DOUBLE_EQ(rb, b);
 }

@@ -2,11 +2,11 @@ export module GameInterface;
 export import GameTypes;
 import Common;
 
-class Object;
-
 export class ObjectInterface {
 public:
   explicit ObjectInterface(const Object &obj) noexcept;
+  explicit ObjectInterface(const std::unique_ptr<const Object> &obj) noexcept : ObjectInterface(*obj) {}
+  explicit ObjectInterface(const std::unique_ptr<Object> &obj) noexcept : ObjectInterface(*obj) {}
   [[nodiscard]] int count() const noexcept;
   [[nodiscard]] ObjectType type() const noexcept;
   [[nodiscard]] Material mat() const noexcept;
@@ -16,19 +16,23 @@ private:
   const Object *obj_;
 };
 
-class ObjectContainer;
 export class ObjectContainerInterface {
 public:
-  using iterator = IteratorImpl<ObjectInterface,ObjectContainerInterface,ObjectInterface>;
+  using iterator = IteratorWrapper<typename ObjectContainer::const_iterator, ObjectInterface>;
   using const_iterator = iterator;
   explicit ObjectContainerInterface(const ObjectContainer &container) noexcept;
-  [[nodiscard]] iterator begin() const noexcept;
-  [[nodiscard]] iterator end() const noexcept;
+  [[nodiscard]] iterator begin() const noexcept {
+    return container_->begin();
+  }
+  [[nodiscard]] iterator end() const noexcept {
+    return container_->end();
+  }
   [[nodiscard]] std::size_t size() const noexcept;
   [[nodiscard]] bool empty() const noexcept;
   [[nodiscard]] ObjectInterface front() const noexcept;
   [[nodiscard]] ObjectInterface back() const noexcept;
   [[nodiscard]] ObjectInterface operator[](std::size_t i) const noexcept;
+
 private:
   const ObjectContainer *container_;
 };
@@ -45,6 +49,7 @@ public:
   [[nodiscard]] Health getHealth() const noexcept;
   [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
   [[nodiscard]] bool isNull() const noexcept;
+
 private:
   const Monster *monster_;
 };
@@ -60,7 +65,7 @@ class GameState;
 class WorldFloor;
 export class WorldFloorInterface {
 public:
-  WorldFloorInterface(const GameState& gameState, const WorldFloor &floor) noexcept;
+  WorldFloorInterface(const GameState &gameState, const WorldFloor &floor) noexcept;
   [[nodiscard]] WorldTileInterface getTile(Position pos) const noexcept;
   [[nodiscard]] std::size_t rows() const noexcept;
   [[nodiscard]] std::size_t cols() const noexcept;
@@ -71,24 +76,24 @@ private:
   const WorldFloor *floor_;
 };
 
-export class EventViewerInteface {
+export class EventViewerInterface {
 public:
-  struct HitInfo{
+  struct HitInfo {
     std::optional<Health> damageDone;
     bool killed;
   };
   virtual void itemPickup(MonsterInterface grabber, ObjectInterface grabbed) = 0;
   virtual void debug(std::string_view message) = 0;
   virtual void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
-  virtual void monsterHitWall(MonsterInterface attacker, TerrainType) = 0;
-  virtual void exception(const std::exception& e) noexcept = 0;
-  virtual ~EventViewerInteface(){};
+  virtual void monsterHitWall(MonsterInterface attacker, TerrainType attacked) = 0;
+  virtual void exception(const std::exception &e) noexcept = 0;
+  virtual ~EventViewerInterface() {};
 };
 
 export class GameInterface {
 public:
-  explicit GameInterface(std::unique_ptr<EventViewerInteface> viewer) noexcept;
-  void setEventViewer(std::unique_ptr<EventViewerInteface> viewer) noexcept;
+  explicit GameInterface(std::unique_ptr<EventViewerInterface> viewer) noexcept;
+  void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
   void pickUpItem(std::size_t selected) noexcept;
@@ -103,7 +108,7 @@ public:
   void throwItem(std::size_t i, Dir dir) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
   ~GameInterface();
-  
+
 private:
   std::unique_ptr<GameState> gs_;
 };

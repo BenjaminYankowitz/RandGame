@@ -5,6 +5,7 @@ export class TimePeriod {
 public:
   friend class GameTime;
   constexpr explicit TimePeriod(std::size_t time) noexcept : impl(time) {}
+  [[nodiscard]] constexpr bool operator==(const TimePeriod &other) const noexcept { return impl == other.impl; }
   [[nodiscard]] constexpr auto operator<=>(const TimePeriod &other) const noexcept { return impl <=> other.impl; }
   [[nodiscard]] constexpr TimePeriod operator+(TimePeriod other) const noexcept {
     auto cp = *this;
@@ -29,7 +30,7 @@ public:
     return *this;
   }
   [[nodiscard]] constexpr bool future() const noexcept { return impl != 0; }
-  constexpr TimePeriod operator/=(std::size_t div) noexcept {
+  constexpr TimePeriod &operator/=(std::size_t div) noexcept {
     impl /= div;
     return *this;
   }
@@ -45,7 +46,7 @@ export class GameTime {
 public:
   constexpr GameTime() noexcept = default;
   [[nodiscard]] constexpr auto operator<=>(const GameTime &other) const noexcept = default;
-  constexpr GameTime operator+(TimePeriod timePassed) noexcept {
+  [[nodiscard]] constexpr GameTime operator+(TimePeriod timePassed) const noexcept {
     GameTime nTime(*this);
     return nTime += timePassed;
   }

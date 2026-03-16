@@ -16,4 +16,4 @@ target_sources(CursesIO
 		FILE_SET CXX_MODULES FILES
 			CursesIO.cxx)
 
-target_link_libraries(CursesIO PUBLIC Game CursesLowLevel Common)
+target_link_libraries(CursesIO PUBLIC GameInterface CursesLowLevel Common)

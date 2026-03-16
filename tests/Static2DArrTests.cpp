@@ -58,3 +58,16 @@ static_assert([] consteval {
     return false;
   return true;
 }());
+
+// fill()
+static_assert([] consteval {
+  Static2DArr<int> arr(2, 3);
+  arr.fill(42);
+  return arr[0, 0] == 42 && arr[1, 2] == 42;
+}());
+
+// inBounds()
+static_assert([] consteval {
+  Static2DArr<int> arr(3, 4);
+  return arr.inBounds(0, 0) && arr.inBounds(2, 3) && !arr.inBounds(3, 0) && !arr.inBounds(0, 4);
+}());

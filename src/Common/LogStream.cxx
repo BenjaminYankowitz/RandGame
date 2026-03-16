@@ -1,10 +1,10 @@
 export module Common:LogStream;
 import std;
 
-
 class IgnoreStreamBuf : public std::streambuf {
 public:
   IgnoreStreamBuf() = default;
+
 protected:
   std::streamsize xsputn(const char_type * /*s*/, std::streamsize count) override {
     return count;
@@ -13,13 +13,8 @@ protected:
 
 export namespace Logging {
 
-  IgnoreStreamBuf ignoreBuf;
+IgnoreStreamBuf ignoreBuf;
 
 std::ostream log(std::cerr.rdbuf());
 
-void f(){
-  log.rdbuf(&ignoreBuf);
-  log << 3;
-}
-
-}  // namespace Logging
+} // namespace Logging

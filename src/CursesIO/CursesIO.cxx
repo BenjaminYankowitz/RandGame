@@ -332,6 +332,10 @@ void displayInvent(BoxedWindow &window, ObjectContainerInterface items) {
     window.moveCursor(0, y);
     window << std::string_view(front);
     front[0]++;
+    if (front[0] == 'z' + 1)
+      front[0] = 'A';
+    if (front[0] == 'Z' + 1)
+      break;
     window << items[y];
   }
   window.updateScreen();
@@ -400,7 +404,7 @@ protected:
 private:
   std::string buffer_;
 };
-class CursesEventViewer final : public EventViewerInteface {
+class CursesEventViewer final : public EventViewerInterface {
 public:
   explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
   void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
@@ -415,9 +419,9 @@ private:
 };
 
 namespace Actions {
-  using ActionType = bool (*)(GameInterface &, IOModule::Interface&, ActionMod &);
-  [[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept;
-}
+using ActionType = bool (*)(GameInterface &, IOModule::Interface &, ActionMod &);
+[[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept;
+} // namespace Actions
 export namespace IOModule {
 class Interface {
 public:
@@ -480,7 +484,7 @@ public:
     if (func == nullptr) {
       return true;
     }
-    return func(*gState_,*this, mod_);
+    return func(*gState_, *this, mod_);
   }
   void addEvent(std::string str) noexcept {
     eventLog_.emplace_back(std::move(str));
@@ -488,15 +492,16 @@ public:
   [[nodiscard]] GameTime getTime() const noexcept {
     return gState_->getTime();
   }
-  bool showSelection(Position pos){
+  bool showSelection(Position pos) {
     Raii_.setCursorState(1);
-    if(mainWindow_.inBounds(pos.x,pos.y)){
+    if (mainWindow_.inBounds(pos.x, pos.y)) {
       mainWindow_.moveCursor(pos.x, pos.y);
       mainWindow_.updateScreen();
       return true;
     }
     return false;
   }
+
 private:
   [[no_unique_address]] CursesRAII Raii_;
   BoxedWindow mainWindow_;
@@ -512,9 +517,9 @@ private:
 } // namespace IOModule
 
 namespace Actions {
-  
+
 template <int Dx, int Dy>
-constexpr bool movePlayer(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod &modifer) noexcept {
+constexpr bool movePlayer(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
   gState.generalMove(D, modifer.getMoveMode());
@@ -554,17 +559,17 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
   }
 }
 
-bool toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
+bool toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::move());
   return true;
 }
 
-bool toggleFightMode(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
+bool toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::fight());
   return true;
 }
 
-bool pickUpItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) {
+bool pickUpItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) {
   std::size_t index = getItemFromInterface(gState.lookAtFloor());
   if (index != NoItem) {
     gState.pickUpItem(index);
@@ -572,34 +577,34 @@ bool pickUpItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMo
   return true;
 }
 
-std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface& iterface) noexcept{
+std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface) noexcept {
   auto pos = gState.getLocation().pos;
   iterface.showSelection(pos);
-  while(true){
+  while (true) {
     auto cmnd = CursesRAII::getChar();
-    if(cmnd == SpecialChar::Escape)
+    if (cmnd == SpecialChar::Escape)
       return {};
-    if(cmnd == '.')
+    if (cmnd == '.')
       return pos;
-    auto dir=keyToDir(cmnd);
-    if(iterface.showSelection(pos+dir)){
-      pos+=dir;
+    auto dir = keyToDir(cmnd);
+    if (iterface.showSelection(pos + dir)) {
+      pos += dir;
     }
   }
 }
 
-bool throwItem(GameInterface &gState,IOModule::Interface& iterface, ActionMod & /*mod*/) noexcept {
+bool throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
-  if (index == NoItem) 
+  if (index == NoItem)
     return true;
   auto target = chooseTile(gState, iterface);
-  if(!target)
+  if (!target)
     return true;
-  gState.throwItem(index, (*target)-gState.getLocation().pos);
+  gState.throwItem(index, (*target) - gState.getLocation().pos);
   return true;
 }
 
-bool dropItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) noexcept {
+bool dropItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index != NoItem) {
     gState.dropItem(index);
@@ -607,19 +612,19 @@ bool dropItem(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod 
   return true;
 }
 
-bool passTime(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & mod) noexcept {
+bool passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
   return true;
 }
 
 template <int n>
-bool addDigit(GameInterface & /*gState*/, IOModule::Interface& /*unused*/, ActionMod &mod) {
+bool addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   static_assert(n >= 0 && n <= 9);
   mod.addDigit(n);
   return true;
 }
 
-bool quit(GameInterface &gState, IOModule::Interface& /*unused*/, ActionMod & /*mod*/) noexcept {
+bool quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
   gState.exit();
   return false;
 }
@@ -665,7 +670,7 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
   return CmndMp.get(input);
 }
 
-}  // namespace Actions
+} // namespace Actions
 
 std::ostream &operator<<(std::ostream &out, GameTime time) {
   return out << time.impl;
@@ -731,7 +736,7 @@ void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface gra
 
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
   printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ' << attacked;
-  if(info.damageDone){
+  if (info.damageDone) {
     printWith_ << ' ' << (info.killed ? "by dealing" : "for") << ' ' << *info.damageDone << " damage";
   }
   printWith_ << '\n';

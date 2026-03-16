@@ -12,35 +12,53 @@ static_assert([] consteval {
   return true;
 }());
 
-TEST(ObjectContainerTests, AddAndRemoveObject) {
+static_assert([] consteval {
   ObjectContainer container;
   container.addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  EXPECT_EQ(container.size(), 1u);
-  EXPECT_FALSE(container.empty());
-  EXPECT_EQ(container[0].type(), ObjectType::KingsCoin);
-  EXPECT_EQ(container[0].mat(), Material::Gold);
-  EXPECT_EQ(container[0].count(), 1);
+  if (container.size() != 1u)
+    return false;
+  if (container.empty())
+    return false;
+  if (container[0].type() != ObjectType::KingsCoin)
+    return false;
+  if (container[0].mat() != Material::Gold)
+    return false;
+  if (container[0].count() != 1)
+    return false;
 
   auto removed = container.remove(0);
-  EXPECT_NE(removed, nullptr);
-  EXPECT_EQ(removed->type(), ObjectType::KingsCoin);
-  EXPECT_EQ(container.size(), 0u);
-  EXPECT_TRUE(container.empty());
-}
+  if (removed == nullptr)
+    return false;
+  if (removed->type() != ObjectType::KingsCoin)
+    return false;
+  if (container.size() != 0u)
+    return false;
+  if (!container.empty())
+    return false;
+  return true;
+}());
 
-TEST(ObjectContainerTests, AddMultipleAndRemoveSwapsLast) {
+static_assert([] consteval {
   ObjectContainer container;
-  container.addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  container.addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Iron));
-  EXPECT_EQ(container.size(), 2u);
+  container.addObject(std::make_unique<Object>(3, ObjectType::KingsCoin, Material::Gold));
+  container.addObject(std::make_unique<Object>(5, ObjectType::Knife, Material::Iron));
+  if (container.size() != 2u)
+    return false;
 
-  // Remove index 0 (KingsCoin) -- should swap back (Knife) into position 0
+  // Remove index 0 (KingsCoin) -- because (Knife) is only object left it should be in position 0
   auto removed = container.remove(0);
-  EXPECT_EQ(removed->type(), ObjectType::KingsCoin);
-  EXPECT_EQ(container.size(), 1u);
-  EXPECT_EQ(container[0].type(), ObjectType::Knife);
-  EXPECT_EQ(container[0].mat(), Material::Iron);
-}
+  if (removed->type() != ObjectType::KingsCoin)
+    return false;
+  if (container.size() != 1u)
+    return false;
+  if (container[0].type() != ObjectType::Knife)
+    return false;
+  if (container[0].mat() != Material::Iron)
+    return false;
+  if (container[0].count() != 5)
+    return false;
+  return true;
+}());
 
 TEST(ObjectContainerTests, CombinableObjectsMerge) {
   ObjectContainer container;

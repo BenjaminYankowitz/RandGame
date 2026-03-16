@@ -2,7 +2,6 @@ export module DungeonMaker;
 import Common;
 import PerlinNoise;
 
-
 template <class T>
 class RoomSplitHelper {
 public:
@@ -102,31 +101,31 @@ void rooms(Static2DArr<decltype(Wall)> &floor, double roomArea = DefaultRoomArea
 }
 
 template <auto Wall, decltype(Wall) Empty>
-void perlin(Static2DArr<decltype(Wall)> &floor,double xscale, double yscale, double threshold = 0.0)noexcept{
+void perlin(Static2DArr<decltype(Wall)> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
   const double xoffset = Rnd::uniform_01();
   const double yoffset = Rnd::uniform_01();
-  const double rotation = Rnd::uniform_real(0.0,0.25*std::numbers::pi_v<double>);
+  const double rotation = Rnd::uniform_real(0.0, 0.25 * std::numbers::pi_v<double>);
   const double cos = std::cos(rotation);
   const double sin = std::sin(rotation);
-  const double maxBaseX = (floor.cols()-1)/xscale;
-  const double maxBaseY = (floor.rows()-1)/yscale;
-  const double minX = -sin*maxBaseY;
+  const double maxBaseX = (floor.cols() - 1) / xscale;
+  const double maxBaseY = (floor.rows() - 1) / yscale;
+  const double minX = -sin * maxBaseY;
   const double minY = 0;
-  const double maxX = cos*maxBaseX;
-  const double maxY = cos*maxBaseY+sin*maxBaseX;
-  const double xRange = maxX-minX;
-  const double yRange = maxY-minY;
-  PerlinNoise::Generator gen(std::ceil(xRange+xoffset)+1,std::ceil(yRange+yoffset)+1);
-  for(std::size_t xI = 0; xI < floor.cols(); xI++){
-    for(std::size_t yI = 0; yI < floor.rows(); yI++){
-      const double x = xI/xscale;
-      const double y = yI/yscale;
-      const double eX = x*cos-y*sin-minX+xoffset;
-      const double eY = y*cos+x*sin-minY+yoffset;
-      if(gen.getHeight(eX, eY)>=threshold){
-        floor[yI,xI] = Wall;
+  const double maxX = cos * maxBaseX;
+  const double maxY = cos * maxBaseY + sin * maxBaseX;
+  const double xRange = maxX - minX;
+  const double yRange = maxY - minY;
+  PerlinNoise::Generator gen(std::ceil(xRange + xoffset) + 1, std::ceil(yRange + yoffset) + 1);
+  for (std::size_t xI = 0; xI < floor.cols(); xI++) {
+    for (std::size_t yI = 0; yI < floor.rows(); yI++) {
+      const double x = xI / xscale;
+      const double y = yI / yscale;
+      const double eX = x * cos - y * sin - minX + xoffset;
+      const double eY = y * cos + x * sin - minY + yoffset;
+      if (gen.getHeight(eX, eY) >= threshold) {
+        floor[yI, xI] = Wall;
       } else {
-        floor[yI,xI] = Empty;
+        floor[yI, xI] = Empty;
       }
     }
   }
@@ -138,9 +137,9 @@ void maze(Static2DArr<decltype(Wall)> &floor, std::size_t extraConnections = 0) 
     return;
   }
   floor.fill(Wall);
-  for(std::size_t row = 0; row < floor.rows(); row+=2){
-    for(std::size_t col = 0; col < floor.cols(); col+=2){
-      floor[row,col] = Empty;
+  for (std::size_t row = 0; row < floor.rows(); row += 2) {
+    for (std::size_t col = 0; col < floor.cols(); col += 2) {
+      floor[row, col] = Empty;
     }
   }
   const std::size_t hcols = (floor.cols() - 1) / 2;
@@ -157,33 +156,26 @@ void maze(Static2DArr<decltype(Wall)> &floor, std::size_t extraConnections = 0) 
   Rnd::shuffle(ordering);
   DisjointSet<std::size_t> connected(osize);
   std::size_t extraLeft = extraConnections;
-  while(!ordering.empty()) {
+  while (!ordering.empty()) {
     const std::size_t toOpen = ordering.back();
     ordering.pop_back();
     auto [arow, acol, horizontal] = [&]() {
       if (toOpen >= hsize) {
         const std::size_t row = (toOpen - hsize) % vrows;
         const std::size_t col = (toOpen - hsize) / vrows;
-        return std::tuple{row,col,false};
+        return std::tuple{row, col, false};
       }
       const std::size_t row = toOpen % hrows;
       const std::size_t col = toOpen / hrows;
-      return std::tuple{row,col,true};
+      return std::tuple{row, col, true};
     }();
-    auto &tile = floor[arow*2+!horizontal,acol*2+horizontal];
-    if (connected.union_set(acol*orows+arow, acol*orows+arow+(horizontal?orows:1))) {
+    auto &tile = floor[arow * 2 + !horizontal, acol * 2 + horizontal];
+    if (connected.union_set(acol * orows + arow, acol * orows + arow + (horizontal ? orows : 1))) {
       tile = Empty;
-    } else if(extraLeft>0){
+    } else if (extraLeft > 0) {
       extraLeft--;
-      tile=Empty;
+      tile = Empty;
     }
   }
 }
 } // namespace DungeonMaker
-
-// //NOLINTBEGIN
-// static void f(){ //give func which uses createDungeon so clangd will be able to report errors.
-//     Static2DArr<int> q(1,1);
-//     DungeonMaker::createDungeon<0,1>(q);
-// }
-// //NOLINTEND

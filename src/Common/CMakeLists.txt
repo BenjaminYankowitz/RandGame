@@ -1,9 +1,9 @@
-add_library(SerialzationLib STATIC)
+add_library(SerializationLib STATIC)
   
-target_sources(SerialzationLib
+target_sources(SerializationLib
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
-        SerialzationLib.cxx)
+        SerializationLib.cxx)
 
 add_library(PerlinNoise STATIC)
   
