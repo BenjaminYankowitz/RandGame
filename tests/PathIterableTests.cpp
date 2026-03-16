@@ -3,7 +3,7 @@ import Common;
 
 // -- Constexpr helpers --
 template <std::size_t N>
-constexpr auto collectPath(Dir e) {
+static constexpr auto collectPath(Dir e) {
   std::array<Dir, N> result{};
   std::size_t i = 0;
   for (auto d : PathIterable{e}) {
@@ -14,7 +14,7 @@ constexpr auto collectPath(Dir e) {
   return result;
 }
 
-constexpr std::size_t pathSize(Dir e) {
+static constexpr std::size_t pathSize(Dir e) {
   std::size_t count = 0;
   for (auto _ : PathIterable{e}) {
     ++count;
@@ -22,7 +22,7 @@ constexpr std::size_t pathSize(Dir e) {
   return count;
 }
 
-constexpr bool pathTerminates(Dir e, int maxSteps) {
+static constexpr bool pathTerminates(Dir e, int maxSteps) {
   auto path = PathIterable{e};
   auto it = path.begin();
   auto end = path.end();

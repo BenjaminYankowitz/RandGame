@@ -63,3 +63,7 @@ add_test(NAME RandomTests COMMAND RandomTests)
 add_executable(GameInterfaceTests GameInterfaceTests.cpp)
 target_link_libraries(GameInterfaceTests PRIVATE GameInterface TestHeader)
 add_test(NAME GameInterfaceTests COMMAND GameInterfaceTests)
+
+add_executable(DungeonMakerTests DungeonMakerTests.cpp)
+target_link_libraries(DungeonMakerTests PRIVATE DungeonMaker TestHeader)
+add_test(NAME DungeonMakerTests COMMAND DungeonMakerTests)

@@ -232,6 +232,7 @@ constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIter
 WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
   WorldFloor ret(xDim, yDim);
   DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16, 4);
+  DungeonMaker::connectRegions<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr());
   return ret;
 }
 

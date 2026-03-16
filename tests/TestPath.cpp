@@ -12,7 +12,7 @@ public:
 };
 using spanT = std::mdspan<bool, std::extents<int, std::dynamic_extent, std::dynamic_extent>, std::layout_right, Accessor>;
 
-constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
+static constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
   if (static_cast<int>(map.size()) != height * width) {
     return false;
   }
@@ -68,7 +68,7 @@ e  \
                       3, 3, 4));
 
 // Unreachable goal returns Dir{0,0}
-constexpr bool testUnreachable(std::string_view map, int height, int width) {
+static constexpr bool testUnreachable(std::string_view map, int height, int width) {
   Position start{-1, -1};
   Position end{-1, -1};
   for (int row = 0; row < height; row++) {

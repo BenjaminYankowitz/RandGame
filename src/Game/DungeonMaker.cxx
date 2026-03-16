@@ -178,4 +178,139 @@ void maze(Static2DArr<decltype(Wall)> &floor, std::size_t extraConnections = 0) 
     }
   }
 }
+
+struct RegionInfo {
+  Static2DArr<int> regionOf;
+  std::vector<Position> representatives;
+  [[nodiscard]] constexpr int numRegions() const noexcept {
+    return representatives.size();
+  }
+};
+
+template <auto Wall, decltype(Wall) Empty>
+RegionInfo labelRegions(const Static2DArr<decltype(Wall)> &floor) noexcept {
+  const auto rows = floor.rows();
+  const auto cols = floor.cols();
+  Static2DArr<int> regionOf(rows, cols);
+  regionOf.fill(-1);
+  std::vector<Position> representatives;
+
+  for (std::size_t r = 0; r < rows; r++) {
+    for (std::size_t c = 0; c < cols; c++) {
+      if (floor[r, c] != Empty || regionOf[r, c] != -1)
+        continue;
+      const int regionId = representatives.size();
+      representatives.emplace_back(static_cast<int>(c), static_cast<int>(r));
+      std::queue<std::pair<std::size_t, std::size_t>> bfs;
+      bfs.emplace(r, c);
+      regionOf[r, c] = regionId;
+      while (!bfs.empty()) {
+        auto [cr, cc] = bfs.front();
+        bfs.pop();
+        constexpr std::array<std::pair<int, int>, 4> Deltas{{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
+        for (auto [dr, dc] : Deltas) {
+          const auto nr = cr + dr;
+          const auto nc = cc + dc;
+          if (floor.inBounds(nr, nc) && floor[nr, nc] == Empty && regionOf[nr, nc] == -1) {
+            regionOf[nr, nc] = regionId;
+            bfs.emplace(nr, nc);
+          }
+        }
+      }
+    }
+  }
+
+  return {std::move(regionOf), std::move(representatives)};
+}
+
+struct Candidate {
+  int regionA;
+  int regionB;
+  std::size_t cost;
+};
+
+template <auto Wall>
+std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall)> &floor, const RegionInfo &info) noexcept {
+  std::vector<Candidate> candidates;
+
+  for (std::size_t r = 0; r < floor.rows(); r++) {
+    for (std::size_t c = 0; c < floor.cols(); c++) {
+      if (floor[r, c] != Wall)
+        continue;
+      constexpr std::array<std::pair<int, int>, 4> Deltas{{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
+      std::vector<int> adjacentRegions;
+      for (auto [dr, dc] : Deltas) {
+        const auto nr = r + dr;
+        const auto nc = c + dc;
+        if (floor.inBounds(nr, nc) && info.regionOf[nr, nc] != -1) {
+          int reg = info.regionOf[nr, nc];
+          if (std::ranges::find(adjacentRegions, reg) == adjacentRegions.end()) {
+            adjacentRegions.push_back(reg);
+          }
+        }
+      }
+      for (std::size_t i = 0; i < adjacentRegions.size(); i++) {
+        for (std::size_t j = i + 1; j < adjacentRegions.size(); j++) {
+          int a = adjacentRegions[i];
+          int b = adjacentRegions[j];
+          candidates.push_back({a, b, Position::chessboard(info.representatives[a], info.representatives[b])});
+        }
+      }
+    }
+  }
+
+  std::ranges::sort(candidates, {}, &Candidate::cost);
+  return candidates;
+}
+
+template <auto Empty>
+void carveCorridor(Static2DArr<decltype(Empty)> &floor, Position from, Position to) noexcept {
+  int x = from.x;
+  const int xStep = (to.x > from.x) ? 1 : -1;
+  while (x != to.x) {
+    const auto row = static_cast<std::size_t>(from.y);
+    const auto col = static_cast<std::size_t>(x);
+    if (floor.inBounds(row, col))
+      floor[row, col] = Empty;
+    x += xStep;
+  }
+  int y = from.y;
+  const int yStep = (to.y > from.y) ? 1 : -1;
+  while (y != to.y) {
+    const auto row = static_cast<std::size_t>(y);
+    const auto col = static_cast<std::size_t>(to.x);
+    if (floor.inBounds(row, col))
+      floor[row, col] = Empty;
+    y += yStep;
+  }
+  {
+    const auto row = static_cast<std::size_t>(to.y);
+    const auto col = static_cast<std::size_t>(to.x);
+    if (floor.inBounds(row, col))
+      floor[row, col] = Empty;
+  }
+}
+
+template <auto Wall, decltype(Wall) Empty>
+void connectRegions(Static2DArr<decltype(Wall)> &floor) noexcept {
+  if (floor.rows() == 0 || floor.cols() == 0)
+    return;
+
+  const auto info = labelRegions<Wall, Empty>(floor);
+  if (info.numRegions() <= 1)
+    return;
+
+  const auto candidates = findCandidates<Wall>(floor, info);
+  DisjointSet<std::size_t> ds(info.numRegions());
+
+  for (const auto &cand : candidates) {
+    if (ds.union_set(cand.regionA, cand.regionB))
+      carveCorridor<Empty>(floor, info.representatives[cand.regionA], info.representatives[cand.regionB]);
+  }
+
+  for (int i = 1; i < info.numRegions(); i++) {
+    if (ds.union_set(0, i))
+      carveCorridor<Empty>(floor, info.representatives[0], info.representatives[i]);
+  }
+}
 } // namespace DungeonMaker
