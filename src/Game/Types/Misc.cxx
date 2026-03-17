@@ -75,7 +75,7 @@ private:
 };
 
 export class MonsterID {
-  using idImpl = int;
+  using idImpl = unsigned;
 
 public:
   class Generator {
@@ -94,7 +94,7 @@ public:
 
 private:
   static constexpr idImpl NullV = 0;
-  [[nodiscard]] constexpr explicit MonsterID(std::size_t id) noexcept : id_(id) {}
+  [[nodiscard]] constexpr explicit MonsterID(idImpl id) noexcept : id_(id) {}
   idImpl id_;
 };
 

@@ -43,6 +43,8 @@ public:
     if constexpr (InDebug) {
       if (rows < 0 || cols < 0) {
         Logging::log << "Tried to make Static2DArr with dims: " << rows << " by " <<  cols << '\n';
+        rows_ = std::max(0,rows);
+        cols_ = std::max(0,cols);
       }
     }
   }
@@ -54,6 +56,7 @@ public:
       if (!self.inBounds(row,col)) {
         Logging::log << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
                   << "Dims are " << self.rows_ << " x " << self.cols_ << '\n';
+        return self[0,0];
       }
     }
     return std::forward_like<decltype(self)>(self.data_[(row * self.cols_) + col]);
@@ -74,6 +77,9 @@ public:
   }
 private:
   [[nodiscard]] constexpr static std::unique_ptr<arr_t> getAlloc(size_type size) noexcept{
+    if(size<0){
+      return nullptr;
+    }
     return std::make_unique<arr_t>(size);
   }
   size_type rows_;

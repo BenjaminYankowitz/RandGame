@@ -235,11 +235,10 @@ std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall),size_type
   for (auto [r, c] : floor.indexIter()) {
     if (floor[r, c] != Wall)
       continue;
-    constexpr std::array<Dir, 4> Deltas{{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
     std::vector<int> adjacentRegions;
-    for (auto d : Deltas) {
-      const auto nr = r + d.dx;
-      const auto nc = c + d.dy;
+    for (auto d : Dir::directDirs()) {
+      const auto nr = r + d.dy;
+      const auto nc = c + d.dx;
       if (floor.inBounds(nr, nc) && info.regionOf[nr, nc] != -1) {
         int reg = info.regionOf[nr, nc];
         if (std::ranges::find(adjacentRegions, reg) == adjacentRegions.end()) {
