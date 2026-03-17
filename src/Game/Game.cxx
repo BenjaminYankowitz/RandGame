@@ -154,9 +154,9 @@ public:
   }
 
 private:
-  Static2DArr<ObjectContainer> ObjectsArr_;
-  Static2DArr<Monster::ID> MonsterArr_;
-  Static2DArr<TerrainType> TerrainTypeArr_;
+  Static2DArr<ObjectContainer,int> ObjectsArr_;
+  Static2DArr<Monster::ID,int> MonsterArr_;
+  Static2DArr<TerrainType,int> TerrainTypeArr_;
   std::vector<Monster::ID> EventListenerArr_;
   class EventListenersIterable {
   public:

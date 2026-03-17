@@ -21,7 +21,7 @@ template <Bool2dArr MapType>
   if (initDist <= 1) {
     return mapP(goal) ? goal - start : Dir{0, 0};
   }
-  Static2DArr<std::int8_t> origin(height, width);
+  Static2DArr<std::int8_t,int> origin(height, width);
   auto originP = [&origin](Position p) -> std::int8_t & {
     return origin[p.y, p.x];
   };

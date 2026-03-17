@@ -46,7 +46,7 @@ std::ostream &operator<<(std::ostream &out, const MathVector<N> &vec) {
 
 export class Generator {
 public:
-  Generator(std::size_t xDim, std::size_t yDim) noexcept : arr_(yDim, xDim) {
+  Generator(int xDim, int yDim) noexcept : arr_(yDim, xDim) {
     static constexpr double Tau = 2*std::numbers::pi;
     std::uniform_real_distribution<> zeroOne(0, 1);
     std::uniform_real_distribution<> zeroTau(0, Tau);
@@ -63,7 +63,7 @@ public:
     const double fY = y - std::floor(y);
     const MathVector<2> vec(std::array<double,2>{x, y});
     std::array<double, vec.cornerNum()> values;
-    const auto func = [vec,&arr=arr_](std::size_t i){
+    const auto func = [vec,&arr=arr_](int i){
       const auto cornerArr = vec.corner(i);
       const MathVector<2> corner(cornerArr);
       return (vec - corner) * (arr[cornerArr[1], cornerArr[0]]);
@@ -74,6 +74,6 @@ public:
   }
 
 private:
-  Static2DArr<MathVector<2>> arr_;
+  Static2DArr<MathVector<2>,int> arr_;
 };
 } // namespace PerlinNoise

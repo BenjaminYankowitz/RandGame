@@ -1,59 +1,10 @@
 export module Common:Location;
 import :Random;
 import std;
+export class Dir;
 
 export class Dir {
-  class BoxIterable {
-    using difference_type = std::ptrdiff_t;
-    class BoxIterator {
-    public:
-      using value_type = Dir;
-      using difference_type = BoxIterable::difference_type;
-      [[nodiscard]] explicit constexpr BoxIterator(int n) : n_(n) {}
-      [[nodiscard]] explicit constexpr BoxIterator() : n_(8) {}
-      [[nodiscard]] constexpr Dir operator*() const {
-        return getBoxDir(n_);
-      }
-      constexpr BoxIterator &operator++() {
-        n_++;
-        return *this;
-      }
-      constexpr BoxIterator operator++(int) {
-        BoxIterator ret = *this;
-        operator++();
-        return ret;
-      }
-      [[nodiscard]] constexpr bool operator==(BoxIterator o) const {
-        return n_ == o.n_;
-      }
-      [[nodiscard]] constexpr bool operator!=(BoxIterator o) const {
-        return n_ != o.n_;
-      }
-
-    private:
-      int n_;
-    };
-
-  public:
-    [[nodiscard]] static constexpr BoxIterator begin() {
-      return BoxIterator(0);
-    }
-    [[nodiscard]] static constexpr BoxIterator end() {
-      return BoxIterator();
-    }
-    [[nodiscard]] static constexpr BoxIterator cbegin() { return begin(); }
-    [[nodiscard]] static constexpr BoxIterator cend() { return end(); }
-  };
-  constexpr static BoxIterable BoxIteratorInst;
-
 public:
-  [[nodiscard]] constexpr static Dir getBoxDir(int n) {
-    if (n < 0 || n >= 8) {
-      std::unreachable();
-    }
-    const int k = n + (n >= 4 ? 1 : 0);
-    return {(k % 3) - 1, (k / 3) - 1};
-  }
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
   [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {}
   [[nodiscard]] constexpr bool noMove() const noexcept { return dx == 0 && dy == 0; }
@@ -71,12 +22,25 @@ public:
   };
   [[nodiscard]] constexpr bool operator==(const Dir &pos) const = default;
   [[nodiscard]] constexpr Dir operator-() const noexcept { return {-dx, -dy}; }
-  [[nodiscard]] constexpr static const BoxIterable &boxDirs() {
-    return BoxIteratorInst;
+  [[nodiscard]] constexpr static auto boxDirs() {
+    constexpr static auto BoxDirs = std::to_array<Dir>({{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
+    return BoxDirs;
+  }
+  [[nodiscard]] constexpr static Dir getBoxDir(int n) {
+    return boxDirs()[n];
+  }
+  [[nodiscard]] constexpr static auto directDirs() {
+    constexpr static auto DirectDirs = std::to_array<Dir>({{0,-1},{-1,0},{1,0},{0,1}});
+    return DirectDirs;
+  }
+  [[nodiscard]] constexpr static Dir getDirectDir(int n) {
+    return directDirs()[n];
   }
   int dx;
   int dy;
 };
+
+
 
 export constexpr Dir capDir(Dir d) noexcept {
   constexpr auto Cap = [](int &x) {
@@ -146,7 +110,7 @@ const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(re
 export class Position {
 public:
   [[nodiscard]] constexpr Position(int xI, int yI) noexcept : x(xI), y(yI) {}
-  [[nodiscard]] static constexpr std::size_t chessboard(Position l1, Position l2) noexcept {
+  [[nodiscard]] static constexpr int chessboard(Position l1, Position l2) noexcept {
     return std::max(abs(l1.x - l2.x), abs(l1.y - l2.y));
   }
   constexpr bool operator==(const Position &pos) const = default;

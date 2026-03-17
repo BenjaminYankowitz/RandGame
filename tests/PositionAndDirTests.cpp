@@ -39,14 +39,22 @@ static_assert(Dir(0, 1) != Dir(0, 2));
 static_assert(Dir(1, 2) != Dir(3, 4));
 
 // -- boxDir answer key & boxDirs range equality --
-constexpr static auto AnswerKey = std::to_array<Dir>(
+constexpr static auto AnswerKeyBoxDir = std::to_array<Dir>(
     {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
+constexpr static auto AnswerKeyDirectDir = std::to_array<Dir>(
+    {{0,-1},{-1,0},{1,0},{0,1}});
 
 static_assert(std::ranges::all_of(std::views::iota(0, 8), [](std::int8_t dirN) {
-  return AnswerKey[dirN] == Dir::getBoxDir(dirN);
+  return AnswerKeyBoxDir[dirN] == Dir::getBoxDir(dirN);
+}));
+static_assert(std::ranges::all_of(std::views::iota(0, 4), [](std::int8_t dirN) {
+  return AnswerKeyDirectDir[dirN] == Dir::getDirectDir(dirN);
 }));
 
-static_assert(std::ranges::equal(AnswerKey, Dir::boxDirs()));
+// static_assert(Dir::getDirectDir(1).dy==-1);
+
+static_assert(std::ranges::equal(AnswerKeyBoxDir, Dir::boxDirs()));
+static_assert(std::ranges::equal(AnswerKeyDirectDir, Dir::directDirs()));
 
 // -- Position Construction & Equality --
 static_assert(Position(10, -20).x == 10);

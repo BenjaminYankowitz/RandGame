@@ -8,14 +8,14 @@ constexpr bool InDebug = false;
 constexpr bool InDebug = true;
 #endif
 
-// export namespace Cmn {
-export template <class T>
+export template <class T, class sizeT = std::size_t>
 class Static2DArr {
   public:
   using value_type = T;
   static_assert(std::is_same_v<std::remove_cvref_t<value_type>, value_type>, "Static2DArr must have a non-const, non-volatile, non reference value_type");
   using constvalue_T = const value_type;
-  using size_type = std::size_t;
+  using size_type = sizeT;
+  static_assert(std::integral<size_type>);
   using iterator = IteratorImpl<value_type, Static2DArr>;
   using const_iterator = IteratorImpl<const value_type, Static2DArr>;
   private:
@@ -31,25 +31,29 @@ class Static2DArr {
 public:
   template<size_type size>
   constexpr Static2DArr(std::initializer_list<value_type[size]> list) noexcept : Static2DArr(list.size(),size){ // NOLINT(modernize-avoid-c-arrays)
-    std::size_t nRow = 0;
-    for(auto row : list){
-      for(std::size_t nCol : std::ranges::views::iota(static_cast<size_type>(0),size)){
-        (*this)[nRow,nCol] = row[nCol];
+    constexpr static auto CZero = std::views::iota(static_cast<size_type>(0));
+    for(auto [row,nRow] : std::views::zip(list,CZero)){
+      for(auto [val,nCol] : std::views::zip(row,CZero)){
+        (*this)[nRow,nCol] = val;
       }
-      nRow++;
     }
   }
   constexpr Static2DArr() noexcept : Static2DArr(0,0){}
-  constexpr Static2DArr(size_type rows, size_type cols) noexcept : rows_(rows), cols_(cols), data_(getAlloc(rows*cols)){} 
+  constexpr Static2DArr(size_type rows, size_type cols) noexcept : rows_(rows), cols_(cols), data_(getAlloc(rows*cols)){
+    if constexpr (InDebug) {
+      if (rows < 0 || cols < 0) {
+        Logging::log << "Tried to make Static2DArr with dims: " << rows << " by " <<  cols << '\n';
+      }
+    }
+  }
   constexpr Static2DArr(const Static2DArr &other) = delete;
   constexpr Static2DArr(Static2DArr &&other) noexcept = default;
   [[nodiscard]] constexpr bool isNull() const noexcept {return data_==nullptr;}
   [[nodiscard]] constexpr auto &operator[](this auto&& self, size_type row, size_type col) noexcept { 
     if constexpr (InDebug) {
-      if (row >= self.rows_ || col >= self.cols_) {
+      if (!self.inBounds(row,col)) {
         Logging::log << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
                   << "Dims are " << self.rows_ << " x " << self.cols_ << '\n';
-        std::exit(1);
       }
     }
     return std::forward_like<decltype(self)>(self.data_[(row * self.cols_) + col]);
@@ -60,17 +64,19 @@ public:
   [[nodiscard]] constexpr size_type cols() const noexcept { return cols_; }
   [[nodiscard]] constexpr size_type size() const noexcept { return cols_ * rows_; }
   [[nodiscard]] constexpr bool inBounds(size_type row, size_type col) const noexcept{
-    return row < rows() && col < cols();
+    return row >= 0 && row < rows() && col >=0 && col < cols();
   } 
   constexpr void fill(const value_type& v) noexcept { 
     std::fill_n(data_.get(),size(),v);
   }
+  constexpr auto indexIter() const noexcept{
+    return std::views::transform(std::views::iota(static_cast<size_type>(0),rows_*cols_),[cols_=cols_](size_type i){return std::make_pair(i/cols_,i%cols_);});
+  }
 private:
-  [[nodiscard]] constexpr static std::unique_ptr<arr_t> getAlloc(std::size_t size) noexcept{
+  [[nodiscard]] constexpr static std::unique_ptr<arr_t> getAlloc(size_type size) noexcept{
     return std::make_unique<arr_t>(size);
   }
   size_type rows_;
   size_type cols_;
   std::unique_ptr<arr_t> data_; 
 };
-// }

@@ -114,3 +114,8 @@ public:
 private:
   ParentIterator impl_;
 };
+
+export template<auto F,class ParentIterator>
+auto mkIteratorWrapper(ParentIterator iter){
+  return IteratorWrapper<ParentIterator,decltype(F(iter)),F>(iter);
+}
