@@ -61,7 +61,7 @@ constexpr bool testMap(std::string_view map, int height, int width, int expected
   return true;
 }
 
-}  // namespace
+} // namespace
 static_assert(testMap("\
 s  \
 xx \
@@ -86,7 +86,7 @@ constexpr bool testUnreachable(std::string_view map, int height, int width) {
   auto dir = FindPath::findPath(mapView, start, end);
   return dir == Dir{0, 0};
 }
-}  // namespace
+} // namespace
 
 static_assert(testUnreachable(
     "s x"
@@ -94,18 +94,14 @@ static_assert(testUnreachable(
     "x e",
     3, 3));
 
-TEST(TestPath, BasicPathAroundWall) {
-  EXPECT_TRUE(testMap(
-      "s  "
-      "xx "
-      "e  ",
-      3, 3, 4));
-}
+static_assert(testMap(
+    "s  "
+    "xx "
+    "e  ",
+    3, 3, 4));
 
-TEST(TestPath, UnreachableGoal) {
-  EXPECT_TRUE(testUnreachable(
-      "s x"
-      "xxx"
-      "x e",
-      3, 3));
-}
+static_assert(testUnreachable(
+    "s x"
+    "xxx"
+    "x e",
+    3, 3));

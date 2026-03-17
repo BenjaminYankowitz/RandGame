@@ -13,11 +13,3 @@ static_assert(TestMap.get(20) == 200);
 static_assert(TestMap.get(30) == 300);
 static_assert(TestMap.get(99) == 73); // Missing key returns null value (73)
 static_assert(TestMap.size() >= 3);
-
-// Trivial test so CTest registers the binary
-TEST(CompileTimeHashMapTests, PositiveLookups) {
-  EXPECT_EQ(TestMap.get(10), 100);
-  EXPECT_EQ(TestMap.get(20), 200);
-  EXPECT_EQ(TestMap.get(30), 300);
-  EXPECT_EQ(TestMap.get(99), 73);
-}

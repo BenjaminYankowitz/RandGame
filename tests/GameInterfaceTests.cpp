@@ -16,7 +16,7 @@ class NullEventViewer final : public EventViewerInterface {
 static std::unique_ptr<EventViewerInterface> makeNullViewer() {
   return std::make_unique<NullEventViewer>();
 }
-}  // namespace
+} // namespace
 TEST(GameInterfaceTests, ConstructionSucceeds) {
   GameInterface gi(makeNullViewer());
   (void)gi;
@@ -101,6 +101,23 @@ TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
   EXPECT_EQ(t0.impl, t1.impl);
 }
 
+TEST(GameInterfaceTests, PlayerTileIsNotWall) {
+  GameInterface gi(makeNullViewer());
+  auto loc = gi.getLocation();
+  auto floor = gi.getFloor(loc.mapPos);
+  auto tile = floor.getTile(loc.pos);
+  EXPECT_NE(tile.terrainType, TerrainType::Wall);
+}
+
+TEST(GameInterfaceTests, StairsAreNotWalls) {
+  // Verify that stair terrain types are distinct from Wall and Empty
+  EXPECT_NE(TerrainType::UpStair, TerrainType::Wall);
+  EXPECT_NE(TerrainType::DownStair, TerrainType::Wall);
+  EXPECT_NE(TerrainType::UpStair, TerrainType::Empty);
+  EXPECT_NE(TerrainType::DownStair, TerrainType::Empty);
+  EXPECT_NE(TerrainType::UpStair, TerrainType::DownStair);
+}
+
 TEST(GameInterfaceTests, PlayerTileHasPlayer) {
   GameInterface gi(makeNullViewer());
   auto loc = gi.getLocation();
@@ -131,13 +148,13 @@ TEST(GameInterfaceTests, LenOne) {
   auto it = iface.begin();
   auto endIt = iface.end();
   EXPECT_TRUE(it != endIt);
-  EXPECT_EQ(1,container.size());
+  EXPECT_EQ(1, container.size());
   std::size_t count = 0;
-  for(auto obj : container){
+  for (auto obj : container) {
     count++;
-    EXPECT_EQ(obj.count(),23);
-    EXPECT_EQ(obj.type(),ObjectType::KingsCoin);
-    EXPECT_EQ(obj.mat(),Material::Gold);
+    EXPECT_EQ(obj.count(), 23);
+    EXPECT_EQ(obj.type(), ObjectType::KingsCoin);
+    EXPECT_EQ(obj.mat(), Material::Gold);
   }
-  EXPECT_EQ(1,count);
+  EXPECT_EQ(1, count);
 }

@@ -136,7 +136,7 @@ public:
   [[nodiscard]] constexpr auto getTile(Position pos) noexcept { return WorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto getTile(Position pos) const noexcept { return ConstWorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto isOpenTerrain(Position pos) const noexcept {
-    return inBounds(pos) && getTerrainType(pos) == TerrainType::Empty;
+    return inBounds(pos) && getTerrainType(pos) != TerrainType::Wall;
   }
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
@@ -154,9 +154,9 @@ public:
   }
 
 private:
-  Static2DArr<ObjectContainer,int> ObjectsArr_;
-  Static2DArr<Monster::ID,int> MonsterArr_;
-  Static2DArr<TerrainType,int> TerrainTypeArr_;
+  Static2DArr<ObjectContainer, int> ObjectsArr_;
+  Static2DArr<Monster::ID, int> MonsterArr_;
+  Static2DArr<TerrainType, int> TerrainTypeArr_;
   std::vector<Monster::ID> EventListenerArr_;
   class EventListenersIterable {
   public:

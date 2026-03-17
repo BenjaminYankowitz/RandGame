@@ -43,8 +43,8 @@ public:
     if constexpr (InDebug) {
       if (rows < 0 || cols < 0) {
         Logging::log << "Tried to make Static2DArr with dims: " << rows << " by " <<  cols << '\n';
-        rows_ = std::max(0,rows);
-        cols_ = std::max(0,cols);
+        rows_ = std::max<size_type>(0,rows);
+        cols_ = std::max<size_type>(0,cols);
       }
     }
   }
@@ -56,7 +56,7 @@ public:
       if (!self.inBounds(row,col)) {
         Logging::log << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
                   << "Dims are " << self.rows_ << " x " << self.cols_ << '\n';
-        return self[0,0];
+        return std::forward_like<decltype(self)>(self.data_[0]);
       }
     }
     return std::forward_like<decltype(self)>(self.data_[(row * self.cols_) + col]);

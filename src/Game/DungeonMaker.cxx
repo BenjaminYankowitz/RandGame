@@ -5,7 +5,7 @@ import PerlinNoise;
 template <class T, class size_type>
 class RoomSplitHelper {
 public:
-  RoomSplitHelper(Static2DArr<T,size_type> &floor, size_type rowB, size_type colB, size_type rowE, size_type colE, std::normal_distribution<> areaDist, bool dir) noexcept : floor_(floor), rowB_(rowB), colB_(colB), rowE_(rowE), colE_(colE), areaDist_(areaDist), dir_(dir) {}
+  RoomSplitHelper(Static2DArr<T, size_type> &floor, size_type rowB, size_type colB, size_type rowE, size_type colE, std::normal_distribution<> areaDist, bool dir) noexcept : floor_(floor), rowB_(rowB), colB_(colB), rowE_(rowE), colE_(colE), areaDist_(areaDist), dir_(dir) {}
   [[nodiscard]] bool doSmallStop() const noexcept {
     const size_type width = colE_ - colB_;
     const size_type height = rowE_ - rowB_;
@@ -62,7 +62,7 @@ public:
   }
 
 private:
-  Static2DArr<T,size_type> &floor_;
+  Static2DArr<T, size_type> &floor_;
   size_type rowB_;
   size_type colB_;
   size_type rowE_;
@@ -72,7 +72,7 @@ private:
 };
 
 template <auto Wall, decltype(Wall) Empty, class size_type>
-void fillArea(RoomSplitHelper<decltype(Wall),size_type> rsh) noexcept {
+void fillArea(RoomSplitHelper<decltype(Wall), size_type> rsh) noexcept {
   if (rsh.doSmallStop()) {
     return;
   }
@@ -101,7 +101,7 @@ void rooms(Static2DArr<decltype(Wall), size_type> &floor, double roomArea = Defa
 }
 
 template <auto Wall, decltype(Wall) Empty, class size_type>
-void perlin(Static2DArr<decltype(Wall),size_type> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+void perlin(Static2DArr<decltype(Wall), size_type> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
   const double xoffset = Rnd::uniform_01();
   const double yoffset = Rnd::uniform_01();
   const double rotation = Rnd::uniform_real(0.0, 0.25 * std::numbers::pi_v<double>);
@@ -132,7 +132,7 @@ void perlin(Static2DArr<decltype(Wall),size_type> &floor, double xscale, double 
 }
 
 template <auto Wall, decltype(Wall) Empty, class size_type>
-void maze(Static2DArr<decltype(Wall),size_type> &floor, size_type extraConnections = 0) {
+void maze(Static2DArr<decltype(Wall), size_type> &floor, size_type extraConnections = 0) {
   if (floor.size() == 0) {
     return;
   }
@@ -178,20 +178,20 @@ void maze(Static2DArr<decltype(Wall),size_type> &floor, size_type extraConnectio
     }
   }
 }
-template<class size_type>
+template <class size_type>
 struct RegionInfo {
-  Static2DArr<int,size_type> regionOf;
+  Static2DArr<int, size_type> regionOf;
   std::vector<Position> representatives;
   [[nodiscard]] constexpr int numRegions() const noexcept {
     return representatives.size();
   }
 };
 
-template <auto Wall, decltype(Wall) Empty,class size_type>
-RegionInfo<size_type> labelRegions(const Static2DArr<decltype(Wall),size_type> &floor) noexcept {
+template <auto Wall, decltype(Wall) Empty, class size_type>
+constexpr RegionInfo<size_type> labelRegions(const Static2DArr<decltype(Wall), size_type> &floor) noexcept {
   const auto rows = floor.rows();
   const auto cols = floor.cols();
-  Static2DArr<int,size_type> regionOf(rows, cols);
+  Static2DArr<int, size_type> regionOf(rows, cols);
   regionOf.fill(-1);
   std::vector<Position> representatives;
 
@@ -201,19 +201,18 @@ RegionInfo<size_type> labelRegions(const Static2DArr<decltype(Wall),size_type> &
         continue;
       const int regionId = representatives.size();
       representatives.emplace_back(static_cast<int>(c), static_cast<int>(r));
-      std::queue<std::pair<size_type, size_type>> bfs;
-      bfs.emplace(r, c);
+      std::vector<std::pair<size_type, size_type>> bfs;
+      bfs.emplace_back(r, c);
       regionOf[r, c] = regionId;
-      while (!bfs.empty()) {
-        auto [cr, cc] = bfs.front();
-        bfs.pop();
+      for (std::size_t bfsI = 0; bfsI < bfs.size(); bfsI++) {
+        auto [cr, cc] = bfs[bfsI];
         constexpr std::array<std::pair<int, int>, 4> Deltas{{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}};
         for (auto [dr, dc] : Deltas) {
           const auto nr = cr + dr;
           const auto nc = cc + dc;
           if (floor.inBounds(nr, nc) && floor[nr, nc] == Empty && regionOf[nr, nc] == -1) {
             regionOf[nr, nc] = regionId;
-            bfs.emplace(nr, nc);
+            bfs.emplace_back(nr, nc);
           }
         }
       }
@@ -230,7 +229,7 @@ struct Candidate {
 };
 
 template <auto Wall, class size_type>
-std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall),size_type> &floor, const RegionInfo<size_type> &info) noexcept {
+constexpr std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall), size_type> &floor, const RegionInfo<size_type> &info) noexcept {
   std::vector<Candidate> candidates;
   for (auto [r, c] : floor.indexIter()) {
     if (floor[r, c] != Wall)
@@ -246,8 +245,8 @@ std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall),size_type
         }
       }
     }
-    for (auto i : std::views::iota(static_cast<std::size_t>(0),adjacentRegions.size())) {
-      for (auto j : std::views::iota(i + 1,adjacentRegions.size())) {
+    for (auto i : std::views::iota(static_cast<std::size_t>(0), adjacentRegions.size())) {
+      for (auto j : std::views::iota(i + 1, adjacentRegions.size())) {
         int a = adjacentRegions[i];
         int b = adjacentRegions[j];
         candidates.push_back({a, b, Position::chessboard(info.representatives[a], info.representatives[b])});
@@ -259,8 +258,8 @@ std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall),size_type
   return candidates;
 }
 
-template <auto Empty,class size_type>
-void carveCorridor(Static2DArr<decltype(Empty),size_type> &floor, Position from, Position to) noexcept {
+template <auto Empty, class size_type>
+constexpr void carveCorridor(Static2DArr<decltype(Empty), size_type> &floor, Position from, Position to) noexcept {
   int x = from.x;
   const int xStep = (to.x > from.x) ? 1 : -1;
   while (x != to.x) {
@@ -288,7 +287,7 @@ void carveCorridor(Static2DArr<decltype(Empty),size_type> &floor, Position from,
 }
 
 template <auto Wall, decltype(Wall) Empty, class size_type>
-void connectRegions(Static2DArr<decltype(Wall),size_type> &floor) noexcept {
+constexpr void connectRegions(Static2DArr<decltype(Wall), size_type> &floor) noexcept {
   if (floor.rows() == 0 || floor.cols() == 0)
     return;
 

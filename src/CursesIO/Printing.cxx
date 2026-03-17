@@ -162,6 +162,10 @@ export [[nodiscard]] Noun toName(TerrainType terrain) {
     return {{"empty spot"}};
   case TerrainType::Wall:
     return {{"wall"}};
+  case TerrainType::UpStair:
+    return {{"staircase up"}};
+  case TerrainType::DownStair:
+    return {{"staircase down"}};
   }
 }
 
@@ -232,6 +236,10 @@ export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexc
     using enum TerrainType;
   case Empty:
     return '.';
+  case UpStair:
+    return '<';
+  case DownStair:
+    return '>';
   case Wall:
     auto getType = [floor](Position pos) {
       return floor.inBounds(pos) && floor.getTile(pos).terrainType == Wall;

@@ -34,7 +34,7 @@ constexpr bool pathTerminates(Dir e, int maxSteps) {
   }
   return it == end;
 }
-}
+} // namespace
 
 // -- Empty path --
 static_assert(pathSize(Dir{0, 0}) == 0);
@@ -166,37 +166,30 @@ static_assert(collectPath<4>(Dir{3, 2}) ==
 static_assert(collectPath<3>(Dir{3, 1}) ==
               std::array<Dir, 3>{{{1, 1}, {2, 1}, {3, 1}}});
 
-// ============================================================
-// Runtime tests: invariant checks on non-uniform paths
-// ============================================================
-
-TEST(PathIterableInvariants, MonotonicityAndValidSteps3x2) {
+// -- Monotonicity and valid steps for non-uniform path (3,2) --
+static_assert([] {
   constexpr Dir E{3, 2};
-  constexpr Dir Capped = capDir(E);
-
+  Dir capped = capDir(E);
   auto path = PathIterable{E};
   auto it = path.begin();
   auto end = path.end();
 
   Dir prev = *it;
-  EXPECT_EQ(prev, Capped);
+  if (!(prev == capped))
+    return false;
   ++it;
 
   while (it != end) {
     Dir cur = *it;
-
-    // Monotonicity: dx should only increase (positive ex)
-    EXPECT_GE(cur.dx, prev.dx);
-    // Monotonicity: dy should only increase (positive ey)
-    EXPECT_GE(cur.dy, prev.dy);
-
-    // Each step should be one of the three valid moves
+    if (cur.dx < prev.dx || cur.dy < prev.dy)
+      return false;
     Dir step{cur.dx - prev.dx, cur.dy - prev.dy};
-    bool validStep = step == Dir{Capped.dx, 0} || step == Dir{0, Capped.dy} ||
-                     step == Capped;
-    EXPECT_TRUE(validStep);
-
+    bool validStep = step == Dir{capped.dx, 0} || step == Dir{0, capped.dy} ||
+                     step == capped;
+    if (!validStep)
+      return false;
     prev = cur;
     ++it;
   }
-}
+  return true;
+}());

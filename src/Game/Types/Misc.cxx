@@ -5,7 +5,9 @@ export using Health = int;
 
 export enum class TerrainType : std::uint8_t {
   Empty,
-  Wall
+  Wall,
+  UpStair,
+  DownStair,
 };
 
 export enum class MonsterClass : std::uint8_t {
@@ -33,9 +35,9 @@ export enum class ArtifactId : std::uint8_t {
   Normal,
 };
 
-
 export class MoveMode {
   using ImplT = std::uint8_t;
+
 public:
   [[nodiscard]] static constexpr MoveMode fight() noexcept { return MoveMode(Fight); };
   [[nodiscard]] static constexpr MoveMode move() noexcept { return MoveMode(Move); };
@@ -80,7 +82,7 @@ export class MonsterID {
 public:
   class Generator {
   public:
-    MonsterID next() noexcept { return MonsterID(value_++); }
+    constexpr MonsterID next() noexcept { return MonsterID(value_++); }
 
   private:
     MonsterID::idImpl value_ = MonsterID::NullV + 1;

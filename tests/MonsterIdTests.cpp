@@ -26,22 +26,30 @@ static_assert(Monster::ID() == Monster::ID::null());
 // Monster::ID::Generator - runtime tests
 // ============================================================
 
-TEST(MonsterIdGenerator, NextProducesNonNull) {
+// Generator produces non-null IDs
+static_assert([] {
   Monster::ID::Generator gen;
   Monster::ID id = gen.next();
-  EXPECT_FALSE(id.isNull());
-}
+  return !id.isNull();
+}());
 
-TEST(MonsterIdGenerator, SequentialNextProducesDistinctIds) {
+// Sequential next produces distinct IDs
+static_assert([] {
   Monster::ID::Generator gen;
   Monster::ID a = gen.next();
   Monster::ID b = gen.next();
   Monster::ID c = gen.next();
-  EXPECT_NE(a, b);
-  EXPECT_NE(b, c);
-  EXPECT_NE(a, c);
-}
+  return a != b && b != c && a != c;
+}());
 
+// Generated ID differs from null
+static_assert([] {
+  Monster::ID::Generator gen;
+  Monster::ID id = gen.next();
+  return id != Monster::ID::null();
+}());
+
+// StdHashWorks
 TEST(MonsterIdGenerator, StdHashWorks) {
   Monster::ID::Generator gen;
   std::unordered_map<Monster::ID, int> map;
@@ -52,10 +60,4 @@ TEST(MonsterIdGenerator, StdHashWorks) {
   EXPECT_EQ(map[a], 1);
   EXPECT_EQ(map[b], 2);
   EXPECT_EQ(map.size(), 2u);
-}
-
-TEST(MonsterIdGenerator, NextDiffersFromNull) {
-  Monster::ID::Generator gen;
-  Monster::ID id = gen.next();
-  EXPECT_NE(id, Monster::ID::null());
 }
