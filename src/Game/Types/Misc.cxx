@@ -73,3 +73,32 @@ private:
   constexpr static ImplT Fight = 1;
   constexpr static ImplT Move = Fight << 1;
 };
+
+export class MonsterID {
+  using idImpl = int;
+
+public:
+  class Generator {
+  public:
+    MonsterID next() noexcept { return MonsterID(value_++); }
+
+  private:
+    MonsterID::idImpl value_ = MonsterID::NullV + 1;
+  };
+  [[nodiscard]] constexpr MonsterID() noexcept : id_(0) {}
+  [[nodiscard]] constexpr std::size_t hash() const noexcept { return std::hash<idImpl>{}(id_); }
+  [[nodiscard]] bool operator==(const MonsterID &o) const noexcept = default;
+  [[nodiscard]] static constexpr MonsterID null() noexcept { return MonsterID{NullV}; }
+  constexpr void clear() noexcept { id_ = NullV; }
+  [[nodiscard]] constexpr bool isNull() const noexcept { return id_ == NullV; }
+
+private:
+  static constexpr idImpl NullV = 0;
+  [[nodiscard]] constexpr explicit MonsterID(std::size_t id) noexcept : id_(id) {}
+  idImpl id_;
+};
+
+template <>
+struct std::hash<MonsterID> {
+  [[nodiscard]] constexpr std::size_t operator()(MonsterID s) const noexcept { return s.hash(); }
+};

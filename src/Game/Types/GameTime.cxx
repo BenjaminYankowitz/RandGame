@@ -60,3 +60,8 @@ public:
   }
   std::size_t impl = 0;
 };
+
+
+export std::ostream &operator<<(std::ostream &out, GameTime time) {
+  return out << time.impl;
+}

@@ -36,6 +36,8 @@ Checks: >
   -readability-magic-numbers,
   -google-readability-braces-around-statements,
   -readability-braces-around-statements,
+  -modernize-use-designated-initializers
+  -misc-use-internal-linkage
 	
 
 
@@ -59,3 +61,4 @@ CheckOptions:
   - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase }
   - { key: readability-identifier-naming.MemberConstantCase,       value: CamelCase }
   - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase }
+  - { key: modernize-use-designated-initializers.FixMode,          value: None}

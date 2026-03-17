@@ -5,7 +5,7 @@ import GameTypes;
 constexpr TimePeriod BaseSpeed{60};
 
 
-struct MonsterBrainInit{
+export struct MonsterBrainInit{
   MustInit<bool> isPlayer =  false;
   MustInit<bool> hatesItemPickups = false;
 };

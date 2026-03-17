@@ -1,6 +1,7 @@
 #include "TestHeader.h"
 import Common;
 
+namespace {
 struct Accessor {
 public:
   using element_type = bool;
@@ -12,15 +13,15 @@ public:
 };
 using spanT = std::mdspan<bool, std::extents<int, std::dynamic_extent, std::dynamic_extent>, std::layout_right, Accessor>;
 
-static constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
+constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
   if (static_cast<int>(map.size()) != height * width) {
     return false;
   }
   Position start{-1, -1};
   Position end{-1, -1};
-  for (int row = 0; row < static_cast<int>(height); row++) {
-    for (int col = 0; col < static_cast<int>(width); col++) {
-      const char c = map[row * width + col];
+  for (int row = 0; row < height; row++) {
+    for (int col = 0; col < width; col++) {
+      const char c = map[(row * width) + col];
       if (c == 's' || c == 'b') {
         start = {col, row};
       } else if (c == 'e' || c == 'f') {
@@ -60,20 +61,21 @@ static constexpr bool testMap(std::string_view map, int height, int width, int e
   return true;
 }
 
+}  // namespace
 static_assert(testMap("\
 s  \
 xx \
 e  \
 ",
                       3, 3, 4));
-
+namespace {
 // Unreachable goal returns Dir{0,0}
-static constexpr bool testUnreachable(std::string_view map, int height, int width) {
+constexpr bool testUnreachable(std::string_view map, int height, int width) {
   Position start{-1, -1};
   Position end{-1, -1};
   for (int row = 0; row < height; row++) {
     for (int col = 0; col < width; col++) {
-      const char c = map[row * width + col];
+      const char c = map[(row * width) + col];
       if (c == 's')
         start = {col, row};
       else if (c == 'e')
@@ -84,6 +86,7 @@ static constexpr bool testUnreachable(std::string_view map, int height, int widt
   auto dir = FindPath::findPath(mapView, start, end);
   return dir == Dir{0, 0};
 }
+}  // namespace
 
 static_assert(testUnreachable(
     "s x"

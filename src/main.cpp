@@ -2,6 +2,7 @@ import std;
 import CursesIO;
 import Game;
 
+namespace {
 void runGame(IOModule::Interface &interface) {
   interface.updateGameScreen();
   while (interface.doAction()) {
@@ -13,6 +14,7 @@ void doMain() {
   IOModule::Interface IORII;
   IORII.createTiedGameInterface();
   runGame(IORII);
+}
 }
 
 int main() {

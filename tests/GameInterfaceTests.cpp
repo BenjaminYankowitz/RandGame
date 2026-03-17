@@ -4,6 +4,7 @@ import GameTypes;
 import Common;
 import std;
 
+namespace {
 class NullEventViewer final : public EventViewerInterface {
   void itemPickup(MonsterInterface /*grabber*/, ObjectInterface /*grabbed*/) override {}
   void debug(std::string_view /*message*/) override {}
@@ -15,7 +16,7 @@ class NullEventViewer final : public EventViewerInterface {
 static std::unique_ptr<EventViewerInterface> makeNullViewer() {
   return std::make_unique<NullEventViewer>();
 }
-
+}  // namespace
 TEST(GameInterfaceTests, ConstructionSucceeds) {
   GameInterface gi(makeNullViewer());
   (void)gi;

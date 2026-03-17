@@ -1,7 +1,7 @@
 export module Common:LogStream;
 import std;
 
-class IgnoreStreamBuf : public std::streambuf {
+class IgnoreStreamBuf : public std::streambuf { //NOLINT(misc-use-internal-linkage)
 public:
   IgnoreStreamBuf() = default;
 

@@ -7,30 +7,6 @@ constexpr bool InDebug = false;
 constexpr bool InDebug = true;
 #endif
 
-template<class T, class U>
-concept CQual = std::same_as<std::remove_cvref_t<T>,std::remove_cvref_t<U>>;
-
-template<class T, class U>
-struct MConstImpl{
-  using type = T;
-};
-
-template<class T, class U>
-struct MConstImpl<T,const U>{
-  using type = const T;
-};
-
-template<class T, class U>
-struct MConstImpl<T,const U&>{
-  using type = const T;
-};
-
-template<class T, class U>
-using MConst = MConstImpl<T,U>::type;
-
-static_assert(std::same_as<std::remove_const_t<const int>, int>);
-
-
 // export namespace Cmn {
 export template <class T>
 class Static2DArr {
@@ -75,7 +51,7 @@ public:
         std::exit(1);
       }
     }
-    return std::forward_like<decltype(self)>(self.data_[row * self.cols_ + col]);
+    return std::forward_like<decltype(self)>(self.data_[(row * self.cols_) + col]);
   }
   [[nodiscard]] constexpr auto begin(this auto&& self) noexcept { return piterator<decltype(self)>(self.data_.get()); }
   [[nodiscard]] constexpr auto end(this auto&& self) noexcept { return piterator<decltype(self)>(self.begin() + self.size()); }

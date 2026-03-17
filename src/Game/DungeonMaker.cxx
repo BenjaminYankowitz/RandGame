@@ -112,7 +112,7 @@ void perlin(Static2DArr<decltype(Wall)> &floor, double xscale, double yscale, do
   const double minX = -sin * maxBaseY;
   const double minY = 0;
   const double maxX = cos * maxBaseX;
-  const double maxY = cos * maxBaseY + sin * maxBaseX;
+  const double maxY = (cos * maxBaseY) + (sin * maxBaseX);
   const double xRange = maxX - minX;
   const double yRange = maxY - minY;
   PerlinNoise::Generator gen(std::ceil(xRange + xoffset) + 1, std::ceil(yRange + yoffset) + 1);
@@ -120,8 +120,8 @@ void perlin(Static2DArr<decltype(Wall)> &floor, double xscale, double yscale, do
     for (std::size_t yI = 0; yI < floor.rows(); yI++) {
       const double x = xI / xscale;
       const double y = yI / yscale;
-      const double eX = x * cos - y * sin - minX + xoffset;
-      const double eY = y * cos + x * sin - minY + yoffset;
+      const double eX = (x * cos) - (y * sin) - minX + xoffset;
+      const double eY = (y * cos) + (x * sin) - minY + yoffset;
       if (gen.getHeight(eX, eY) >= threshold) {
         floor[yI, xI] = Wall;
       } else {
@@ -232,7 +232,7 @@ struct Candidate {
 template <auto Wall>
 std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall)> &floor, const RegionInfo &info) noexcept {
   std::vector<Candidate> candidates;
-
+    // for (auto [r, c] : std::views::cartesian_product(std::views::iota(0, floor.rows()), std::views::iota(0, floor.cols()))) {
   for (std::size_t r = 0; r < floor.rows(); r++) {
     for (std::size_t c = 0; c < floor.cols(); c++) {
       if (floor[r, c] != Wall)

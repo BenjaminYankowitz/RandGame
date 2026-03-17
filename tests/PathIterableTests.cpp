@@ -1,9 +1,10 @@
 #include "TestHeader.h"
 import Common;
 
+namespace {
 // -- Constexpr helpers --
 template <std::size_t N>
-static constexpr auto collectPath(Dir e) {
+constexpr auto collectPath(Dir e) {
   std::array<Dir, N> result{};
   std::size_t i = 0;
   for (auto d : PathIterable{e}) {
@@ -14,7 +15,7 @@ static constexpr auto collectPath(Dir e) {
   return result;
 }
 
-static constexpr std::size_t pathSize(Dir e) {
+constexpr std::size_t pathSize(Dir e) {
   std::size_t count = 0;
   for (auto _ : PathIterable{e}) {
     ++count;
@@ -22,7 +23,7 @@ static constexpr std::size_t pathSize(Dir e) {
   return count;
 }
 
-static constexpr bool pathTerminates(Dir e, int maxSteps) {
+constexpr bool pathTerminates(Dir e, int maxSteps) {
   auto path = PathIterable{e};
   auto it = path.begin();
   auto end = path.end();
@@ -32,6 +33,7 @@ static constexpr bool pathTerminates(Dir e, int maxSteps) {
     ++steps;
   }
   return it == end;
+}
 }
 
 // -- Empty path --

@@ -103,7 +103,7 @@ public:
 template <class T>
 concept EnumType = std::is_enum_v<T>;
 template <class ObjectT, std::size_t size>
-class EnumToObject {
+class EnumToObject { 
 private:
   std::array<ObjectT, size> impl_;
   using EnumT = decltype(GetEnumValue<ObjectT>::get(impl_[0]));

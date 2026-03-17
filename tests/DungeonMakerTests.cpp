@@ -7,9 +7,10 @@ import std;
 constexpr int Wall = 1;
 constexpr int Empty = 0;
 
-
-static int countRegions(Static2DArr<int> &floor) {
+namespace {
+int countRegions(Static2DArr<int> &floor) {
   return DungeonMaker::labelRegions<Wall,Empty>(floor).numRegions();
+}
 }
 
 

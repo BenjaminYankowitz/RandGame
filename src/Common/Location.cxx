@@ -52,7 +52,7 @@ public:
       std::unreachable();
     }
     const int k = n + (n >= 4 ? 1 : 0);
-    return {k % 3 - 1, k / 3 - 1};
+    return {(k % 3) - 1, (k / 3) - 1};
   }
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
   [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {}
@@ -96,7 +96,7 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   return out;
 }
 
-[[nodiscard]] constexpr auto abs(auto n) noexcept {
+[[nodiscard]] constexpr auto abs(auto n) noexcept { 
   return n < 0 ? -n : n;
 }
 

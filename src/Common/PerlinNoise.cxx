@@ -2,17 +2,12 @@ export module PerlinNoise;
 import Common;
 namespace PerlinNoise {
 double Smoothstep(double x, double a, double b) {
-  return a + x * x * (3 - 2 * x) * (b - a);
+  return a + (x * x * (3 - (2 * x)) * (b - a));
 }
 
 template <std::size_t N>
-class MathVector;
-template <std::size_t N>
-std::ostream &operator<<(std::ostream &out, const MathVector<N> &vec);
-template <std::size_t N>
 class MathVector {
   static_assert(N>0);
-private:
 public:
   constexpr MathVector() = default;
   constexpr explicit MathVector(const std::array<double, N> &vector) noexcept : impl_(vector) {}
@@ -27,7 +22,7 @@ public:
   [[nodiscard]] constexpr MathVector operator-(const MathVector other) const noexcept {
     std::array<double, N> ret;
     std::ranges::transform(std::views::zip(impl_, other.impl_), ret.begin(), [](auto a) {
-      return a.first - a.second;
+      return std::get<0>(a) - std::get<1>(a);
     });
     return MathVector(ret);
   }
@@ -41,8 +36,6 @@ public:
     return 1 << N;
   }
   std::array<double, N> impl_;
-
-  friend std::ostream &operator<< <N>(std::ostream &, const MathVector<N> &vec);
 };
 template <std::size_t N>
 std::ostream &operator<<(std::ostream &out, const MathVector<N> &vec) {

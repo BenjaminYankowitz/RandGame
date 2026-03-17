@@ -2,300 +2,11 @@ export module CursesIO;
 import CursesLowLevel;
 import Common;
 import GameInterface;
+import Printing;
 
-using namespace std::literals;
-export namespace IOExceptions {
-using IOModuleException = CursesLowLevel::IOExceptions::IOModuleException;
-}
+using namespace std::string_view_literals;
 using namespace CursesLowLevel;
-
-attr_t toModifierChar(const MonsterInterface &monst) noexcept {
-  if (monst.isPlayer()) {
-    return Modifier::Standout;
-  }
-  return Modifier::Normal;
-}
-
-Color toColorChar(const MonsterInterface &monst) noexcept {
-  switch (monst.getClass()) {
-    using enum MonsterClass;
-  case Human:
-    return White;
-  case Cat:
-    return White;
-  case SeaSlug:
-    return Magenta;
-  case GreedyWeasel:
-    return Brown;
-  case Bryozoan:
-    return DarkBlue;
-  }
-}
-
-chtype toDisplayChar(const MonsterInterface &monst) noexcept {
-  switch (monst.getClass()) {
-    using enum MonsterClass;
-  case Human:
-    return '@';
-  case Cat:
-    return 'f';
-  case SeaSlug:
-    return '~';
-  case GreedyWeasel:
-    return 'w';
-  case Bryozoan:
-    return L'˚';
-  }
-}
-
-constexpr std::array Vowels = {'a', 'e', 'i', 'o', 'u', 'y'};
-template <class T, std::size_t size>
-constexpr bool inArray(const std::array<T, size> &arr, const T &v) noexcept {
-  return std::ranges::any_of(arr, [v](const T &i) { return i == v; });
-}
-
-class Word {
-public:
-  std::string_view word;
-  bool weirdAn = false;
-};
-
-class Noun : public Word {
-public:
-  std::string_view weirdPlural{}; // NOLINT(readability-redundant-member-init)
-};
-
-class Adjective : public Word {};
-
-[[nodiscard]] constexpr bool usesAn(Word word) noexcept {
-  return word.weirdAn != inArray(Vowels, word.word[0]);
-}
-
-class PrintableObject {
-  using DescriptorsType = std::array<Adjective, 4>;
-
-public:
-  constexpr explicit PrintableObject(Noun name, std::size_t count = 1) noexcept : name_{name}, count_{count} {}
-  constexpr void addDescriptor(Adjective descriptor) noexcept { descriptors_[numDescriptors_++] = descriptor; }
-  constexpr void setUseThe() { useThe_ = true; }
-  constexpr void setCount(std::size_t count) { count_ = count; }
-  [[nodiscard]] constexpr std::string_view getNameSingular() const noexcept {
-    return name_.word;
-  }
-  [[nodiscard]] constexpr std::string_view getNameWeirdPlural() const noexcept {
-    return name_.weirdPlural;
-  }
-  [[nodiscard]] constexpr std::string_view getNamePluralSuffix() const noexcept {
-    return name_.word.back() == 's' ? "es" : "s";
-  }
-  [[nodiscard]] constexpr std::size_t getCount() const noexcept {
-    return count_;
-  }
-  [[nodiscard]] constexpr std::string_view getSingularPrefix() const noexcept {
-    if (useThe_) {
-      return "the";
-    }
-    return (numDescriptors_ == 0 ? usesAn(name_) : usesAn(descriptors_[0])) ? "an" : "a";
-  }
-  [[nodiscard]] constexpr Iterable<DescriptorsType::const_iterator> getDescriptors() const noexcept {
-    return {descriptors_.begin(), descriptors_.begin() + numDescriptors_};
-  }
-
-private:
-  Noun name_;
-  std::size_t count_ = 1;
-  std::size_t numDescriptors_ = 0;
-  DescriptorsType descriptors_;
-  bool useThe_ = false;
-};
-
-std::ostream &operator<<(std::ostream &out, const PrintableObject &obj) noexcept {
-  if (obj.getCount() == 1) {
-    out << obj.getSingularPrefix();
-  } else {
-    out << obj.getCount();
-  }
-  out << ' ';
-  for (const auto &word : obj.getDescriptors()) {
-    out << word.word << ' ';
-  }
-  std::string_view word;
-  std::string_view plural;
-  if (obj.getCount() != 1) {
-    word = obj.getNameWeirdPlural();
-  }
-  if (word.empty()) {
-    word = obj.getNameSingular();
-    if (obj.getCount() != 1) {
-      plural = obj.getNamePluralSuffix();
-    }
-  }
-  out << word << plural;
-  return out;
-}
-
-[[nodiscard]] Noun toName(ObjectInterface obj) noexcept {
-  switch (obj.type()) {
-    using enum ObjectType;
-  case KingsCoin:
-    return {{"coin"}};
-  case Knife:
-    return {{"knife"}, "knives"};
-  case Die:
-    return {{"die"}, "dice"};
-  }
-}
-
-[[nodiscard]] Adjective getMatAdj(ObjectInterface obj) noexcept {
-  switch (obj.mat()) {
-    using enum Material;
-  case Gold:
-    return {obj.type() == ObjectType::KingsCoin ? "gold" : "golden"};
-  case Iron:
-    return {"iron"};
-  case Plastic:
-    return {"plastic"};
-  case Wood:
-    return {"wooden"};
-  }
-}
-
-[[nodiscard]] Noun toName(TerrainType terrain) {
-  switch (terrain) {
-  case TerrainType::Empty:
-    return {{"empty spot"}};
-  case TerrainType::Wall:
-    return {{"wall"}};
-  }
-}
-
-[[nodiscard]] PrintableObject toPrintAbleObject(TerrainType terrain) noexcept {
-  const Noun ObjName = toName(terrain);
-  PrintableObject printer(ObjName);
-  return printer;
-}
-
-[[nodiscard]] PrintableObject toPrintAbleObject(ObjectInterface obj) noexcept {
-  const Noun ObjName = toName(obj);
-  const Adjective matDescriptor = getMatAdj(obj);
-  PrintableObject printer(ObjName, obj.count());
-  printer.addDescriptor(matDescriptor);
-  if (obj.artifactStatus() != ArtifactId::Normal) {
-    printer.setUseThe();
-  }
-  return printer;
-}
-
-std::ostream &operator<<(std::ostream &str, const ObjectInterface &obj) noexcept {
-  return str << toPrintAbleObject(obj);
-}
-
-Symbol MonsterToSymbol(MonsterInterface monst) noexcept {
-  Symbol sym = toDisplayChar(monst);
-  sym.addModifier(toModifierChar(monst));
-  sym.setFrontColor(toColorChar(monst));
-  sym.setBackColor(Black);
-  return sym;
-}
-
-constexpr chtype ObjectTypeToCharacter(ObjectType otype) noexcept {
-  switch (otype) {
-    using enum ObjectType;
-  case KingsCoin:
-    return '$';
-  case Knife:
-    return ')';
-  case Die:
-    return '(';
-  }
-}
-
-constexpr Color ObjectMaterialToColor(Material otype) noexcept {
-  switch (otype) {
-    using enum Material;
-  case Gold:
-    return Yellow;
-  case Iron:
-    return White;
-  case Plastic:
-    return BrightWhite;
-  case Wood:
-    return Brown;
-  }
-}
-
-Symbol ObjectToSymbol(ObjectInterface obj) noexcept {
-  Symbol sym = ObjectTypeToCharacter(obj.type());
-  Color c = ObjectMaterialToColor(obj.mat());
-  sym.setFrontColor(c);
-  return sym;
-}
-
-Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexcept {
-  const auto tile = floor.getTile(pos);
-  const auto c = tile.terrainType;
-  switch (c) {
-    using enum TerrainType;
-  case Empty:
-    return '.';
-  case Wall:
-    auto getType = [floor](Position pos) {
-      return floor.inBounds(pos) && floor.getTile(pos).terrainType == Wall;
-    };
-    auto check = [&getType, pos](Dir dir) {
-      if (!getType(pos + dir)) {
-        return false;
-      }
-      auto [dx, dy] = dir;
-      Dir oDir(dy, dx);
-      // return true;
-      return !(getType(pos + oDir) && getType(pos - oDir) && getType(pos + dir + oDir) && getType(pos + dir - oDir));
-    };
-    using enum SpecialChar::Directions;
-    SpecialChar::Directions dir = None;
-    if (check(Dir::up()))
-      dir |= Up;
-    if (check(Dir::down()))
-      dir |= Down;
-    if (check(Dir::left()))
-      dir |= Left;
-    if (check(Dir::right()))
-      dir |= Right;
-    if (dir == None && getType(pos.up())) {
-      return ' ';
-    }
-    return SpecialChar::Walls[dir];
-  }
-}
-
-Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
-  const auto tile = floor.getTile(pos);
-  auto monstPtr = tile.monster;
-  if (!monstPtr.isNull()) {
-    return MonsterToSymbol(monstPtr);
-  }
-  if (!tile.objects.empty()) {
-    return ObjectToSymbol(tile.objects.back());
-  }
-  return TerrainTypeToSymbol(floor, pos);
-}
-
-std::string_view getName(MonsterInterface monster) noexcept {
-  switch (monster.getClass()) {
-    using enum MonsterClass;
-  case Human:
-    return "human";
-  case Cat:
-    return "cat";
-  case SeaSlug:
-    return "sea slug";
-  case GreedyWeasel:
-    return "greedy weasel";
-  case Bryozoan:
-    return "bryozoan";
-  }
-}
-
+namespace {
 constexpr Dir keyToDir(chtype key) noexcept {
   switch (key) {
   case SpecialChar::Left:
@@ -322,9 +33,10 @@ constexpr Dir keyToDir(chtype key) noexcept {
     return {};
   }
 }
+}  // namespace
 
 // static BoxedWindow *EventWindow;
-
+namespace {
 void displayInvent(BoxedWindow &window, ObjectContainerInterface items) {
   window.clear();
   std::array front = {'a', ' ', '-', ' '};
@@ -352,7 +64,8 @@ void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
   window.updateScreen();
 }
 
-class ActionMod {
+}  // namespace
+class ActionMod { 
 public:
   [[nodiscard]] constexpr MoveMode getMoveMode() noexcept {
     return moveMode_;
@@ -368,7 +81,7 @@ public:
     if (count_ == NoCount) {
       return count_ = n;
     }
-    return count_ = count_ * 10 + n;
+    return count_ = (count_ * 10) + n;
   }
   constexpr void toggleMoveMode(MoveMode mode) noexcept {
     moveMode_ ^= mode;
@@ -391,9 +104,8 @@ namespace IOModule {
 export class Interface;
 }
 using IOModule::Interface;
-
 using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
-class PrintToViewer : public streambufT {
+class PrintToViewer : public streambufT { 
 public:
   explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
   Interface *parent_;
@@ -420,7 +132,9 @@ private:
 
 namespace Actions {
 using ActionType = bool (*)(GameInterface &, IOModule::Interface &, ActionMod &);
+namespace{
 [[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept;
+}
 } // namespace Actions
 export namespace IOModule {
 class Interface {
@@ -518,6 +232,7 @@ private:
 
 namespace Actions {
 
+namespace {
 template <int Dx, int Dy>
 constexpr bool movePlayer(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
@@ -525,13 +240,12 @@ constexpr bool movePlayer(GameInterface &gState, IOModule::Interface & /*unused*
   gState.generalMove(D, modifer.getMoveMode());
   return true;
 }
-
 struct ItemFromInterfaceSettings {
   bool doDisplay = true;
   bool autoSelectOne = true;
 };
 
-static constexpr std::size_t NoItem = std::numeric_limits<std::size_t>::max();
+constexpr std::size_t NoItem = std::numeric_limits<std::size_t>::max();
 template <ItemFromInterfaceSettings settings = {}>
 std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
   if (interface.size() == 0) {
@@ -629,7 +343,7 @@ bool quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /
   return false;
 }
 
-static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
+constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
     {SpecialChar::Left, movePlayer<-1, 0>},
     {'h', movePlayer<-1, 0>},
     {SpecialChar::Down, movePlayer<0, 1>},
@@ -669,21 +383,8 @@ static constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t
   static constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
   return CmndMp.get(input);
 }
-
+}  // namespace
 } // namespace Actions
-
-std::ostream &operator<<(std::ostream &out, GameTime time) {
-  return out << time.impl;
-}
-
-std::ostream &operator<<(std::ostream &out, MonsterInterface monster) {
-  if (monster.isPlayer()) {
-    out << "you";
-  } else {
-    out << "a " << getName(monster);
-  }
-  return out;
-}
 
 std::streamsize PrintToViewer::xsputn(const char_type *s, std::streamsize count) {
   std::string_view input(s, count);

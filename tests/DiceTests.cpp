@@ -36,7 +36,7 @@ static_assert([] consteval {
 TEST(DiceTests, DiceInRange) {
   auto d = "2d4+3d6+5"_dice;
   std::size_t min = 2+3+5;
-  std::size_t max = 2*4+3*6+5;
+  std::size_t max = (2*4)+(3*6)+5;
   for(auto _ : std::ranges::views::iota(0,1000)){
     auto val = d();
     EXPECT_LE(val,max);

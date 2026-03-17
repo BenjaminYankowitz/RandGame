@@ -67,11 +67,14 @@ consteval auto makeMap() {
   });
   return ret;
 }
+
+namespace {
 template <std::convertible_to<std::size_t> T>
 class DefaultHasher {
 public:
   constexpr static std::size_t operator()(T t) { return t; }
 };
+}
 
 export namespace CompileTimeHashMap {
 template <Pairing paring, Hasher hasher, decltype(paring)::KeyType nullKV, decltype(paring)::ValueType nullVV>

@@ -3,13 +3,16 @@ import :Random;
 import :Misc;
 import std;
 
+namespace {
 struct MonoState{};
-
-constexpr void stringViewToNumber(std::string_view str, std::uint16_t &out) {
+}
+constexpr std::uint16_t stringViewToNumber(std::string_view str) { 
+  std::uint16_t out;
   std::from_chars_result result = std::from_chars(str.begin(), str.end(), out);
   if (result.ec != std::errc()) {
     throw ERRCException(result.ec);
   }
+  return out;
 }
 
 
@@ -22,12 +25,12 @@ class SingleTypeGroup {
     if (dLoc == start) {
       number_ = 1;
     } else {
-      stringViewToNumber(writtenExplanation.substr(start, dLoc-start), number_);
+      number_ = stringViewToNumber(writtenExplanation.substr(start, dLoc-start));
     }
     if(dLoc==std::string_view::npos){
       faces_ = 1;
     } else {
-      stringViewToNumber(writtenExplanation.substr(dLoc + 1), faces_);
+      faces_ = stringViewToNumber(writtenExplanation.substr(dLoc + 1));
     }
   }
   constexpr SingleTypeGroup(std::uint16_t faces, std::uint16_t number) : faces_(faces), number_(number){

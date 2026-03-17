@@ -1,7 +1,7 @@
 export module Game;
 import Common;
 import DungeonMaker;
-import GameTypes;
+export import GameTypes;
 import MonsterClassConfig;
 
 export class GameState;
@@ -29,29 +29,7 @@ public:
   struct AttackInfo {
     MustInit<Health> damage;
   };
-  class ID {
-    using idImpl = int;
-
-  public:
-    class Generator {
-    public:
-      ID next() noexcept { return ID(value_++); }
-
-    private:
-      ID::idImpl value_ = ID::NullV + 1;
-    };
-    [[nodiscard]] constexpr ID() noexcept : id_(0) {}
-    [[nodiscard]] constexpr std::size_t hash() const noexcept { return std::hash<idImpl>{}(id_); }
-    [[nodiscard]] bool operator==(const ID &o) const noexcept = default;
-    [[nodiscard]] static constexpr ID null() noexcept { return ID{NullV}; }
-    constexpr void clear() noexcept { id_ = NullV; }
-    [[nodiscard]] constexpr bool isNull() const noexcept { return id_ == NullV; }
-
-  private:
-    static constexpr idImpl NullV = 0;
-    [[nodiscard]] constexpr explicit ID(std::size_t id) noexcept : id_(id) {}
-    idImpl id_;
-  };
+  using ID = MonsterID;
 
   static ID createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer = false) noexcept;
   [[nodiscard]] constexpr TimePeriod generalMove(GameState &state, Dir d, MoveMode m) noexcept;
@@ -78,7 +56,7 @@ public:
     return pathTo(state, target, false);
   }
   [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, bool attack) noexcept;
-  enum class ReThinkReason {
+  enum class ReThinkReason : std::uint8_t {
     CanNotMove,
     TargetDead,
     CanNotPathToTarget,
@@ -124,11 +102,6 @@ private:
 [[nodiscard]] constexpr bool operator==(const Monster &lhs, const Monster &rhs) noexcept {
   return &lhs == &rhs;
 }
-
-template <>
-struct std::hash<Monster::ID> {
-  [[nodiscard]] constexpr std::size_t operator()(Monster::ID s) const noexcept { return s.hash(); }
-};
 
 class WorldTile {
 public:

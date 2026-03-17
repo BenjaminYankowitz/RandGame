@@ -19,7 +19,7 @@ concept Distribution = requires(T dist, std::mt19937 state) {
   return {seeda, seedb};
 }
 
-static inline std::mt19937 rndState = []() {
+inline std::mt19937 rndState = []() {
   auto seedSeq = getSeed();
   std::mt19937 ret(seedSeq);
   return ret;
