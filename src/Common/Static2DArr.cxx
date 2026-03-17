@@ -1,5 +1,6 @@
 export module Common:Static2DArr;
 import :IteratorBase;
+import :LogStream;
 import std;
 #ifdef NDEBUG
 constexpr bool InDebug = false;
@@ -12,7 +13,7 @@ export template <class T>
 class Static2DArr {
   public:
   using value_type = T;
-  static_assert(std::is_same<std::remove_cvref_t<value_type>, value_type>::value, "Static2DArr must have a non-const, non-volatile, non reference value_type");
+  static_assert(std::is_same_v<std::remove_cvref_t<value_type>, value_type>, "Static2DArr must have a non-const, non-volatile, non reference value_type");
   using constvalue_T = const value_type;
   using size_type = std::size_t;
   using iterator = IteratorImpl<value_type, Static2DArr>;
@@ -46,7 +47,7 @@ public:
   [[nodiscard]] constexpr auto &operator[](this auto&& self, size_type row, size_type col) noexcept { 
     if constexpr (InDebug) {
       if (row >= self.rows_ || col >= self.cols_) {
-        std::cerr << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
+        Logging::log << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
                   << "Dims are " << self.rows_ << " x " << self.cols_ << '\n';
         std::exit(1);
       }

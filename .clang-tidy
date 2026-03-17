@@ -36,8 +36,8 @@ Checks: >
   -readability-magic-numbers,
   -google-readability-braces-around-statements,
   -readability-braces-around-statements,
-  -modernize-use-designated-initializers
-  -misc-use-internal-linkage
+  -modernize-use-designated-initializers,
+  -misc-use-internal-linkage,
 	
 
 
