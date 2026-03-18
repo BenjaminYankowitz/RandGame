@@ -39,12 +39,15 @@ private:
 export template <class T>
 class OptionalReference {
 private:
+  using wConstT = std::remove_const<T>;
+  friend OptionalReference<const T>;
 public:
   using iterator = IteratorImpl<T, OptionalReference>;
   using const_iterator = IteratorImpl<const T, OptionalReference>;
   constexpr explicit OptionalReference(T *ptr) noexcept : ptr_(ptr) {}
   constexpr explicit OptionalReference(T& value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;
+  constexpr OptionalReference(OptionalReference<std::remove_const<T>> o) noexcept : ptr_(o.ptr_) {} //NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr iterator begin() noexcept { return iterator(ptr_); }
   [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator(ptr_); }
   [[nodiscard]] constexpr iterator end() noexcept { return endIter(); }

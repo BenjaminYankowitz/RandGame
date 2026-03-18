@@ -26,6 +26,8 @@ add_library(GameInterface STATIC)
 target_sources(GameInterface
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
-      	GameInterface.cxx)
+      	GameInterface.cxx
+	PRIVATE
+				GameInterfaceImpl.cxx)
 
-target_link_libraries(GameInterface PUBLIC Common Game)
+target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE Game)
