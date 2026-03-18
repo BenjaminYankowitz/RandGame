@@ -237,26 +237,26 @@ public:
     return std::forward_like<decltype(self)>(self.floorData_[floorId.floor]);
   }
   [[nodiscard]] constexpr auto &getObjects(this auto &&self, Location loc) noexcept {
-    return std::forward_like<decltype(self)>(self.getFloor(loc.mapPos).getObjects(loc.pos));
+    return self.getFloor(loc.mapPos).getObjects(loc.pos);
   }
   [[nodiscard]] constexpr auto &getMonster(this auto &&self, Location loc) noexcept {
-    return std::forward_like<decltype(self)>(self.getFloor(loc.mapPos).getMonster(loc.pos));
+    return self.getFloor(loc.mapPos).getMonster(loc.pos);
   }
   [[nodiscard]] constexpr auto &getTerrainType(this auto &&self, Location loc) noexcept {
-    return std::forward_like<decltype(self)>(self.getFloor(loc.mapPos).getTerrainType(loc.pos));
+    return self.getFloor(loc.mapPos).getTerrainType(loc.pos);
   }
   [[nodiscard]] constexpr auto getTile(this auto &&self, Location loc) noexcept {
-    return std::forward_like<decltype(self)>(self.getFloor(loc.mapPos).getTile(loc.pos));
+    return self.getFloor(loc.mapPos).getTile(loc.pos);
   }
   [[nodiscard]] constexpr bool isOpenTile(Location loc) const noexcept {
     return getFloor(loc.mapPos).isOpenTile(loc.pos);
   }
-  [[nodiscard]] auto &getMonster(this auto &&self, Monster::ID id) noexcept {
-    return std::forward_like<decltype(self)>(*self.monsterMap_.find(id)->second);
-  }
   [[nodiscard]] auto tryGetMonster(this auto&& self, Monster::ID id) noexcept {
     auto found = self.monsterMap_.find(id);
-    return found == self.monsterMap_.end() ? OptionalReference<Monster>() : OptionalReference(std::forward_like<decltype(self)>(*found->second));
+    return found == self.monsterMap_.end() ? OptionalReference<std::remove_reference_t<decltype(std::forward_like<decltype(self)>(*found->second))>>() : OptionalReference(std::forward_like<decltype(self)>(*found->second));
+  }
+  [[nodiscard]] auto &getMonster(this auto &&self, Monster::ID id) noexcept {
+    return *self.tryGetMonster(id);
   }
   [[nodiscard]] constexpr bool containsMonster(Monster::ID id) const noexcept {
     return monsterMap_.contains(id);
