@@ -7,10 +7,10 @@
 *.o
 *.so
 *.out
+build/
 #proto buff
 *.pb.*
 *_pb2.py
-build/
 .vscode
 vcpkg_installed/
 # Packages #
@@ -32,6 +32,7 @@ vcpkg_installed/
 *.sql
 *.sqlite
 __*__
+Testing/
 # OS generated files #
 ######################
 .DS_Store

@@ -14,7 +14,7 @@ void doMain() {
   IOModule::Interface IORII;
   runGame(IORII);
 }
-}
+}  // namespace
 
 int main() {
   try {

@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 11,
   "configurePresets": [
     {
       "name": "default",
@@ -10,20 +10,7 @@
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake",
         "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": false
-      }
-    },
-    {
-      "name": "ExportCompileCommands",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -DFAKEGTESTFORCLANG",
+        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -Wall -Wextra -pedantic -Wno-deprecated-declarations -g -Qunused-arguments",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true
       }
     }
