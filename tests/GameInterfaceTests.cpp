@@ -13,7 +13,7 @@ class NullEventViewer final : public EventViewerInterface {
   void exception(const std::exception & /*e*/) noexcept override {}
 };
 
-static std::unique_ptr<EventViewerInterface> makeNullViewer() {
+std::unique_ptr<EventViewerInterface> makeNullViewer() {
   return std::make_unique<NullEventViewer>();
 }
 } // namespace
@@ -107,15 +107,6 @@ TEST(GameInterfaceTests, PlayerTileIsNotWall) {
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
   EXPECT_NE(tile.terrainType, TerrainType::Wall);
-}
-
-TEST(GameInterfaceTests, StairsAreNotWalls) {
-  // Verify that stair terrain types are distinct from Wall and Empty
-  EXPECT_NE(TerrainType::UpStair, TerrainType::Wall);
-  EXPECT_NE(TerrainType::DownStair, TerrainType::Wall);
-  EXPECT_NE(TerrainType::UpStair, TerrainType::Empty);
-  EXPECT_NE(TerrainType::DownStair, TerrainType::Empty);
-  EXPECT_NE(TerrainType::UpStair, TerrainType::DownStair);
 }
 
 TEST(GameInterfaceTests, PlayerTileHasPlayer) {

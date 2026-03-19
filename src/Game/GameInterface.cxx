@@ -97,6 +97,8 @@ public:
   void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
+  void goUpStair(MoveMode mode) noexcept;
+  void goDownStair(MoveMode mode) noexcept;
   void pickUpItem(std::size_t selected) noexcept;
   [[nodiscard]] WorldFloorInterface getFloor(FloorSpecifier floorId) const noexcept;
   [[nodiscard]] ObjectContainerInterface lookAtFloor() const noexcept;

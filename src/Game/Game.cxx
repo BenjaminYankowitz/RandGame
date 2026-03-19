@@ -32,7 +32,11 @@ public:
   using ID = MonsterID;
 
   static ID createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer = false) noexcept;
+  [[nodiscard]] constexpr TimePeriod generalMove(GameState &state, Location nLoc, MoveMode m) noexcept;
+  [[nodiscard]] constexpr TimePeriod generalMove(GameState &state, Position nPos, MoveMode m) noexcept;
   [[nodiscard]] constexpr TimePeriod generalMove(GameState &state, Dir d, MoveMode m) noexcept;
+  [[nodiscard]] constexpr TimePeriod goUpStair(GameState &state, MoveMode m) noexcept;
+  [[nodiscard]] constexpr TimePeriod goDownStair(GameState &state, MoveMode m) noexcept;
   [[nodiscard]] TimePeriod runAI(GameState &state) noexcept;
   [[nodiscard]] constexpr MonsterClass getClass() const noexcept { return mClass_; };
   [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return speed_; };
@@ -141,9 +145,9 @@ public:
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
   }
-  constexpr WorldFloor(std::size_t x, std::size_t y) noexcept : ObjectsArr_(y, x), MonsterArr_(y, x), TerrainTypeArr_(y, x) {}
-  [[nodiscard]] constexpr std::size_t rows() const noexcept { return ObjectsArr_.rows(); }
-  [[nodiscard]] constexpr std::size_t cols() const noexcept { return ObjectsArr_.cols(); }
+  constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(y, x), MonsterArr_(y, x), TerrainTypeArr_(y, x) {}
+  [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
+  [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
   [[nodiscard]] constexpr bool inBounds(Position pos) const noexcept {
     const auto [x, y] = pos;
     return ObjectsArr_.inBounds(y, x);
@@ -202,10 +206,22 @@ private:
 template <>
 constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIterable> = true; // NOLINT
 
-WorldFloor createDungeon(std::size_t xDim, std::size_t yDim) {
+WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
   DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16, 4);
+  if(ret.inBounds(upStair)){
+    ret.getTerrainType(upStair) = TerrainType::Empty;
+  }
+  if(ret.inBounds(downStair)){
+    ret.getTerrainType(downStair) = TerrainType::Empty;
+  }
   DungeonMaker::connectRegions<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr());
+  if(ret.inBounds(upStair)){
+    ret.getTerrainType(upStair) = TerrainType::UpStair;
+  }
+  if(ret.inBounds(downStair)){
+    ret.getTerrainType(downStair) = TerrainType::DownStair;
+  }
   return ret;
 }
 
@@ -236,6 +252,12 @@ public:
   [[nodiscard]] auto &getFloor(this auto &&self, FloorSpecifier floorId) noexcept {
     return std::forward_like<decltype(self)>(self.floorData_[floorId.floor]);
   }
+  [[nodiscard]] bool floorInBound(FloorSpecifier floorId) const noexcept{
+    return floorId.floor >= 0 && static_cast<std::size_t>(floorId.floor) < floorData_.size();
+  }
+  [[nodiscard]] bool inBound(Location loc) const noexcept{
+    return floorInBound(loc.mapPos) && getFloor(loc.mapPos).inBounds(loc.pos);
+  }
   [[nodiscard]] constexpr auto &getObjects(this auto &&self, Location loc) noexcept {
     return self.getFloor(loc.mapPos).getObjects(loc.pos);
   }
@@ -249,7 +271,10 @@ public:
     return self.getFloor(loc.mapPos).getTile(loc.pos);
   }
   [[nodiscard]] constexpr bool isOpenTile(Location loc) const noexcept {
-    return getFloor(loc.mapPos).isOpenTile(loc.pos);
+    return floorInBound(loc.mapPos) && getFloor(loc.mapPos).isOpenTile(loc.pos);
+  }
+  [[nodiscard]] constexpr bool isOpenTerrain(Location loc) const noexcept{
+    return floorInBound(loc.mapPos) && getFloor(loc.mapPos).isOpenTerrain(loc.pos);
   }
   [[nodiscard]] auto tryGetMonster(this auto&& self, Monster::ID id) noexcept {
     auto found = self.monsterMap_.find(id);
@@ -340,7 +365,18 @@ private:
 GameState::GameState() noexcept {
   constexpr int DungeonWidth = 90;
   constexpr int DungeonHeight = 30;
-  floorData_.push_back(createDungeon(DungeonWidth, DungeonHeight));
+  Position up = {-1,-1};
+  for(int floor = 0; floor < 10; floor++){
+    Position down = up;
+    if(floor==9){
+      down = {-1,-1};
+    }
+    while(down==up){
+      down = {Rnd::rnd(DungeonWidth),Rnd::rnd(DungeonHeight)};
+    }
+    floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
+    up = down;
+  }
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
     const auto cFloor = FloorSpecifier(0);
     while (pos != Position(0, DungeonHeight + 1)) {
@@ -500,18 +536,17 @@ constexpr TimePeriod Monster::takeItem(GameState &state, ObjectContainer &contai
   inventory_.addObject(container.remove(index));
   return getSpeed() / PickUpItemSpeedFraction;
 }
-constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode) noexcept {
-  Position nPos = loc_.pos + d;
-  WorldFloor &cfloor = state.getFloor(loc_.mapPos);
-  if (!cfloor.isOpenTerrain(nPos)) {
+
+constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveMode mode) noexcept {
+  if (!state.isOpenTerrain(nLoc)) {
     return TimePeriod(0);
   }
-  auto &destMonster = cfloor.getMonster(nPos);
+  auto &destMonster = state.getMonster(nLoc);
   if (destMonster.isNull() && mode.isMove()) {
-    ID &currentSpot = cfloor.getMonster(loc_.pos);
+    ID &currentSpot = state.getMonster(loc_);
     destMonster = currentSpot;
     currentSpot.clear();
-    loc_.pos = nPos;
+    loc_ = nLoc;
     return getSpeed();
   }
   if (!destMonster.isNull() && mode.isFight()) {
@@ -519,6 +554,28 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode
   }
   return TimePeriod{0};
 }
+
+constexpr TimePeriod Monster::generalMove(GameState &state, Position nPos, MoveMode mode) noexcept {
+  return generalMove(state,Location(nPos,loc_.mapPos),mode);
+}
+constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode) noexcept {
+  return generalMove(state,Location(loc_.pos+d,loc_.mapPos),mode);
+}
+
+[[nodiscard]] constexpr TimePeriod Monster::goUpStair(GameState &state, MoveMode m) noexcept {
+  if(state.getTerrainType(loc_) == TerrainType::UpStair){
+    return generalMove(state,loc_.up(),m);
+  }
+  return TimePeriod(0);
+}
+
+[[nodiscard]] constexpr TimePeriod Monster::goDownStair(GameState &state, MoveMode m) noexcept {
+  if(state.getTerrainType(loc_) == TerrainType::DownStair){
+    return generalMove(state,loc_.down(),m);
+  }
+  return TimePeriod(0);
+}
+
 constexpr void Monster::informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept {
   if (isPlayer()) {
     state.printItemPickup(grabber, grabbed);

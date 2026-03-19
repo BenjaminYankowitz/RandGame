@@ -33,7 +33,7 @@ constexpr Dir keyToDir(chtype key) noexcept {
     return {};
   }
 }
-}  // namespace
+} // namespace
 
 // static BoxedWindow *EventWindow;
 namespace {
@@ -64,8 +64,8 @@ void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
   window.updateScreen();
 }
 
-}  // namespace
-class ActionMod { 
+} // namespace
+class ActionMod {
 public:
   [[nodiscard]] constexpr MoveMode getMoveMode() noexcept {
     return moveMode_;
@@ -86,11 +86,15 @@ public:
   constexpr void toggleMoveMode(MoveMode mode) noexcept {
     moveMode_ ^= mode;
   }
-  constexpr void betweenRounds() noexcept {
+  [[nodiscard]] constexpr bool betweenRounds() noexcept {
     if (!changeDigitLast_) {
       count_ = NoCount;
     }
     changeDigitLast_ = false;
+    return continuePlaying_;
+  }
+  constexpr void quitGame() noexcept {
+    continuePlaying_ = false;
   }
 
 private:
@@ -98,6 +102,7 @@ private:
   static constexpr MoveMode DefaultMoveMode = MoveMode::move() | MoveMode::fight();
   MoveMode moveMode_ = DefaultMoveMode;
   bool changeDigitLast_ = false;
+  bool continuePlaying_ = true;
   std::size_t count_ = NoCount;
 };
 namespace IOModule {
@@ -105,7 +110,7 @@ export class Interface;
 }
 using IOModule::Interface;
 using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
-class PrintToViewer : public streambufT { 
+class PrintToViewer : public streambufT {
 public:
   explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
   Interface *parent_;
@@ -131,8 +136,8 @@ private:
 };
 
 namespace Actions {
-using ActionType = bool (*)(GameInterface &, IOModule::Interface &, ActionMod &);
-namespace{
+using ActionType = void (*)(GameInterface &, IOModule::Interface &, ActionMod &);
+namespace {
 [[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept;
 }
 } // namespace Actions
@@ -145,19 +150,10 @@ public:
     inventWindow_ = BoxedWindow(0, 0, 0, 0);
     statusWindow_ = BoxedWindow(0, 0, 0, 0);
     oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
+    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
   }
   ~Interface() {
     Logging::log.rdbuf(oldBuffer_);
-  }
-  void createTiedGameInterface() noexcept {
-    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
-  }
-  void tieGameInterface(std::unique_ptr<GameInterface> gState) {
-    gState_ = std::move(gState);
-    gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
-  }
-  [[nodiscard]] std::unique_ptr<GameInterface> getGameInterface() noexcept {
-    return std::move(gState_);
   }
   void updateGameScreen() {
     Raii_.setCursorState(0);
@@ -194,17 +190,19 @@ public:
     chtype userInput = CursesRAII::getChar();
     const auto func = Actions::getActionFromInput(userInput);
 
-    mod_.betweenRounds();
     if (func == nullptr) {
       return true;
     }
-    return func(*gState_, *this, mod_);
+    func(*gState_, *this, mod_);
+    return mod_.betweenRounds();
   }
   void addEvent(std::string str) noexcept {
     eventLog_.emplace_back(std::move(str));
   }
   [[nodiscard]] GameTime getTime() const noexcept {
-    return gState_->getTime();
+    if (gState_)
+      return gState_->getTime();
+    return {};
   }
   bool showSelection(Position pos) {
     Raii_.setCursorState(1);
@@ -234,11 +232,18 @@ namespace Actions {
 
 namespace {
 template <int Dx, int Dy>
-constexpr bool movePlayer(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
+void movePlayer(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
   gState.generalMove(D, modifer.getMoveMode());
-  return true;
+}
+
+void goUpStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
+  gState.goUpStair(modifer.getMoveMode());
+}
+
+void goDownStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
+  gState.goDownStair(modifer.getMoveMode());
 }
 struct ItemFromInterfaceSettings {
   bool doDisplay = true;
@@ -273,22 +278,19 @@ std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
   }
 }
 
-bool toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
+void toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::move());
-  return true;
 }
 
-bool toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
+void toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::fight());
-  return true;
 }
 
-bool pickUpItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) {
+void pickUpItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) {
   std::size_t index = getItemFromInterface(gState.lookAtFloor());
   if (index != NoItem) {
     gState.pickUpItem(index);
   }
-  return true;
 }
 
 std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface) noexcept {
@@ -307,40 +309,36 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   }
 }
 
-bool throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
+void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index == NoItem)
-    return true;
+    return;
   auto target = chooseTile(gState, iterface);
   if (!target)
-    return true;
+    return;
   gState.throwItem(index, (*target) - gState.getLocation().pos);
-  return true;
 }
 
-bool dropItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+void dropItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index != NoItem) {
     gState.dropItem(index);
   }
-  return true;
 }
 
-bool passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
+void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
-  return true;
 }
 
 template <int n>
-bool addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
+void addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   static_assert(n >= 0 && n <= 9);
   mod.addDigit(n);
-  return true;
 }
 
-bool quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
   gState.exit();
-  return false;
+  mod.quitGame();
 }
 
 constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
@@ -356,6 +354,9 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'u', movePlayer<1, -1>},
     {'b', movePlayer<-1, 1>},
     {'n', movePlayer<1, 1>},
+
+    {'<', goUpStair},
+    {'>', goDownStair},
 
     {'F', toggleFightMode},
     {'m', toggleMoveMode},
@@ -383,7 +384,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
   static constexpr auto CmndMp = CompileTimeHashMap::to_Map<CmndMpPairs, 0, nullptr>();
   return CmndMp.get(input);
 }
-}  // namespace
+} // namespace
 } // namespace Actions
 
 std::streamsize PrintToViewer::xsputn(const char_type *s, std::streamsize count) {

@@ -26,7 +26,7 @@ MonsterInterface toInterface(const Monster &m) noexcept {
   return MonsterInterface(static_cast<const IMonster&>(m));
 }
 MonsterInterface toInterface(const Monster *m) noexcept {
-  return MonsterInterface(static_cast<const IMonster&>(*m));
+  return MonsterInterface(static_cast<const IMonster*>(m));
 }
 
 WorldTileInterface toInterface(const GameState &gameState, ConstWorldTile tile) noexcept {
@@ -102,6 +102,18 @@ void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
     return;
   }
   passTime(gs_->getPlayer().generalMove(*gs_, capDir(d), mode));
+}
+void GameInterface::goUpStair(MoveMode mode) noexcept {
+  if (!gs_->getPlayer().isAlive()) {
+    return;
+  }
+  passTime(gs_->getPlayer().goUpStair(*gs_,mode));
+}
+void GameInterface::goDownStair(MoveMode mode) noexcept {
+  if (!gs_->getPlayer().isAlive()) {
+    return;
+  }
+  passTime(gs_->getPlayer().goDownStair(*gs_,mode));
 }
 void GameInterface::pickUpItem(std::size_t selected) noexcept {
   if (!gs_->getPlayer().isAlive()) {

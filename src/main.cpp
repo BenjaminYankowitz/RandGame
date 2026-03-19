@@ -12,7 +12,6 @@ void runGame(IOModule::Interface &interface) {
 
 void doMain() {
   IOModule::Interface IORII;
-  IORII.createTiedGameInterface();
   runGame(IORII);
 }
 }
