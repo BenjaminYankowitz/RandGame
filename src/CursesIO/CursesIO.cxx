@@ -365,7 +365,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
     Dir step = FindPath::findPath(
         FloorInterfaceWrapper{gState.getFloor(currentFloor)},
         currentPos, goal);
-    if (step == Dir{0, 0})
+    if (step.noMove())
       break;
     gState.generalMove(step, mod.getMoveMode());
     interface.updateGameScreen();
