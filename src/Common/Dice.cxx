@@ -4,9 +4,9 @@ import :Misc;
 import std;
 
 namespace {
-struct MonoState{};
-}
-constexpr std::uint16_t stringViewToNumber(std::string_view str) { 
+struct MonoState {};
+} // namespace
+constexpr std::uint16_t stringViewToNumber(std::string_view str) {
   std::uint16_t out;
   std::from_chars_result result = std::from_chars(str.begin(), str.end(), out);
   if (result.ec != std::errc()) {
@@ -15,86 +15,98 @@ constexpr std::uint16_t stringViewToNumber(std::string_view str) {
   return out;
 }
 
-
 export namespace Dice {
 class SingleTypeGroup {
-  public:
+public:
   consteval explicit SingleTypeGroup(std::string_view writtenExplanation) {
     const std::size_t dLoc = writtenExplanation.find_first_of("dD");
     const std::size_t start = writtenExplanation.find_first_not_of(' ');
     if (dLoc == start) {
       number_ = 1;
     } else {
-      number_ = stringViewToNumber(writtenExplanation.substr(start, dLoc-start));
+      number_ = stringViewToNumber(writtenExplanation.substr(start, dLoc - start));
     }
-    if(dLoc==std::string_view::npos){
+    if (dLoc == std::string_view::npos) {
       faces_ = 1;
     } else {
       faces_ = stringViewToNumber(writtenExplanation.substr(dLoc + 1));
     }
   }
-  constexpr SingleTypeGroup(std::uint16_t faces, std::uint16_t number) : faces_(faces), number_(number){
-    if(faces==0){
+  constexpr SingleTypeGroup(std::uint16_t faces, std::uint16_t number) : faces_(faces), number_(number) {
+    if (faces == 0) {
       throw std::invalid_argument{"Cannot have a zero sided die"};
     }
   }
-  constexpr SingleTypeGroup() noexcept :faces_(1), number_(0){}
+  constexpr SingleTypeGroup() noexcept : faces_(1), number_(0) {}
   [[nodiscard]] std::size_t operator()() const noexcept {
-    std::uniform_int_distribution<std::size_t> dist(1,faces_);
-    auto view = std::views::repeat(MonoState{},number_);
-    return std::transform_reduce(view.begin(),view.end(),0ul,std::plus<>(),[&dist](MonoState){
-        return Rnd::get(dist);
+    std::uniform_int_distribution<std::size_t> dist(1, faces_);
+    auto view = std::views::repeat(MonoState{}, number_);
+    return std::transform_reduce(view.begin(), view.end(), 0ul, std::plus<>(), [&dist](MonoState) {
+      return Rnd::get(dist);
     });
   }
-  [[nodiscard]] constexpr std::uint16_t getFaces() const noexcept {return faces_;}
-  [[nodiscard]] constexpr std::uint16_t getNumber() const noexcept {return number_;}
+  [[nodiscard]] constexpr std::size_t min() const noexcept { return number_; }
+  [[nodiscard]] constexpr std::size_t max() const noexcept { return static_cast<std::size_t>(number_) * faces_; }
+  [[nodiscard]] constexpr std::uint16_t getFaces() const noexcept { return faces_; }
+  [[nodiscard]] constexpr std::uint16_t getNumber() const noexcept { return number_; }
+
 private:
   std::uint16_t faces_;
   std::uint16_t number_;
 };
 
 class Group {
-  public:
+public:
   constexpr static std::size_t MaxTypes = 2;
   consteval explicit Group(std::string_view writtenExplanation) {
     constant_ = 0;
     const std::size_t strLen = writtenExplanation.size();
     std::size_t beginSection = 0;
-    std::size_t endSection = std::min(writtenExplanation.find_first_of('+'),strLen);
+    std::size_t endSection = std::min(writtenExplanation.find_first_of('+'), strLen);
     std::size_t typeNum = 0;
-    while(beginSection<strLen){
-      const SingleTypeGroup g(writtenExplanation.substr(beginSection,endSection-beginSection));
-      if(g.getFaces()==1){
-        constant_+=g.getNumber();
+    while (beginSection < strLen) {
+      const SingleTypeGroup g(writtenExplanation.substr(beginSection, endSection - beginSection));
+      if (g.getFaces() == 1) {
+        constant_ += g.getNumber();
       } else {
         dice_[typeNum++] = g;
       }
-      if(endSection==std::string_view::npos){
+      if (endSection == std::string_view::npos) {
         break;
       }
-      beginSection = endSection+1;
-      endSection = std::min(writtenExplanation.find_first_of('+',endSection+1),strLen);
+      beginSection = endSection + 1;
+      endSection = std::min(writtenExplanation.find_first_of('+', endSection + 1), strLen);
     }
   }
-  constexpr explicit Group(std::uint16_t constant, SingleTypeGroup s1 = {}, SingleTypeGroup s2 = {}) noexcept : constant_(constant), dice_({s1,s2}){}
+  constexpr explicit Group(std::uint16_t constant, SingleTypeGroup s1 = {}, SingleTypeGroup s2 = {}) noexcept : constant_(constant), dice_({s1, s2}) {}
   [[nodiscard]] std::size_t operator()() const noexcept {
-    return std::transform_reduce(dice_.begin(),dice_.end(),constant_,std::plus<>(),[](SingleTypeGroup die){
-        return die();
+    return std::transform_reduce(dice_.begin(), dice_.end(), constant_, std::plus<>(), [](SingleTypeGroup die) {
+      return die();
     });
   }
-  private:
+  [[nodiscard]] constexpr std::size_t min() const noexcept {
+    return std::transform_reduce(dice_.begin(), dice_.end(), static_cast<std::size_t>(constant_), std::plus<>(), [](const SingleTypeGroup &die) {
+      return die.min();
+    });
+  }
+  [[nodiscard]] constexpr std::size_t max() const noexcept {
+    return std::transform_reduce(dice_.begin(), dice_.end(), static_cast<std::size_t>(constant_), std::plus<>(), [](const SingleTypeGroup &die) {
+      return die.max();
+    });
+  }
+
+private:
   std::uint16_t constant_;
-  std::array<SingleTypeGroup,MaxTypes> dice_;
+  std::array<SingleTypeGroup, MaxTypes> dice_;
 };
 
-
 namespace Literals {
-consteval Group operator ""_dice( const char* str, std::size_t len ) noexcept{
-  return Group(std::string_view(str,len));      
+consteval Group operator""_dice(const char *str, std::size_t len) noexcept {
+  return Group(std::string_view(str, len));
 }
-consteval SingleTypeGroup operator ""_diceST( const char* str, std::size_t len ) noexcept{
-  return SingleTypeGroup(std::string_view(str,len));      
+consteval SingleTypeGroup operator""_diceST(const char *str, std::size_t len) noexcept {
+  return SingleTypeGroup(std::string_view(str, len));
 }
-}
+} // namespace Literals
 
 }; // namespace Dice
