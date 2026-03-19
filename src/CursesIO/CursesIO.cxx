@@ -245,6 +245,23 @@ void goUpStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMo
 void goDownStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
   gState.goDownStair(modifer.getMoveMode());
 }
+struct FloorInterfaceWrapper {
+  WorldFloorInterface floor;
+  [[nodiscard]] int extent(int n) const noexcept {
+    switch (n) {
+    case 0:
+      return static_cast<int>(floor.rows());
+    case 1:
+      return static_cast<int>(floor.cols());
+    default:
+      std::unreachable();
+    }
+  }
+  [[nodiscard]] bool operator[](int row, int col) const noexcept {
+    return floor.getTile(Position{col, row}).terrainType != TerrainType::Wall;
+  }
+};
+
 struct ItemFromInterfaceSettings {
   bool doDisplay = true;
   bool autoSelectOne = true;
@@ -330,6 +347,35 @@ void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
 }
 
+void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
+  auto target = chooseTile(gState, interface);
+  if (!target)
+    return;
+  const Position goal = *target;
+  const FloorSpecifier currentFloor = gState.getLocation().mapPos;
+  while (true) {
+    const Position currentPos = gState.getLocation().pos;
+    if (currentPos == goal)
+      break;
+    if (CursesRAII::tryGetChar().has_value())
+      break;
+    if (gState.getLocation().mapPos != currentFloor)
+      break;
+    const Health healthBefore = gState.getHealth();
+    Dir step = FindPath::findPath(
+        FloorInterfaceWrapper{gState.getFloor(currentFloor)},
+        currentPos, goal);
+    if (step == Dir{0, 0})
+      break;
+    gState.generalMove(step, mod.getMoveMode());
+    interface.updateGameScreen();
+    if (gState.getHealth() < healthBefore) //at some point change to getting allerted by message.
+      break;
+    if (gState.getLocation().pos == currentPos)
+      break;
+  }
+}
+
 template <int n>
 void addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   static_assert(n >= 0 && n <= 9);
@@ -376,6 +422,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'t', throwItem},
     {',', pickUpItem},
     {'.', passTime},
+    {'_', autoPath},
 
     {SpecialChar::Backspace, quit},
 });

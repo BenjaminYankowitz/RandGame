@@ -6,9 +6,9 @@ module;
 #include <exception>
 #include <iostream>
 #include <memory>
+#include <ranges>
 #include <string_view>
 #include <utility>
-#include <ranges>
 export module CursesLowLevel;
 namespace CursesLowLevel {
 export namespace IOExceptions {
@@ -57,9 +57,9 @@ export enum class BaseColor : std::uint8_t { Black,
                                              Magenta,
                                              Cyan,
                                              White };
-namespace  {
+namespace {
 
-}  // namespace
+} // namespace
 consteval int lg(std::size_t n) {
   assert(std::popcount(n) <= 1);
   int r = -1;
@@ -80,48 +80,48 @@ public:
   constexpr Color() = default;
   constexpr Color(BaseColor baseColor_, bool isBright_) noexcept : baseColor(baseColor_), isBright(isBright_) {}
   [[nodiscard]] static constexpr BaseColor getEnum(NCURSES_COLOR_T color) noexcept {
-  switch (color) {
-  case COLOR_BLACK:
-    return BaseColor::Black;
-  case COLOR_RED:
-    return BaseColor::Red;
-  case COLOR_GREEN:
-    return BaseColor::Green;
-  case COLOR_YELLOW:
-    return BaseColor::Brown;
-  case COLOR_BLUE:
-    return BaseColor::Blue;
-  case COLOR_MAGENTA:
-    return BaseColor::Magenta;
-  case COLOR_CYAN:
-    return BaseColor::Cyan;
-  case COLOR_WHITE:
-    return BaseColor::White;
-  default:
-    assert(false);
-    return BaseColor::White;
+    switch (color) {
+    case COLOR_BLACK:
+      return BaseColor::Black;
+    case COLOR_RED:
+      return BaseColor::Red;
+    case COLOR_GREEN:
+      return BaseColor::Green;
+    case COLOR_YELLOW:
+      return BaseColor::Brown;
+    case COLOR_BLUE:
+      return BaseColor::Blue;
+    case COLOR_MAGENTA:
+      return BaseColor::Magenta;
+    case COLOR_CYAN:
+      return BaseColor::Cyan;
+    case COLOR_WHITE:
+      return BaseColor::White;
+    default:
+      assert(false);
+      return BaseColor::White;
+    }
+  };
+  [[nodiscard]] static constexpr NCURSES_COLOR_T getDef(BaseColor color) noexcept {
+    switch (color) {
+    case BaseColor::Black:
+      return COLOR_BLACK;
+    case BaseColor::Red:
+      return COLOR_RED;
+    case BaseColor::Green:
+      return COLOR_GREEN;
+    case BaseColor::Brown:
+      return COLOR_YELLOW;
+    case BaseColor::Blue:
+      return COLOR_BLUE;
+    case BaseColor::Magenta:
+      return COLOR_MAGENTA;
+    case BaseColor::Cyan:
+      return COLOR_CYAN;
+    case BaseColor::White:
+      return COLOR_WHITE;
+    }
   }
-};
-[[nodiscard]] static constexpr NCURSES_COLOR_T getDef(BaseColor color) noexcept {
-  switch (color) {
-  case BaseColor::Black:
-    return COLOR_BLACK;
-  case BaseColor::Red:
-    return COLOR_RED;
-  case BaseColor::Green:
-    return COLOR_GREEN;
-  case BaseColor::Brown:
-    return COLOR_YELLOW;
-  case BaseColor::Blue:
-    return COLOR_BLUE;
-  case BaseColor::Magenta:
-    return COLOR_MAGENTA;
-  case BaseColor::Cyan:
-    return COLOR_CYAN;
-  case BaseColor::White:
-    return COLOR_WHITE;
-  }
-}
   [[nodiscard]] static constexpr NCURSES_PAIRS_T getId(NCURSES_COLOR_T front, NCURSES_COLOR_T back) noexcept { return static_cast<NCURSES_PAIRS_T>(1 + (2 * (front + (back * NumBaseColor)))); }
   [[nodiscard]] static constexpr NCURSES_PAIRS_T getId(Color front, Color back) noexcept {
     return getId(getDef(front.baseColor), getDef(back.baseColor));
@@ -131,7 +131,7 @@ public:
   }
 };
 
-static_assert(std::ranges::all_of(std::views::iota(0,NumBaseColor),[](int i){return Color::getDef(Color::getEnum(i))==i;}));
+static_assert(std::ranges::all_of(std::views::iota(0, NumBaseColor), [](int i) { return Color::getDef(Color::getEnum(i)) == i; }));
 export constexpr Color Black(BaseColor::Black, false);
 export constexpr Color Grey(BaseColor::Black, true);
 export constexpr Color Red(BaseColor::Red, false);
@@ -157,7 +157,7 @@ constexpr attr_t Normal = WA_NORMAL;
 export class Symbol {
 public:
   constexpr Symbol() noexcept = default;
-  constexpr Symbol(chtype c) noexcept : character_(c), attributes_(Modifier::Normal), frontColor_(White), backColor_(Black) {}; //NOLINT(google-explicit-constructor)
+  constexpr Symbol(chtype c) noexcept : character_(c), attributes_(Modifier::Normal), frontColor_(White), backColor_(Black) {}; // NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr chtype print() const noexcept { return character_; }
   constexpr void setFrontColor(Color c) noexcept {
     frontColor_ = c;
@@ -181,7 +181,7 @@ private:
 #undef NCURSES_ACS
 namespace {
 [[nodiscard]] constexpr chtype NCURSES_ACS(char c) noexcept { return A_ALTCHARSET + static_cast<chtype>(c); }
-}
+} // namespace
 [[nodiscard]] consteval chtype operator""_toch(const char *str, unsigned long len) {
   std::array<char, 4> data = {};
   data.fill(0);
@@ -196,7 +196,7 @@ constexpr chtype Down = KEY_DOWN;
 constexpr chtype Left = KEY_LEFT;
 constexpr chtype Right = KEY_RIGHT;
 constexpr chtype Backspace = KEY_BACKSPACE;
-enum class Directions : std::uint8_t{
+enum class Directions : std::uint8_t {
   None = 0,
   Up = 1,
   Down = Up << 1,
@@ -210,7 +210,7 @@ constexpr Directions &operator|=(Directions &d1, Directions d2) noexcept {
   d1 = d1 | d2;
   return d1;
 }
-constexpr auto Walls = []() {// NOLINT says Walls is unused even though it is exported
+constexpr auto Walls = []() { // NOLINT says Walls is unused even though it is exported
   class RetType {
   public:
     [[nodiscard]] constexpr chtype &operator[](Directions dir) noexcept {
@@ -254,8 +254,7 @@ void initColors() noexcept {
     }
   }
 }
-}
-
+} // namespace
 
 export class CursesRAII {
 public:
@@ -281,9 +280,15 @@ public:
     endwin();
   }
   static auto getChar() noexcept { return getch(); }
-  static int setCursorState(int n){
-  return curs_set(n);
-}
+  static std::optional<chtype> tryGetChar() noexcept {
+    timeout(0);
+    auto ch = getch();
+    timeout(-1);
+    return ch == ERR ? std::nullopt : std::optional<chtype>(ch);
+  }
+  static int setCursorState(int n) {
+    return curs_set(n);
+  }
 
 private:
   static bool exists;
@@ -297,9 +302,9 @@ namespace {
 struct SymbolTraits { // should be specialzation of std::char_traits but that's not working due to compiler bug
   using char_type = Symbol;
 };
-}
+} // namespace
 
-export using string_view_Symbol = std::basic_string_view<Symbol,SymbolTraits>;
+export using string_view_Symbol = std::basic_string_view<Symbol, SymbolTraits>;
 export class WindowWrapper {
 public:
   constexpr WindowWrapper() noexcept : impl_(nullptr), width_(0), height_(0), xoffset_(0), yoffset_(0) {};
@@ -358,7 +363,7 @@ public:
     wadd_wch(impl_.get(), &ct);
   }
   template <class CharT, class TypeTraits>
-  void place(std::basic_string_view<CharT,TypeTraits> str) {
+  void place(std::basic_string_view<CharT, TypeTraits> str) {
     if (str.size() == 0) {
       return;
     }
@@ -397,14 +402,14 @@ concept Printable = requires(WindowWrapper &w, T a) {
   { w.place(a) };
 };
 
-template<class T>
+template <class T>
 concept NPrintable = !Printable<T>;
-namespace{
+namespace {
 template <class T>
 struct IsViewS : public std::false_type {};
 template <class T>
 struct IsViewS<std::basic_string_view<T>> : public std::true_type {};
-}
+} // namespace
 
 template <class T>
 concept PrintableView = Printable<T> && static_cast<bool>(IsViewS<T>{});
@@ -412,12 +417,11 @@ concept PrintableView = Printable<T> && static_cast<bool>(IsViewS<T>{});
 template <class T>
 concept PrintableChar = Printable<T> && static_cast<bool>(!IsViewS<T>{});
 
-
 static_assert(Printable<string_view_Symbol>);
 static_assert(NPrintable<int>);
 
 export class BoxedWindow;
-class WindowStreamBuf : public std::streambuf { 
+class WindowStreamBuf : public std::streambuf {
 public:
   explicit WindowStreamBuf(BoxedWindow *parent) noexcept : parent_(parent) {}
 
@@ -433,7 +437,7 @@ export class BoxedWindow {
 public:
   BoxedWindow() noexcept = default;
   BoxedWindow(BoxedWindow &&other) noexcept
-      : impl_(std::move(other.impl_)){}
+      : impl_(std::move(other.impl_)) {}
   BoxedWindow &operator=(BoxedWindow &&other) noexcept {
     impl_ = std::move(other.impl_);
     return *this;
@@ -450,7 +454,7 @@ public:
   void place(PrintableChar auto sym) { impl_.place(sym); }
   void place(PrintableView auto view) { impl_.place(view.substr(0, leftOnLine())); }
   void place(const char *str) { place(std::string_view(str)); }
-  void place(NPrintable auto const & obj){
+  void place(NPrintable auto const &obj) {
     ostream_ << obj;
   }
   void place(int x, int y, Printable auto sym) {
@@ -459,7 +463,7 @@ public:
   }
   [[nodiscard]] int cursorX() const noexcept { return impl_.cursorX() - 1; }
   [[nodiscard]] int cursorY() const noexcept { return impl_.cursorY() - 1; }
-  [[nodiscard]] bool inBounds(int x, int y) const{ return x >= 0 && y>=0 && x <= prntWidth() && y <= prntHeight();}
+  [[nodiscard]] bool inBounds(int x, int y) const { return x >= 0 && y >= 0 && x <= prntWidth() && y <= prntHeight(); }
   void moveCursor(int x, int y) { impl_.moveCursor(x + 1, y + 1); }
   BoxedWindow &operator<<(auto sym) {
     place(sym);
@@ -488,7 +492,7 @@ private:
     impl_.moveCursor(prntWidth() + 1, prntHeight() + 1);
     impl_.place(L'┘');
     impl_.moveCursor(1, 0);
-    for (auto _ : std::views::iota(0,2)) {
+    for (auto _ : std::views::iota(0, 2)) {
       for (int i = 1; i < prntWidth() + 1; i++) {
         impl_.place(L'─');
       }
