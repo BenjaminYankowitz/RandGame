@@ -149,3 +149,14 @@ TEST(GameInterfaceTests, LenOne) {
   }
   EXPECT_EQ(1, count);
 }
+
+TEST(GameInterfaceTests, MultiplePassTimeAdvancesCorrectly) {
+  GameInterface gi(makeNullViewer());
+  auto t0 = gi.getTime();
+  gi.passTime(TimePeriod(1));
+  auto t1 = gi.getTime();
+  gi.passTime(TimePeriod(1));
+  auto t2 = gi.getTime();
+  EXPECT_TRUE(t2.impl > t1.impl);
+  EXPECT_TRUE(t1.impl > t0.impl);
+}

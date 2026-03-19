@@ -23,7 +23,7 @@ static_assert([] {
 static_assert(Monster::ID() == Monster::ID::null());
 
 // ============================================================
-// Monster::ID::Generator - runtime tests
+// Monster::ID::Generator - constexpr tests
 // ============================================================
 
 // Generator produces non-null IDs
@@ -49,6 +49,10 @@ static_assert([] {
   return id != Monster::ID::null();
 }());
 
+// ============================================================
+// Monster::ID::Generator - runtime tests
+// ============================================================
+
 // StdHashWorks
 TEST(MonsterIdGenerator, StdHashWorks) {
   Monster::ID::Generator gen;
@@ -60,4 +64,13 @@ TEST(MonsterIdGenerator, StdHashWorks) {
   EXPECT_EQ(map[a], 1);
   EXPECT_EQ(map[b], 2);
   EXPECT_EQ(map.size(), 2u);
+}
+
+// Generate 100 IDs, verify all unique
+TEST(MonsterIdGenerator, ManyUniqueIds) {
+  Monster::ID::Generator gen;
+  std::unordered_set<Monster::ID> ids;
+  for (int i = 0; i < 100; ++i)
+    ids.insert(gen.next());
+  EXPECT_EQ(ids.size(), 100u);
 }

@@ -71,3 +71,41 @@ static_assert([] consteval {
   Static2DArr<int> arr(3, 4);
   return arr.inBounds(0, 0) && arr.inBounds(2, 3) && !arr.inBounds(3, 0) && !arr.inBounds(0, 4);
 }());
+
+// Iteration via begin()/end()
+static_assert([] consteval {
+  Static2DArr<int> arr = {{1, 2}, {3, 4}};
+  int sum = 0;
+  for (auto val : arr)
+    sum += val;
+  return sum == 10;
+}());
+
+// indexIter() yields correct (row, col) pairs
+static_assert([] consteval {
+  Static2DArr<int> arr(2, 3);
+  arr.fill(0);
+  for (auto [r, c] : arr.indexIter())
+    arr[r, c] = (r * 10) + c;
+  return arr[0, 0] == 0 && arr[0, 2] == 2 && arr[1, 0] == 10 && arr[1, 2] == 12;
+}());
+
+// Move construction
+static_assert([] consteval {
+  Static2DArr<int> arr = {{7, 8}, {9, 10}};
+  Static2DArr<int> moved(std::move(arr));
+  return moved.rows() == 2 && moved.cols() == 2 && moved[0, 0] == 7 && moved[1, 1] == 10;
+}());
+
+// int size_type
+static_assert([] consteval {
+  Static2DArr<int, int> arr(3, 4);
+  arr.fill(5);
+  return arr.rows() == 3 && arr.cols() == 4 && arr[2, 3] == 5;
+}());
+
+// Empty array
+static_assert([] consteval {
+  Static2DArr<int> arr;
+  return arr.rows() == 0 && arr.cols() == 0 && arr.size() == 0 && arr.isNull();
+}());
