@@ -1,5 +1,6 @@
 export module GameTypes:Misc;
 import :GameTime;
+import Common;
 import std;
 export using Health = int;
 
@@ -15,21 +16,70 @@ export enum class MonsterClass : std::uint8_t {
   Cat,
   SeaSlug,
   GreedyWeasel,
-  Bryozoan
+  Bryozoan,
 };
 
-export enum class ObjectType : std::uint8_t {
+export enum class ObjectTypeImpl : std::uint8_t {
   KingsCoin,
   Knife,
-  Die
+  Die,
+  Corpse = 1<<(std::numeric_limits<std::uint8_t>::digits-1),
 };
+
+[[nodiscard]] constexpr bool isCorpse(ObjectTypeImpl obj){
+  return (std::to_underlying(obj) & std::to_underlying(ObjectTypeImpl::Corpse)) != 0;
+}
+
+export struct ObjectType {
+  using enum ObjectTypeImpl;
+  constexpr ObjectType(ObjectTypeImpl val) noexcept : type_(val){} //NOLINT(google-explicit-constructor)
+  constexpr operator ObjectTypeImpl() const noexcept { //NOLINT(google-explicit-constructor)
+    return isCorpse(type_) ? Corpse : type_;
+  }
+  [[nodiscard]] constexpr bool operator==(const ObjectType& other) const = default;
+  [[nodiscard]] constexpr bool operator==(ObjectTypeImpl other) const noexcept {return (operator ObjectTypeImpl()) == other;};
+  private:
+  friend constexpr MonsterClass corpseOfWhat(ObjectType obj);
+  ObjectTypeImpl type_;
+};
+
+export [[nodiscard]]  constexpr bool isCorpse(ObjectType obj){
+  return obj == ObjectType::Corpse;
+}
+
+export [[nodiscard]] constexpr ObjectType corpseOf(MonsterClass monst){
+  return static_cast<ObjectTypeImpl>(std::to_underlying(monst)|std::to_underlying(ObjectType::Corpse));
+}
+
+export [[nodiscard]] constexpr MonsterClass corpseOfWhat(ObjectType obj){
+  if(!isCorpse(obj)){
+    Logging::log << "Tried to get corpse of non corpse object\n";
+  }
+  return static_cast<MonsterClass>(std::to_underlying(obj.type_)&~std::to_underlying(ObjectType::Corpse));
+}
 
 export enum class Material : std::uint8_t {
   Gold,
   Iron,
   Plastic,
-  Wood
+  Wood,
+  Flesh
 };
+
+export constexpr Material defaultMat(ObjectType type){
+  switch (type) {
+    using enum Material;
+    using enum ObjectTypeImpl;
+  case KingsCoin:
+    return Gold;
+  case Knife:
+    return Iron;
+  case Die:
+    return Plastic;
+  case Corpse:
+    return Flesh;
+  }
+}
 
 export enum class ArtifactId : std::uint8_t {
   Normal,

@@ -134,7 +134,7 @@ TEST(GameInterfaceTests, FloorObjectsAccessible) {
 
 TEST(GameInterfaceTests, LenOne) {
   ObjectContainer container;
-  container.addObject(std::make_unique<Object>(23, ObjectType::KingsCoin, Material::Gold));
+  container.addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold,.count=23});
   ObjectContainerInterface iface(container);
   auto it = iface.begin();
   auto endIt = iface.end();

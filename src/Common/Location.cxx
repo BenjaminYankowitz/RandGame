@@ -24,14 +24,14 @@ public:
   [[nodiscard]] constexpr Dir operator-() const noexcept { return {-dx, -dy}; }
   [[nodiscard]] constexpr static auto boxDirs() {
     constexpr static auto BoxDirs = std::to_array<Dir>({{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
-    return BoxDirs;
+    return std::ranges::ref_view(BoxDirs);
   }
   [[nodiscard]] constexpr static Dir getBoxDir(int n) {
     return boxDirs()[n];
   }
   [[nodiscard]] constexpr static auto directDirs() {
     constexpr static auto DirectDirs = std::to_array<Dir>({{0,-1},{-1,0},{1,0},{0,1}});
-    return DirectDirs;
+    return std::ranges::ref_view(DirectDirs);
   }
   [[nodiscard]] constexpr static Dir getDirectDir(int n) {
     return directDirs()[n];
@@ -39,6 +39,8 @@ public:
   int dx;
   int dy;
 };
+
+constexpr auto V = std::same_as<decltype(Dir::boxDirs()),decltype(Dir::directDirs())>;
 
 
 

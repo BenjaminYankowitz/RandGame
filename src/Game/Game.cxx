@@ -54,18 +54,15 @@ public:
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Monster> kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
-  [[nodiscard]] TimePeriod goToTarget(GameState &state, NoTarget /*unused*/) noexcept;
-  [[nodiscard]] TimePeriod goToTarget(GameState &state, ID targetId) noexcept;
-  [[nodiscard]] TimePeriod goToTarget(GameState &state, Location target) noexcept {
-    return pathTo(state, target, false);
-  }
+  [[nodiscard]] TimePeriod wander(GameState &state) noexcept;
+  [[nodiscard]] TimePeriod goToEnemey(GameState &state) noexcept;
   [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, bool attack) noexcept;
   enum class ReThinkReason : std::uint8_t {
     CanNotMove,
     TargetDead,
     CanNotPathToTarget,
-    ReachedDestination,
     FailedAttack,
+    ReachedDestination,
     Unknown,
   };
   [[nodiscard]] TimePeriod reThink(ReThinkReason reason) noexcept {
@@ -77,27 +74,27 @@ public:
     case Unknown:
       return TimePeriod(10);
     case TargetDead:
-    case ReachedDestination:
-      target_ = NoTarget{};
+      target_.clear();
+    case ReachedDestination: //Fallthrough
       return TimePeriod(1);
     }
   }
   [[nodiscard]] constexpr TimePeriod takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept;
   [[nodiscard]] constexpr TimePeriod dropItem(GameState &state, std::size_t i) noexcept;
   [[nodiscard]] constexpr TimePeriod throwItem(GameState &state, std::size_t i, Dir dir) noexcept;
-  [[nodiscard]] constexpr TimePeriod dropEverthing(GameState &state) noexcept;
+  constexpr void deathDrop(GameState &state) noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
-  Monster(CreateKey /*unused*/, MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), health_(body.health), damage_(body.damage), id_(id), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
+  Monster(CreateKey /*unused*/, MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), health_(body.health), id_(id), damage_(body.damage), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
 
 private:
   constexpr void setDead(bool dead = true) noexcept { alive_ = !dead; }
   ObjectContainer inventory_;
   TimePeriod speed_;
   Location loc_;
-  std::variant<NoTarget, ID, Location> target_;
   Health health_;
-  Dice::Group damage_;
   ID id_;
+  ID target_;
+  Dice::Group damage_;
   MonsterBrain brain_;
   MonsterClass mClass_;
   bool alive_;
@@ -398,10 +395,10 @@ GameState::GameState() noexcept {
   tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
   tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
-  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  startingFloor.getObjects({4, 2}).addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Iron));
-  startingFloor.getObjects({1, 0}).addObject(std::make_unique<Object>(1, ObjectType::Knife, Material::Gold));
+  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold});
+  startingFloor.getObjects({4, 2}).addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold});
+  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::Knife, .mat=Material::Iron});
+  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::Knife, .mat=Material::Gold});
 }
 
 [[nodiscard]] constexpr bool operator==(WorldFloor::EventListenersIterable::EventListenerSentinal end, WorldFloor::EventListenersIterable::EventListenerIterator iter) noexcept {
@@ -476,7 +473,7 @@ Dir monsterPath(const GameState &state, const Monster &start, Location end) {
 constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   return state.getFloor(loc_.mapPos).isOpenTile(loc_.pos + d);
 }
-[[nodiscard]] TimePeriod Monster::goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
+[[nodiscard]] TimePeriod Monster::wander(GameState &state) noexcept {
   std::array IntToDir = {
       Dir(-1, -1), Dir(-1, 0), Dir(-1, 1), Dir(0, -1),
       Dir(0, 1), Dir(1, -1), Dir(1, 0), Dir(1, 1)};
@@ -496,13 +493,12 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   return reThink(ReThinkReason::CanNotMove);
 }
 
-TimePeriod Monster::goToTarget(GameState &state, ID targetId) noexcept {
-  auto mMonster = state.tryGetMonster(targetId);
-  if (!mMonster) {
+TimePeriod Monster::goToEnemey(GameState &state) noexcept {
+  return state.tryGetMonster(target_).doIf([&](Monster& target){
+    return pathTo(state, target.getLoc(), true);
+  }, [&](){
     return reThink(ReThinkReason::TargetDead);
-  }
-  Monster &target = *mMonster;
-  return pathTo(state, target.getLoc(), true);
+  });
 }
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
   auto movePlan = monsterPath(state, *this, target);
@@ -607,7 +603,12 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
-  TimePeriod timeTaken = std::visit([&state, this](auto target) { return goToTarget(state, target); }, target_);
+  TimePeriod timeTaken(0);
+  if(target_.isNull()){
+    timeTaken = wander(state);
+  } else {
+    timeTaken = goToEnemey(state);
+  }
   if (!isAlive()) {
     return TimePeriod(0);
   }
@@ -650,12 +651,11 @@ constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir
   sendItemFlying(state, removeFromInvent(i), *this, dir);
   return getSpeed() / ThrowItemSpeedFraction;
 }
-constexpr TimePeriod Monster::dropEverthing(GameState &state) noexcept {
-  TimePeriod totalTime(0);
+constexpr void Monster::deathDrop(GameState &state) noexcept {
   while (!inventory_.empty()) {
-    totalTime += dropItem(state, inventory_.size() - 1);
+    (void) dropItem(state, inventory_.size() - 1);
   }
-  return totalTime;
+  state.getObjects(getLoc()).addObject(ObjectBluePrint{corpseOf(mClass_)});
 }
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
@@ -673,7 +673,6 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   MonsterBody body{mInfo.speed, mInfo.maxHealth, mInfo.damage, mClass};
   MonsterBrain brain = isPlayer ? PlayerBrain : mInfo.brain;
   auto &mstr = game.insertMonster(std::make_unique<Monster>(CreateKey{}, body, loc, id, brain));
-  mstr.inventory_.addObject(std::make_unique<Object>(1, ObjectType::Die, Material::Plastic));
   if (mstr.caresEvent()) {
     game.getFloor(loc.mapPos).addEventListener(id);
   }
@@ -690,7 +689,7 @@ constexpr std::unique_ptr<Monster> Monster::kill(GameState &state) noexcept {
     state.playerDied();
     return nullptr;
   }
-  (void)dropEverthing(state);
+  deathDrop(state);
   return state.removeMonster(getId());
 }
 Monster::HitReturn Monster::hitBy(GameState &state, AttackInfo info) noexcept {

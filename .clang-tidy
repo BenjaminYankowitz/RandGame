@@ -38,6 +38,7 @@ Checks: >
   -readability-braces-around-statements,
   -modernize-use-designated-initializers,
   -misc-use-internal-linkage,
+  -readability-enum-initial-value,
 	
 
 

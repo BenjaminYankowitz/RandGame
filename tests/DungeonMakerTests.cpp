@@ -186,7 +186,9 @@ static_assert([] {
   if (info.numRegions() != 3)
     return false;
   auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  bool has01 = false, has02 = false, has12 = false;
+  bool has01 = false;
+  bool has02 = false;
+  bool has12 = false;
   for (const auto &c : candidates) {
     int lo = std::min(c.regionA, c.regionB);
     int hi = std::max(c.regionA, c.regionB);

@@ -492,7 +492,7 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
 }
 
 void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {
-  printWith_ << attacker << " hit " << toPrintAbleObject(attacked) << '\n';
+  printWith_ << attacker << " hit " << attacked << '\n';
 }
 
 // 𐁀

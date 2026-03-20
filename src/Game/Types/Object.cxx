@@ -2,10 +2,18 @@ export module GameTypes:Object;
 import :Misc;
 import Common;
 
+export struct ObjectBluePrint {
+  ObjectType type;
+  Material mat = defaultMat(type);
+  ArtifactId artifactStatus = ArtifactId::Normal;
+  int count = 1;
+};
+
 export class Object {
 public:
-  constexpr Object(int count, ObjectType type, Material mat) noexcept : count_(count), type_(type), mat_(mat) {}
+  constexpr Object(const ObjectBluePrint& obj) noexcept : count_(obj.count), type_(obj.type), mat_(obj.mat), artifactStatus_(obj.artifactStatus) {} //NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr bool isCombinable() const noexcept {
+
     return artifactStatus_ == ArtifactId::Normal;
   }
   [[nodiscard]] constexpr bool canCombine(const Object &other) const noexcept {
@@ -41,6 +49,9 @@ public:
     } else {
       impl_.push_back(std::move(obj));
     }
+  }
+  constexpr void addObject(const ObjectBluePrint& obj) noexcept {
+    addObject(std::make_unique<Object>(obj));
   }
   [[nodiscard]] constexpr std::size_t size() const noexcept {
     return impl_.size();

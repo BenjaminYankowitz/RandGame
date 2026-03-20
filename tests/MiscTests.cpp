@@ -151,12 +151,12 @@ static_assert([] consteval {
 static_assert([] consteval {
   int x = 10;
   OptionalReference<int> opt(x);
-  int result = opt.doIf([]() { return -1; }, [](int &v) { return v * 2; });
+  int result = opt.doIf([](int &v) { return v * 2; }, []() { return -1; });
   if (result != 20)
     return false;
 
   OptionalReference<int> empty;
-  int emptyResult = empty.doIf([]() { return -1; }, [](int &v) { return v * 2; });
+  int emptyResult = empty.doIf([](int &v) { return v * 2; }, []() { return -1; });
   return emptyResult == -1;
 }());
 
@@ -183,7 +183,7 @@ static_assert([] consteval {
 // range for iterates over nothing if not filled
 static_assert([] consteval {
   OptionalReference<int> opt;
-  for (auto &v : opt) { //NOLINT(readability-use-anyofallof)
+  for (auto &v : opt) { // NOLINT(readability-use-anyofallof)
     (void)v;
     return false;
   }
@@ -193,9 +193,8 @@ static_assert([] consteval {
 // all of does not see anything if not filled
 static_assert([] consteval {
   OptionalReference<int> opt;
-  return std::ranges::all_of(opt,[](int&){return false;});
+  return std::ranges::all_of(opt, [](int &) { return false; });
 }());
-
 
 // ============================================================
 // MustInit

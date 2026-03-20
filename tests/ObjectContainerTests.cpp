@@ -14,7 +14,7 @@ static_assert([] consteval {
 
 static_assert([] consteval {
   ObjectContainer container;
-  container.addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
+  container.addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
   if (container.size() != 1u)
     return false;
   if (container.empty())
@@ -40,8 +40,8 @@ static_assert([] consteval {
 
 static_assert([] consteval {
   ObjectContainer container;
-  container.addObject(std::make_unique<Object>(3, ObjectType::KingsCoin, Material::Gold));
-  container.addObject(std::make_unique<Object>(5, ObjectType::Knife, Material::Iron));
+  container.addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold, .count = 5});
+  container.addObject({.type = ObjectType::Knife, .mat = Material::Iron, .count = 5});
   if (container.size() != 2u)
     return false;
 
@@ -60,10 +60,24 @@ static_assert([] consteval {
   return true;
 }());
 
+// Corpses of different creatures do not stack
+static_assert([] consteval {
+  ObjectContainer container;
+  container.addObject({.type = corpseOf(MonsterClass::Human)});
+  container.addObject({.type = corpseOf(MonsterClass::Cat)});
+  if (container.size() != 2u)
+    return false;
+  if (!isCorpse(container[0].type()))
+    return false;
+  if (!isCorpse(container[1].type()))
+    return false;
+  return true;
+}());
+
 TEST(ObjectContainerTests, CombinableObjectsMerge) {
   ObjectContainer container;
-  container.addObject(std::make_unique<Object>(1, ObjectType::KingsCoin, Material::Gold));
-  container.addObject(std::make_unique<Object>(3, ObjectType::KingsCoin, Material::Gold));
+  container.addObject({.type = ObjectType::KingsCoin,.count=3});
+  container.addObject({.type = ObjectType::KingsCoin});
   // Same type + material + both Normal artifact status => should merge
   EXPECT_EQ(container.size(), 1u);
   EXPECT_EQ(container[0].count(), 4); // 1 + 3

@@ -4,12 +4,12 @@ import std;
 
 export template <std::integral INT>
 class DisjointSet {
-  public:
+public:
   constexpr explicit DisjointSet(INT maxSize) noexcept : parent_(maxSize) {
     std::iota(parent_.begin(), parent_.end(), 0);
   }
   [[nodiscard]] constexpr INT find_set(INT v) noexcept {
-    while(v!=parent_[v]){
+    while (v != parent_[v]) {
       v = parent_[v] = parent_[parent_[v]];
     }
     return v;
@@ -18,9 +18,10 @@ class DisjointSet {
     a = find_set(a);
     b = find_set(b);
     parent_[b] = a;
-    return a!=b;
+    return a != b;
   }
-  private:
+
+private:
   std::vector<INT> parent_;
 };
 
@@ -41,13 +42,16 @@ class OptionalReference {
 private:
   using wConstT = std::remove_const<T>;
   friend OptionalReference<const T>;
+
 public:
   using iterator = IteratorImpl<T, OptionalReference>;
   using const_iterator = IteratorImpl<const T, OptionalReference>;
   constexpr explicit OptionalReference(T *ptr) noexcept : ptr_(ptr) {}
-  constexpr explicit OptionalReference(T& value) noexcept : ptr_(&value) {}
+  constexpr explicit OptionalReference(T &value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;
-  constexpr OptionalReference(OptionalReference<std::remove_const<T>> o) noexcept : ptr_(o.ptr_) {} //NOLINT(google-explicit-constructor)
+  constexpr OptionalReference(const OptionalReference &o) = default;
+  constexpr OptionalReference &operator=(const OptionalReference &o) = default;
+  constexpr OptionalReference(OptionalReference<wConstT> o) noexcept : ptr_(o.ptr_) {} // NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr iterator begin() noexcept { return iterator(ptr_); }
   [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator(ptr_); }
   [[nodiscard]] constexpr iterator end() noexcept { return endIter(); }
@@ -64,21 +68,20 @@ public:
       f(*ptr_);
     }
   }
-  constexpr void doIfNoValue(auto&& f){
-    if(!has_value()){
+  constexpr void doIfNoValue(auto &&f) {
+    if (!has_value()) {
       f();
     }
   }
-  constexpr auto doIf(auto&& noValue, auto&& hasValue){
-    if(has_value()){
+  constexpr auto doIf(auto &&hasValue, auto &&noValue) {
+    if (has_value()) {
       return hasValue(*ptr_);
     }
     return noValue();
-    
   }
 
 private:
-  [[nodiscard]] constexpr iterator endIter() const noexcept{
+  [[nodiscard]] constexpr iterator endIter() const noexcept {
     return iterator(has_value() ? ptr_ + 1 : nullptr);
   }
   T *ptr_ = nullptr;
@@ -99,14 +102,14 @@ export template <class T>
 struct GetEnumValue {
 public:
   static constexpr void get(const T & /* Unused */) noexcept {
-    static_assert(false,"You must specify how to get the enum value from your object");
+    static_assert(false, "You must specify how to get the enum value from your object");
   }
 };
 
 template <class T>
 concept EnumType = std::is_enum_v<T>;
 template <class ObjectT, std::size_t size>
-class EnumToObject { 
+class EnumToObject {
 private:
   std::array<ObjectT, size> impl_;
   using EnumT = decltype(GetEnumValue<ObjectT>::get(impl_[0]));
@@ -121,11 +124,10 @@ public:
   }
 };
 
-
 export template <class ObjectT, std::size_t size, std::size_t... Is>
-constexpr auto mkEnumToObjectimpl(std::array<ObjectT,size> arr, std::index_sequence<Is...> /*template thing*/) {
+constexpr auto mkEnumToObjectimpl(std::array<ObjectT, size> arr, std::index_sequence<Is...> /*template thing*/) {
   std::array<std::size_t, size> indexMapping;
-  std::ranges::for_each(std::ranges::iota_view(0ul,size),[&](std::size_t i){
+  std::ranges::for_each(std::ranges::iota_view(0ul, size), [&](std::size_t i) {
     indexMapping[std::to_underlying(GetEnumValue<ObjectT>::get(arr[i]))] = i;
   });
   return EnumToObject<ObjectT, size>(std::array<ObjectT, size>{(arr[indexMapping[Is]])...});
