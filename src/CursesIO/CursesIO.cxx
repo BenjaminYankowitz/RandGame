@@ -144,13 +144,13 @@ namespace {
 export namespace IOModule {
 class Interface {
 public:
-  Interface() : printToViewer_(this) {
+  explicit Interface(std::unique_ptr<GameInterface> interface) : gState_(std::move(interface)), printToViewer_(this) {
     eventWindow_ = BoxedWindow(0, 0, 0, 0);
     mainWindow_ = BoxedWindow(0, 0, 0, 0);
     inventWindow_ = BoxedWindow(0, 0, 0, 0);
     statusWindow_ = BoxedWindow(0, 0, 0, 0);
     oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
-    gState_ = std::make_unique<GameInterface>(std::make_unique<CursesEventViewer>(this));
+    gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
   }
   ~Interface() {
     Logging::log.rdbuf(oldBuffer_);
@@ -336,6 +336,35 @@ void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod &
   gState.throwItem(index, (*target) - gState.getLocation().pos);
 }
 
+void eatItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  bool fromFloor = false;
+  ObjectContainerInterface floorItems = gState.lookAtFloor();
+  bool floorHasEdible = false;
+  for (std::size_t i = 0; i < floorItems.size(); i++) {
+    if (gState.canEat(floorItems[i])) {
+      floorHasEdible = true;
+      break;
+    }
+  }
+  if (floorHasEdible) {
+    while (true) {
+      auto input = CursesRAII::getChar();
+      if (input == 'y') {
+        fromFloor = true;
+        break;
+      }
+      if (input == 'n' || input == SpecialChar::Escape) {
+        break;
+      }
+    }
+  }
+  ObjectContainerInterface items = fromFloor ? gState.lookAtFloor() : gState.lookAtInventory();
+  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(items);
+  if (index != NoItem) {
+    gState.eatItem(index, fromFloor);
+  }
+}
+
 void dropItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
   std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
   if (index != NoItem) {
@@ -369,7 +398,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
       break;
     gState.generalMove(step, mod.getMoveMode());
     interface.updateGameScreen();
-    if (gState.getHealth() < healthBefore) //at some point change to getting allerted by message.
+    if (gState.getHealth() < healthBefore) // at some point change to getting allerted by message.
       break;
     if (gState.getLocation().pos == currentPos)
       break;
@@ -419,6 +448,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'9', addDigit<9>},
 
     {'d', dropItem},
+    {'e', eatItem},
     {'t', throwItem},
     {',', pickUpItem},
     {'.', passTime},

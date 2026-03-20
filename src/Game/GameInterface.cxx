@@ -13,6 +13,7 @@ public:
   [[nodiscard]] ArtifactId artifactStatus() const noexcept;
 
 private:
+  friend class GameInterface;
   const Object *obj_;
 };
 
@@ -38,7 +39,7 @@ private:
 };
 
 class IMonster;
-class IGameState;
+export class IGameState;
 class IWorldFloor;
 
 export class MonsterInterface {
@@ -93,7 +94,7 @@ public:
 
 export class GameInterface {
 public:
-  explicit GameInterface(std::unique_ptr<EventViewerInterface> viewer) noexcept;
+  explicit GameInterface(IGameState& gs, MonsterID controlled) noexcept;
   void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
@@ -108,10 +109,13 @@ public:
   [[nodiscard]] GameTime getTime() const noexcept;
   [[nodiscard]] TimePeriod getSpeed() const noexcept;
   void dropItem(std::size_t i) noexcept;
+  void eatItem(std::size_t i, bool fromFloor) noexcept;
+  [[nodiscard]] bool canEat(ObjectInterface obj) const noexcept;
   void throwItem(std::size_t i, Dir dir) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
   ~GameInterface();
 
 private:
-  std::unique_ptr<IGameState> gs_;
+  IGameState* gs_;
+  MonsterID controlled_;
 };

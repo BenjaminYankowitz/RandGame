@@ -2,9 +2,9 @@ module GameInterface;
 import Common;
 import Game;
 
-class IMonster : public Monster{};
-class IWorldFloor : public WorldFloor{};
-class IGameState : public GameState{};
+class IMonster : public Monster {};
+class IWorldFloor : public WorldFloor {};
+class IGameState : public GameState {};
 
 ObjectInterface::ObjectInterface(const Object &obj) noexcept : obj_(&obj) {}
 int ObjectInterface::count() const noexcept { return obj_->count(); }
@@ -23,10 +23,10 @@ ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { retu
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 
 MonsterInterface toInterface(const Monster &m) noexcept {
-  return MonsterInterface(static_cast<const IMonster&>(m));
+  return MonsterInterface(static_cast<const IMonster &>(m));
 }
 MonsterInterface toInterface(const Monster *m) noexcept {
-  return MonsterInterface(static_cast<const IMonster*>(m));
+  return MonsterInterface(static_cast<const IMonster *>(m));
 }
 
 WorldTileInterface toInterface(const GameState &gameState, ConstWorldTile tile) noexcept {
@@ -48,9 +48,7 @@ ObjectInterface ObjectContainerInterface::front() const noexcept { return Object
 ObjectInterface ObjectContainerInterface::back() const noexcept { return ObjectInterface(container_->back()); }
 ObjectInterface ObjectContainerInterface::operator[](std::size_t i) const noexcept { return ObjectInterface((*container_)[i]); }
 
-GameInterface::GameInterface(std::unique_ptr<EventViewerInterface> viewer) noexcept : gs_(std::make_unique<IGameState>()) {
-  setEventViewer(std::move(viewer));
-}
+GameInterface::GameInterface(IGameState& gs, MonsterID controlled) noexcept : gs_(&gs), controlled_(controlled) {}
 namespace {
 class EventViewerTranslator : public EventViewer {
 public:
@@ -91,61 +89,65 @@ public:
 private:
   std::unique_ptr<EventViewerInterface> impl_;
 };
-}  // namespace
+} // namespace
 
 void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept {
   gs_->setEventViewer(std::make_unique<EventViewerTranslator>(std::move(viewer)));
 }
 void GameInterface::exit() noexcept {}
 void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  passTime(gs_->getPlayer().generalMove(*gs_, capDir(d), mode));
+  passTime(self.generalMove(*gs_, capDir(d), mode));
 }
 void GameInterface::goUpStair(MoveMode mode) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  passTime(gs_->getPlayer().goUpStair(*gs_,mode));
+  passTime(self.goUpStair(*gs_, mode));
 }
 void GameInterface::goDownStair(MoveMode mode) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  passTime(gs_->getPlayer().goDownStair(*gs_,mode));
+  passTime(self.goDownStair(*gs_, mode));
 }
 void GameInterface::pickUpItem(std::size_t selected) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  ObjectContainer &floorItems = gs_->getObjects(gs_->getPlayer().getLoc());
+  ObjectContainer &floorItems = gs_->getObjects(self.getLoc());
   if (selected >= floorItems.size()) {
     return;
   }
-  TimePeriod timePassed = gs_->getPlayer().takeItem(*gs_, floorItems, selected);
+  TimePeriod timePassed = self.takeItem(*gs_, floorItems, selected);
 
   passTime(timePassed);
 }
 
 WorldFloorInterface GameInterface::getFloor(FloorSpecifier floorId) const noexcept {
-  return {static_cast<const IGameState&>(*gs_), static_cast<const IWorldFloor&>(gs_->getFloor(floorId))};
+  return {static_cast<const IGameState &>(*gs_), static_cast<const IWorldFloor &>(gs_->getFloor(floorId))};
 }
 
 ObjectContainerInterface GameInterface::lookAtFloor() const noexcept {
-  return ObjectContainerInterface(gs_->getObjects(gs_->getPlayer().getLoc()));
+  return ObjectContainerInterface(gs_->getObjects(gs_->getMonster(controlled_).getLoc()));
 }
 
 ObjectContainerInterface GameInterface::lookAtInventory() const noexcept {
-  return ObjectContainerInterface(gs_->getPlayer().viewInventory());
+  return ObjectContainerInterface(gs_->getMonster(controlled_).viewInventory());
 }
 
 Location GameInterface::getLocation() const noexcept {
-  return gs_->getPlayer().getLoc();
+  return gs_->getMonster(controlled_).getLoc();
 }
 
 Health GameInterface::getHealth() const noexcept {
-  return gs_->getPlayer().getHealth();
+  return gs_->getMonster(controlled_).getHealth();
 }
 
 GameTime GameInterface::getTime() const noexcept {
@@ -153,32 +155,53 @@ GameTime GameInterface::getTime() const noexcept {
 }
 
 TimePeriod GameInterface::getSpeed() const noexcept {
-  return gs_->getPlayer().getSpeed();
+  return gs_->getMonster(controlled_).getSpeed();
 }
 
 void GameInterface::dropItem(std::size_t i) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  const auto &invent = gs_->getPlayer().viewInventory();
+  const auto &invent = self.viewInventory();
   if (i >= invent.size()) {
     return;
   }
-  passTime(gs_->getPlayer().dropItem(*gs_, i));
+  passTime(self.dropItem(*gs_, i));
+}
+
+void GameInterface::eatItem(std::size_t i, bool fromFloor) noexcept {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
+    return;
+  }
+  const ObjectContainer &container = fromFloor ? gs_->getObjects(self.getLoc()) : self.viewInventory();
+  if (i >= container.size()) {
+    return;
+  }
+  if (!self.canEat(container[i])) {
+    return;
+  }
+  passTime(self.eatItem(*gs_, i, fromFloor));
+}
+
+bool GameInterface::canEat(ObjectInterface obj) const noexcept {
+  return gs_->getMonster(controlled_).canEat(*obj.obj_);
 }
 
 void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  auto& self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
     return;
   }
-  const ObjectContainer &invent = gs_->getPlayer().viewInventory();
+  const ObjectContainer &invent = self.viewInventory();
   if (i >= invent.size()) {
     return;
   }
-  passTime(gs_->getPlayer().throwItem(*gs_, i, dir));
+  passTime(self.throwItem(*gs_, i, dir));
 }
 void GameInterface::passTime(TimePeriod numTurns) noexcept {
-  if (!gs_->getPlayer().isAlive()) {
+  if (!gs_->getMonster(controlled_).isAlive()) {
     return;
   }
   gs_->passTime(numTurns);

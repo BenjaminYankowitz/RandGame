@@ -46,6 +46,7 @@ public:
   [[nodiscard]] constexpr const ObjectContainer &viewInventory() const noexcept { return inventory_; }
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return brain_.isPlayer(); }
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
+  [[nodiscard]] constexpr bool canEat(const Object & /*unused*/) const noexcept { return mClass_!=MonsterClass::Bryozoan; }
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
   constexpr void informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept;
@@ -75,13 +76,14 @@ public:
       return TimePeriod(10);
     case TargetDead:
       target_.clear();
-    case ReachedDestination: //Fallthrough
+    case ReachedDestination: // Fallthrough
       return TimePeriod(1);
     }
   }
   [[nodiscard]] constexpr TimePeriod takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept;
   [[nodiscard]] constexpr TimePeriod dropItem(GameState &state, std::size_t i) noexcept;
   [[nodiscard]] constexpr TimePeriod throwItem(GameState &state, std::size_t i, Dir dir) noexcept;
+  [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   constexpr void deathDrop(GameState &state) noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
   Monster(CreateKey /*unused*/, MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), health_(body.health), id_(id), damage_(body.damage), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
@@ -206,17 +208,17 @@ constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIter
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
   DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16, 4);
-  if(ret.inBounds(upStair)){
+  if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
   }
-  if(ret.inBounds(downStair)){
+  if (ret.inBounds(downStair)) {
     ret.getTerrainType(downStair) = TerrainType::Empty;
   }
   DungeonMaker::connectRegions<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr());
-  if(ret.inBounds(upStair)){
+  if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::UpStair;
   }
-  if(ret.inBounds(downStair)){
+  if (ret.inBounds(downStair)) {
     ret.getTerrainType(downStair) = TerrainType::DownStair;
   }
   return ret;
@@ -249,10 +251,10 @@ public:
   [[nodiscard]] auto &getFloor(this auto &&self, FloorSpecifier floorId) noexcept {
     return std::forward_like<decltype(self)>(self.floorData_[floorId.floor]);
   }
-  [[nodiscard]] bool floorInBound(FloorSpecifier floorId) const noexcept{
+  [[nodiscard]] bool floorInBound(FloorSpecifier floorId) const noexcept {
     return floorId.floor >= 0 && static_cast<std::size_t>(floorId.floor) < floorData_.size();
   }
-  [[nodiscard]] bool inBound(Location loc) const noexcept{
+  [[nodiscard]] bool inBound(Location loc) const noexcept {
     return floorInBound(loc.mapPos) && getFloor(loc.mapPos).inBounds(loc.pos);
   }
   [[nodiscard]] constexpr auto &getObjects(this auto &&self, Location loc) noexcept {
@@ -270,10 +272,10 @@ public:
   [[nodiscard]] constexpr bool isOpenTile(Location loc) const noexcept {
     return floorInBound(loc.mapPos) && getFloor(loc.mapPos).isOpenTile(loc.pos);
   }
-  [[nodiscard]] constexpr bool isOpenTerrain(Location loc) const noexcept{
+  [[nodiscard]] constexpr bool isOpenTerrain(Location loc) const noexcept {
     return floorInBound(loc.mapPos) && getFloor(loc.mapPos).isOpenTerrain(loc.pos);
   }
-  [[nodiscard]] auto tryGetMonster(this auto&& self, Monster::ID id) noexcept {
+  [[nodiscard]] auto tryGetMonster(this auto &&self, Monster::ID id) noexcept {
     auto found = self.monsterMap_.find(id);
     return found == self.monsterMap_.end() ? OptionalReference<std::remove_reference_t<decltype(std::forward_like<decltype(self)>(*found->second))>>() : OptionalReference(std::forward_like<decltype(self)>(*found->second));
   }
@@ -362,14 +364,14 @@ private:
 GameState::GameState() noexcept {
   constexpr int DungeonWidth = 90;
   constexpr int DungeonHeight = 30;
-  Position up = {-1,-1};
-  for(int floor = 0; floor < 10; floor++){
+  Position up = {-1, -1};
+  for (int floor = 0; floor < 10; floor++) {
     Position down = up;
-    if(floor==9){
-      down = {-1,-1};
+    if (floor == 9) {
+      down = {-1, -1};
     }
-    while(down==up){
-      down = {Rnd::rnd(DungeonWidth),Rnd::rnd(DungeonHeight)};
+    while (down == up) {
+      down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
     up = down;
@@ -395,10 +397,10 @@ GameState::GameState() noexcept {
   tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
   tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
-  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold});
-  startingFloor.getObjects({4, 2}).addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold});
-  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::Knife, .mat=Material::Iron});
-  startingFloor.getObjects({1, 0}).addObject({.type=ObjectType::Knife, .mat=Material::Gold});
+  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
+  startingFloor.getObjects({4, 2}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
+  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Iron});
+  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Gold});
 }
 
 [[nodiscard]] constexpr bool operator==(WorldFloor::EventListenersIterable::EventListenerSentinal end, WorldFloor::EventListenersIterable::EventListenerIterator iter) noexcept {
@@ -494,11 +496,7 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
 }
 
 TimePeriod Monster::goToEnemey(GameState &state) noexcept {
-  return state.tryGetMonster(target_).doIf([&](Monster& target){
-    return pathTo(state, target.getLoc(), true);
-  }, [&](){
-    return reThink(ReThinkReason::TargetDead);
-  });
+  return state.tryGetMonster(target_).doIf([&](Monster &target) { return pathTo(state, target.getLoc(), true); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
   auto movePlan = monsterPath(state, *this, target);
@@ -552,22 +550,22 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
 }
 
 constexpr TimePeriod Monster::generalMove(GameState &state, Position nPos, MoveMode mode) noexcept {
-  return generalMove(state,Location(nPos,loc_.mapPos),mode);
+  return generalMove(state, Location(nPos, loc_.mapPos), mode);
 }
 constexpr TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode) noexcept {
-  return generalMove(state,Location(loc_.pos+d,loc_.mapPos),mode);
+  return generalMove(state, Location(loc_.pos + d, loc_.mapPos), mode);
 }
 
 [[nodiscard]] constexpr TimePeriod Monster::goUpStair(GameState &state, MoveMode m) noexcept {
-  if(state.getTerrainType(loc_) == TerrainType::UpStair){
-    return generalMove(state,loc_.up(),m);
+  if (state.getTerrainType(loc_) == TerrainType::UpStair) {
+    return generalMove(state, loc_.up(), m);
   }
   return TimePeriod(0);
 }
 
 [[nodiscard]] constexpr TimePeriod Monster::goDownStair(GameState &state, MoveMode m) noexcept {
-  if(state.getTerrainType(loc_) == TerrainType::DownStair){
-    return generalMove(state,loc_.down(),m);
+  if (state.getTerrainType(loc_) == TerrainType::DownStair) {
+    return generalMove(state, loc_.down(), m);
   }
   return TimePeriod(0);
 }
@@ -604,7 +602,7 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
     return TimePeriod(0);
   }
   TimePeriod timeTaken(0);
-  if(target_.isNull()){
+  if (target_.isNull()) {
     timeTaken = wander(state);
   } else {
     timeTaken = goToEnemey(state);
@@ -651,9 +649,19 @@ constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir
   sendItemFlying(state, removeFromInvent(i), *this, dir);
   return getSpeed() / ThrowItemSpeedFraction;
 }
+
+constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept{
+  static constexpr std::size_t EatItemSpeedFraction = 1;
+  ObjectContainer& container = fromFloor ? state.getObjects(loc_) : inventory_;
+  Object& toEat = container[i];
+  if(--toEat.count()==0){
+    (void) container.remove(i);
+  }
+  return getSpeed()/EatItemSpeedFraction;
+}
 constexpr void Monster::deathDrop(GameState &state) noexcept {
   while (!inventory_.empty()) {
-    (void) dropItem(state, inventory_.size() - 1);
+    (void)dropItem(state, inventory_.size() - 1);
   }
   state.getObjects(getLoc()).addObject(ObjectBluePrint{corpseOf(mClass_)});
 }

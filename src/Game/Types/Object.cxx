@@ -23,6 +23,7 @@ public:
     count_ += other->count_;
   }
   [[nodiscard]] constexpr int count() const noexcept { return count_; }
+  [[nodiscard]] constexpr int& count() noexcept { return count_; }
   [[nodiscard]] constexpr ObjectType type() const noexcept { return type_; }
   [[nodiscard]] constexpr Material mat() const noexcept { return mat_; }
   [[nodiscard]] constexpr ArtifactId artifactStatus() const noexcept { return artifactStatus_; }

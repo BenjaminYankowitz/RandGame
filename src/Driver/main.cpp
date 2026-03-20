@@ -1,6 +1,7 @@
 import std;
 import CursesIO;
 import Game;
+import GameInterface;
 
 namespace {
 void runGame(IOModule::Interface &interface) {
@@ -11,7 +12,8 @@ void runGame(IOModule::Interface &interface) {
 }
 
 void doMain() {
-  IOModule::Interface IORII;
+  GameState game;
+  IOModule::Interface IORII(std::make_unique<GameInterface>(reinterpret_cast<IGameState&>(game),game.getPlayer().getId()));
   runGame(IORII);
 }
 }  // namespace
