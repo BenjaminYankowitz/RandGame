@@ -19,3 +19,12 @@ target_sources(Common
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
             Common.cxx Shared.cxx Random.cxx CompileTimeHashMap.cxx Dice.cxx Misc.cxx IteratorBase.cxx Static2DArr.cxx Location.cxx PathFind.cxx LogStream.cxx)
+
+
+add_library(OpenSimplex STATIC)
+target_sources(OpenSimplex
+	PUBLIC
+		FILE_SET CXX_MODULES FILES
+            OpenSimplex.cxx
+	PRIVATE
+		OpenSimplexImpl.cxx)

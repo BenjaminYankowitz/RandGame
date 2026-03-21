@@ -1,8 +1,10 @@
 export module Common:Location;
 import :Random;
 import std;
-export class Dir;
 
+[[nodiscard]] constexpr auto abs(auto n) noexcept { 
+  return n < 0 ? -n : n;
+}
 export class Dir {
 public:
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
@@ -36,6 +38,9 @@ public:
   [[nodiscard]] constexpr static Dir getDirectDir(int n) {
     return directDirs()[n];
   }
+  [[nodiscard]] static constexpr int chessboard(Dir d) noexcept {
+    return std::max(abs(d.dx),abs(d.dy));
+  }
   int dx;
   int dy;
 };
@@ -62,13 +67,12 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   return out;
 }
 
-[[nodiscard]] constexpr auto abs(auto n) noexcept { 
-  return n < 0 ? -n : n;
-}
+struct PathIterSentinal {};
 
 export struct PathIterable {
   struct PathIter {
     using difference_type = std::ptrdiff_t;
+    using value_type = Dir;
     Dir c;
     Dir e;
     constexpr PathIter operator++(int) noexcept {
@@ -77,8 +81,11 @@ export struct PathIterable {
       return ret;
     }
     constexpr PathIter &operator++() noexcept {
-      auto v1 = abs(static_cast<std::int64_t>(c.dx) * e.dy);
-      auto v2 = abs(static_cast<std::int64_t>(c.dy) * e.dx);
+      if(e.noMove()){
+        c = {1,0};
+      }
+      auto v1 = abs<std::int64_t>(e.dy) * ((2 * abs<std::int64_t>(c.dx)) + 1);
+      auto v2 = abs<std::int64_t>(e.dx) * ((2 * abs<std::int64_t>(c.dy)) + 1);
       if (v1 < v2) {
         c.dx += capDir(e).dx;
       } else if (v1 == v2) {
@@ -93,21 +100,64 @@ export struct PathIterable {
       return c;
     }
     [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
+    [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const {
+      return Dir::chessboard(c)>Dir::chessboard(e);
+    };
   };
   [[nodiscard]] constexpr PathIter begin() const noexcept {
-    return ++PathIter{{0, 0}, e};
+    return PathIter{{0, 0}, e};
   }
-  [[nodiscard]] constexpr PathIter end() const noexcept {
-    return ++PathIter{
-        e,
-        e,
-    };
+  [[nodiscard]] static constexpr PathIterSentinal end() noexcept {
+    return {};
+  }
+  Dir e;
+  // bool favor
+};
+template <>
+const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
+export struct PathIterableShort {
+  struct PathIter {
+    using difference_type = std::ptrdiff_t;
+    using value_type = Dir;
+    int dist;
+    Dir e;
+    constexpr PathIter operator++(int) noexcept {
+      PathIter ret = *this;
+      ++(*this);
+      return ret;
+    }
+    constexpr PathIter &operator++() noexcept {
+      ++dist;
+      return *this;
+    }
+    [[nodiscard]] constexpr Dir operator*() const noexcept {
+      if(dist==0){
+        return {0,0};
+      }
+      int bDG = Dir::chessboard(e);
+      int sDG = std::min(abs(e.dx),abs(e.dy));
+      int sDC = ((dist*sDG)+(bDG/2))/bDG;
+      auto capEnd = capDir(e);
+      if(abs(e.dx) < abs(e.dy)){
+        return {sDC*capEnd.dx,dist*capEnd.dy};
+      }
+      return {dist*capEnd.dx,sDC*capEnd.dy};
+    }
+    [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
+    [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const noexcept{
+      return dist>Dir::chessboard(e);
+    }
+  };
+  [[nodiscard]] constexpr PathIter begin() const noexcept {
+    return PathIter{0, e};
+  }
+  [[nodiscard]] static constexpr PathIterSentinal end() noexcept {
+    return {};
   }
   Dir e;
 };
-
 template <>
-const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
+const bool std::ranges::enable_borrowed_range<PathIterableShort> = true; // NOLINT(readability-identifier-naming)
 
 export class Position {
 public:

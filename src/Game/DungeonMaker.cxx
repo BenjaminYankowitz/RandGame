@@ -1,6 +1,7 @@
 export module DungeonMaker;
 import Common;
 import PerlinNoise;
+import OpenSimplex;
 
 template <class T, class size_type>
 class RoomSplitHelper {
@@ -123,6 +124,22 @@ void perlin(Static2DArr<decltype(Wall), size_type> &floor, double xscale, double
       const double eX = (x * cos) - (y * sin) - minX + xoffset;
       const double eY = (y * cos) + (x * sin) - minY + yoffset;
       if (gen.getHeight(eX, eY) >= threshold) {
+        floor[yI, xI] = Wall;
+      } else {
+        floor[yI, xI] = Empty;
+      }
+    }
+  }
+}
+
+template <auto Wall, decltype(Wall) Empty, class size_type>
+void openSimplex(Static2DArr<decltype(Wall), size_type> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+  OpenSimplex2S gen(Rnd::uniform_int<std::int64_t>(std::numeric_limits<std::int64_t>::min(),std::numeric_limits<std::int64_t>::max()));
+  for (size_type xI = 0; xI < floor.cols(); xI++) {
+    for (size_type yI = 0; yI < floor.rows(); yI++) {
+      const double x = xI / xscale;
+      const double y = yI / yscale;
+      if (gen.noise2(x, y) >= threshold) {
         floor[yI, xI] = Wall;
       } else {
         floor[yI, xI] = Empty;
@@ -260,29 +277,10 @@ constexpr std::vector<Candidate> findCandidates(const Static2DArr<decltype(Wall)
 
 template <auto Empty, class size_type>
 constexpr void carveCorridor(Static2DArr<decltype(Empty), size_type> &floor, Position from, Position to) noexcept {
-  int x = from.x;
-  const int xStep = (to.x > from.x) ? 1 : -1;
-  while (x != to.x) {
-    const auto row = static_cast<size_type>(from.y);
-    const auto col = static_cast<size_type>(x);
-    if (floor.inBounds(row, col))
-      floor[row, col] = Empty;
-    x += xStep;
-  }
-  int y = from.y;
-  const int yStep = (to.y > from.y) ? 1 : -1;
-  while (y != to.y) {
-    const auto row = static_cast<size_type>(y);
-    const auto col = static_cast<size_type>(to.x);
-    if (floor.inBounds(row, col))
-      floor[row, col] = Empty;
-    y += yStep;
-  }
-  {
-    const auto row = static_cast<size_type>(to.y);
-    const auto col = static_cast<size_type>(to.x);
-    if (floor.inBounds(row, col))
-      floor[row, col] = Empty;
+  floor[from.y,from.x] = Empty;
+  for(auto d : PathIterableShort(to-from)){
+    Position cPos = from+d;
+    floor[cPos.y,cPos.x] = Empty;
   }
 }
 
@@ -303,7 +301,7 @@ constexpr void connectRegions(Static2DArr<decltype(Wall), size_type> &floor) noe
       carveCorridor<Empty>(floor, info.representatives[cand.regionA], info.representatives[cand.regionB]);
   }
 
-  for (int i = 1; i < info.numRegions(); i++) {
+  for (auto i : std::views::iota(0,info.numRegions())) {
     if (ds.union_set(0, i))
       carveCorridor<Empty>(floor, info.representatives[0], info.representatives[i]);
   }

@@ -207,7 +207,7 @@ constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIter
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::perlin<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 16, 4);
+  DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8,-0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
   }
@@ -628,7 +628,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, con
   Dir lastDir;
   auto [mapPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
-  for (Dir cDir : PathIterable{dir}) {
+  for (Dir cDir : PathIterable{dir} | std::views::drop(1)) {
     Position cSpot = mapPos + cDir;
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {

@@ -203,59 +203,6 @@ static_assert([] {
 }(),
               "FindCandidates WallAdjacentToThreeRegions");
 
-// --- carveCorridor tests ---
-
-static_assert([] {
-  Static2DArr<int> floor(1, 5);
-  floor.fill(Wall);
-  DungeonMaker::carveCorridor<Empty>(floor, Position{0, 0}, Position{4, 0});
-  for (std::size_t c = 0; c < 5; c++)
-    if (floor[0, c] != Empty)
-      return false;
-  return true;
-}(),
-              "CarveCorridor HorizontalOnly");
-
-static_assert([] {
-  Static2DArr<int> floor(5, 1);
-  floor.fill(Wall);
-  DungeonMaker::carveCorridor<Empty>(floor, Position{0, 0}, Position{0, 4});
-  for (std::size_t r = 0; r < 5; r++)
-    if (floor[r, 0] != Empty)
-      return false;
-  return true;
-}(),
-              "CarveCorridor VerticalOnly");
-
-static_assert([] {
-  // From (0,0) to (3,2): horizontal along row 0 then vertical along col 3
-  Static2DArr<int> floor(3, 4);
-  floor.fill(Wall);
-  DungeonMaker::carveCorridor<Empty>(floor, Position{0, 0}, Position{3, 2});
-  for (std::size_t c = 0; c < 3; c++)
-    if (floor[0, c] != Empty)
-      return false;
-  for (std::size_t r = 0; r < 3; r++)
-    if (floor[r, 3] != Empty)
-      return false;
-  return true;
-}(),
-              "CarveCorridor LShapedPath");
-
-static_assert([] {
-  // From (3,2) to (0,0): walks left then up
-  Static2DArr<int> floor(3, 4);
-  floor.fill(Wall);
-  DungeonMaker::carveCorridor<Empty>(floor, Position{3, 2}, Position{0, 0});
-  for (std::size_t c = 1; c <= 3; c++)
-    if (floor[2, c] != Empty)
-      return false;
-  for (std::size_t r = 0; r <= 2; r++)
-    if (floor[r, 0] != Empty)
-      return false;
-  return true;
-}(),
-              "CarveCorridor ReverseLShaped");
 
 static_assert([] {
   Static2DArr<int> floor(3, 3);

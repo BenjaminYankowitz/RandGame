@@ -1,4 +1,5 @@
 #include "TestHeader.h"
+import Game;
 import GameInterface;
 import GameTypes;
 import Common;
@@ -16,43 +17,56 @@ class NullEventViewer final : public EventViewerInterface {
 std::unique_ptr<EventViewerInterface> makeNullViewer() {
   return std::make_unique<NullEventViewer>();
 }
+
+GameInterface makeGI(GameState &game) {
+  GameInterface gi(reinterpret_cast<IGameState &>(game), game.getPlayer().getId());
+  gi.setEventViewer(makeNullViewer());
+  return gi;
+}
 } // namespace
 TEST(GameInterfaceTests, ConstructionSucceeds) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   (void)gi;
 }
 
 TEST(GameInterfaceTests, PlayerStartsAlive) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   EXPECT_TRUE(gi.getHealth() > 0);
 }
 
 TEST(GameInterfaceTests, InitialTimeIsZero) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   EXPECT_EQ(gi.getTime().impl, 0);
 }
 
 TEST(GameInterfaceTests, SpeedIsPositive) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   EXPECT_TRUE(gi.getSpeed().impl > 0);
 }
 
 TEST(GameInterfaceTests, FloorHasDimensions) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto floor = gi.getFloor(FloorSpecifier(0));
   EXPECT_TRUE(floor.rows() > 0);
   EXPECT_TRUE(floor.cols() > 0);
 }
 
 TEST(GameInterfaceTests, PlayerLocationInBounds) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   EXPECT_TRUE(floor.inBounds(loc.pos));
 }
 
 TEST(GameInterfaceTests, InventoryAccessible) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto inv = gi.lookAtInventory();
   // Player may start with items; just verify access works
   (void)inv.size();
@@ -60,7 +74,8 @@ TEST(GameInterfaceTests, InventoryAccessible) {
 }
 
 TEST(GameInterfaceTests, PassTimeAdvancesClock) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.passTime(TimePeriod(1));
   auto t1 = gi.getTime();
@@ -68,7 +83,8 @@ TEST(GameInterfaceTests, PassTimeAdvancesClock) {
 }
 
 TEST(GameInterfaceTests, MoveChangesTimeOrPosition) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto loc0 = gi.getLocation();
   auto t0 = gi.getTime();
   gi.generalMove(Dir::right(), MoveMode::move());
@@ -78,7 +94,8 @@ TEST(GameInterfaceTests, MoveChangesTimeOrPosition) {
 }
 
 TEST(GameInterfaceTests, PickUpItemOutOfRangeIsNoOp) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.pickUpItem(999);
   auto t1 = gi.getTime();
@@ -86,7 +103,8 @@ TEST(GameInterfaceTests, PickUpItemOutOfRangeIsNoOp) {
 }
 
 TEST(GameInterfaceTests, DropItemOutOfRangeIsNoOp) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.dropItem(999);
   auto t1 = gi.getTime();
@@ -94,7 +112,8 @@ TEST(GameInterfaceTests, DropItemOutOfRangeIsNoOp) {
 }
 
 TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.throwItem(999, Dir::up());
   auto t1 = gi.getTime();
@@ -102,7 +121,8 @@ TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
 }
 
 TEST(GameInterfaceTests, PlayerTileIsNotWall) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
@@ -110,7 +130,8 @@ TEST(GameInterfaceTests, PlayerTileIsNotWall) {
 }
 
 TEST(GameInterfaceTests, PlayerTileHasPlayer) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
@@ -120,13 +141,15 @@ TEST(GameInterfaceTests, PlayerTileHasPlayer) {
 }
 
 TEST(GameInterfaceTests, SetEventViewerWorks) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   gi.setEventViewer(makeNullViewer());
   EXPECT_TRUE(gi.getHealth() > 0);
 }
 
 TEST(GameInterfaceTests, FloorObjectsAccessible) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto floorItems = gi.lookAtFloor();
   (void)floorItems.size();
   (void)floorItems.empty();
@@ -134,7 +157,7 @@ TEST(GameInterfaceTests, FloorObjectsAccessible) {
 
 TEST(GameInterfaceTests, LenOne) {
   ObjectContainer container;
-  container.addObject({.type=ObjectType::KingsCoin, .mat=Material::Gold,.count=23});
+  container.addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold, .count = 23});
   ObjectContainerInterface iface(container);
   auto it = iface.begin();
   auto endIt = iface.end();
@@ -151,7 +174,8 @@ TEST(GameInterfaceTests, LenOne) {
 }
 
 TEST(GameInterfaceTests, MultiplePassTimeAdvancesCorrectly) {
-  GameInterface gi(makeNullViewer());
+  GameState game;
+  GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.passTime(TimePeriod(1));
   auto t1 = gi.getTime();
