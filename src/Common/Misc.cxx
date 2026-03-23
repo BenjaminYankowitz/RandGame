@@ -9,6 +9,10 @@ public:
     std::iota(parent_.begin(), parent_.end(), 0);
   }
   [[nodiscard]] constexpr INT find_set(INT v) noexcept {
+    if(v < static_cast<INT>(0) || static_cast<std::size_t>(v)>=parent_.size()){
+      std::cerr << "Tried to pass invalid value to DisjointSet: " << v << "\n";
+      return -1;
+    }
     while (v != parent_[v]) {
       v = parent_[v] = parent_[parent_[v]];
     }

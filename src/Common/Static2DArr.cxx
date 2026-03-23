@@ -21,18 +21,19 @@ public:
 
 private:
   using arr_t = value_type[]; // NOLINT(modernize-avoid-c-arrays)
-  template <class U>
+  template <bool b>
   struct PiteratorImpl {};
   template <>
-  struct PiteratorImpl<Static2DArr> {
+  struct PiteratorImpl<false> {
     using type = iterator;
   };
   template <>
-  struct PiteratorImpl<const Static2DArr> {
+  struct PiteratorImpl<true> {
     using type = const_iterator;
   };
   template <class U>
-  using piterator = PiteratorImpl<std::remove_reference_t<U>>::type;
+  using piterator = PiteratorImpl<std::is_const_v<U>>::type;
+  
 
 public:
   template <size_type size>
@@ -51,6 +52,7 @@ public:
         Logging::log << "Tried to make Static2DArr with dims: " << rows << " by " << cols << '\n';
         rows_ = std::max<size_type>(0, rows);
         cols_ = std::max<size_type>(0, cols);
+        data_ = nullptr;
       }
     }
   }
@@ -59,7 +61,7 @@ public:
   [[nodiscard]] constexpr bool isNull() const noexcept { return data_ == nullptr; }
   [[nodiscard]] constexpr auto &operator[](this auto &&self, size_type row, size_type col) noexcept {
     if constexpr (InDebug) {
-      if (!self.inBounds(row, col)) {
+      if (!self.Static2DArr::inBounds(row, col)) {
         Logging::log << "Bad Static2DArr index\nrow: " << row << " col: " << col << '\n'
                      << "Dims are " << self.rows_ << " x " << self.cols_ << '\n';
         return std::forward_like<decltype(self)>(self.data_[0]);
@@ -67,8 +69,8 @@ public:
     }
     return std::forward_like<decltype(self)>(self.data_[(row * self.cols_) + col]);
   }
-  [[nodiscard]] constexpr auto begin(this auto &&self) noexcept { return piterator<decltype(self)>(self.data_.get()); }
-  [[nodiscard]] constexpr auto end(this auto &&self) noexcept { return piterator<decltype(self)>(self.begin() + self.size()); }
+  [[nodiscard]] constexpr auto begin(this auto &&self) noexcept { return Static2DArr::piterator<decltype(self)>(self.data_.get()); }
+  [[nodiscard]] constexpr auto end(this auto &&self) noexcept { return Static2DArr::piterator<decltype(self)>(self.begin() + self.size()); }
   [[nodiscard]] constexpr size_type rows() const noexcept { return rows_; }
   [[nodiscard]] constexpr size_type cols() const noexcept { return cols_; }
   [[nodiscard]] constexpr size_type size() const noexcept { return cols_ * rows_; }

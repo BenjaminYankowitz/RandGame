@@ -130,7 +130,7 @@ public:
   [[nodiscard]] constexpr auto end##name(this auto &&self) noexcept { return self.name##Arr_.end(); }                                    \
   [[nodiscard]] constexpr auto iterable##name(this auto &&self) noexcept { return Iterable(self.begin##name(), self.end##name()); }      \
   [[nodiscard]] constexpr auto &get##name##Arr(this auto &&self) noexcept { return std::forward_like<decltype(self)>(self.name##Arr_); } \
-  [[nodiscard]] constexpr auto &get##name(this auto &&self, Position pos) noexcept { return self.get##name##Arr()[pos.y, pos.x]; }
+  [[nodiscard]] constexpr auto &get##name(this auto &&self, Position pos) noexcept { return self.get##name##Arr()[pos]; }
   ACCESSORS_WORLD_FLOOR(Objects)
   ACCESSORS_WORLD_FLOOR(Monster)
   ACCESSORS_WORLD_FLOOR(TerrainType)
@@ -144,12 +144,11 @@ public:
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
   }
-  constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(y, x), MonsterArr_(y, x), TerrainTypeArr_(y, x) {}
+  constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x,y), MonsterArr_(x,y), TerrainTypeArr_(x,y) {}
   [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
   [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
   [[nodiscard]] constexpr bool inBounds(Position pos) const noexcept {
-    const auto [x, y] = pos;
-    return ObjectsArr_.inBounds(y, x);
+    return ObjectsArr_.inBounds(pos);
   }
   constexpr void addEventListener(Monster::ID id) { EventListenerArr_.push_back(id); }
   [[nodiscard]] constexpr auto getEventListeners(GameState &state) noexcept {
@@ -157,9 +156,9 @@ public:
   }
 
 private:
-  Static2DArr<ObjectContainer, int> ObjectsArr_;
-  Static2DArr<Monster::ID, int> MonsterArr_;
-  Static2DArr<TerrainType, int> TerrainTypeArr_;
+  StaticPositionArr<ObjectContainer> ObjectsArr_;
+  StaticPositionArr<Monster::ID> MonsterArr_;
+  StaticPositionArr<TerrainType> TerrainTypeArr_;
   std::vector<Monster::ID> EventListenerArr_;
   class EventListenersIterable {
   public:

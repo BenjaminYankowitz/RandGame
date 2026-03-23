@@ -1,5 +1,6 @@
 export module Common:Location;
 import :Random;
+import :Static2DArr;
 import std;
 
 [[nodiscard]] constexpr auto abs(auto n) noexcept { 
@@ -161,6 +162,7 @@ const bool std::ranges::enable_borrowed_range<PathIterableShort> = true; // NOLI
 
 export class Position {
 public:
+  Position() = default;
   [[nodiscard]] constexpr Position(int xI, int yI) noexcept : x(xI), y(yI) {}
   [[nodiscard]] static constexpr int chessboard(Position l1, Position l2) noexcept {
     return std::max(abs(l1.x - l2.x), abs(l1.y - l2.y));
@@ -182,6 +184,29 @@ public:
 };
 
 static_assert(Position{2, 1}.within({2, 2}));
+
+export template<class T>
+class StaticPositionArr : public Static2DArr<T,int> {
+  public:
+  constexpr StaticPositionArr(int width, int height) noexcept: Static2DArr<T,int>(height,width){}
+  template<std::size_t size>
+  constexpr StaticPositionArr(std::initializer_list<T[size]> list) noexcept: Static2DArr<T,int>(list){} //NOLINT(modernize-avoid-c-arrays)
+  [[nodiscard]] constexpr auto& operator[](this auto&& self, Position p) noexcept {
+    return self.Static2DArr<T,int>::operator[](p.y,p.x);
+  }
+  [[nodiscard]] constexpr int width() const noexcept{
+    return Static2DArr<T,int>::cols();
+  }
+  [[nodiscard]] constexpr int height() const noexcept{
+    return Static2DArr<T,int>::rows();
+  }
+  [[nodiscard]] constexpr bool inBounds(Position p) const noexcept {
+    return Static2DArr<T,int>::inBounds(p.y,p.x);
+  }
+  [[nodiscard]] constexpr auto indexIter() const noexcept {
+    return std::views::transform(Static2DArr<T,int>::indexIter(),[](std::pair<int,int> p){return Position{p.second,p.first};});
+  }
+};
 
 export constexpr Position &operator+=(Position &pos, Dir dir) noexcept {
   pos.x += dir.dx;

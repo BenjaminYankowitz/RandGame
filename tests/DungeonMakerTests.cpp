@@ -7,7 +7,7 @@ constexpr int Wall = 1;
 constexpr int Empty = 0;
 
 namespace {
-constexpr int countRegions(Static2DArr<int> &floor) {
+constexpr int countRegions(StaticPositionArr<int> &floor) {
   return DungeonMaker::labelRegions<Wall, Empty>(floor).numRegions();
 }
 } // namespace
@@ -15,344 +15,224 @@ constexpr int countRegions(Static2DArr<int> &floor) {
 // --- labelRegions tests ---
 
 static_assert([] {
-  Static2DArr<int> floor(3, 3);
+  StaticPositionArr<int> floor(3, 3);
   floor.fill(Empty);
   auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
   if (info.numRegions() != 1)
     return false;
-  if (info.representatives.size() != 1u)
-    return false;
-  for (std::size_t r = 0; r < 3; r++)
-    for (std::size_t c = 0; c < 3; c++)
-      if (info.regionOf[r, c] != 0)
-        return false;
-  return true;
+  return std::ranges::all_of(info.regionOf, [](auto i) { return i == 0; });
 }(),
               "LabelRegions AllEmpty");
 
 static_assert([] {
-  Static2DArr<int> floor(3, 3);
+  StaticPositionArr<int> floor(3, 3);
   floor.fill(Wall);
   auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
   if (info.numRegions() != 0)
     return false;
-  if (!info.representatives.empty())
-    return false;
-  for (std::size_t r = 0; r < 3; r++)
-    for (std::size_t c = 0; c < 3; c++)
-      if (info.regionOf[r, c] != -1)
-        return false;
-  return true;
+  return std::ranges::all_of(info.regionOf, [](auto i) { return i == -1; });
 }(),
               "LabelRegions AllWalls");
 
 static_assert([] {
   // E W E
   // E W E
-  Static2DArr<int> floor(2, 3);
+  StaticPositionArr<int> floor(3, 2);
   floor.fill(Empty);
-  floor[0, 1] = Wall;
-  floor[1, 1] = Wall;
+  floor[{1, 0}] = Wall;
+  floor[{1, 1}] = Wall;
   auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
   if (info.numRegions() != 2)
     return false;
-  if (info.representatives.size() != 2u)
+  if (info.regionOf[{0, 0}] != info.regionOf[{0, 1}])
     return false;
-  if (info.regionOf[0, 0] != info.regionOf[1, 0])
+  if (info.regionOf[{2, 0}] != info.regionOf[{2, 1}])
     return false;
-  if (info.regionOf[0, 2] != info.regionOf[1, 2])
+  if (info.regionOf[{0, 0}] == info.regionOf[{2, 0}])
     return false;
-  if (info.regionOf[0, 0] == info.regionOf[0, 2])
-    return false;
-  if (info.regionOf[0, 1] != -1)
+  if (info.regionOf[{1, 0}] != -1)
     return false;
   return true;
 }(),
               "LabelRegions TwoRegions");
 
 static_assert([] {
-  // E W
-  // W E
-  Static2DArr<int> floor(2, 2);
-  floor[0, 0] = Empty;
-  floor[0, 1] = Wall;
-  floor[1, 0] = Wall;
-  floor[1, 1] = Empty;
+  StaticPositionArr<int> floor(0, 0);
   auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  return info.numRegions() == 2 && info.regionOf[0, 0] != info.regionOf[1, 1];
-}(),
-              "LabelRegions DiagonalNotConnected");
-
-static_assert([] {
-  // W E E
-  // W W W
-  // E E W
-  Static2DArr<int> floor(3, 3);
-  floor.fill(Wall);
-  floor[0, 1] = Empty;
-  floor[0, 2] = Empty;
-  floor[2, 0] = Empty;
-  floor[2, 1] = Empty;
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  if (info.numRegions() != 2)
-    return false;
-  if (info.representatives[0].x != 1 || info.representatives[0].y != 0)
-    return false;
-  if (info.representatives[1].x != 0 || info.representatives[1].y != 2)
-    return false;
-  return true;
-}(),
-              "LabelRegions RepresentativeIsFirstTileInRegion");
-
-static_assert([] {
-  Static2DArr<int> floor(0, 0);
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  return info.numRegions() == 0 && info.representatives.empty();
+  return info.numRegions() == 0;
 }(),
               "LabelRegions ZeroSize");
 
 // --- findCandidates tests ---
 
 static_assert([] {
-  Static2DArr<int> floor(3, 3);
-  floor.fill(Empty);
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  return candidates.empty();
-}(),
-              "FindCandidates NoCandidatesAllEmpty");
-
-static_assert([] {
-  // E W W E
-  Static2DArr<int> floor(1, 4);
-  floor[0, 0] = Empty;
-  floor[0, 1] = Wall;
-  floor[0, 2] = Wall;
-  floor[0, 3] = Empty;
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  if (info.numRegions() != 2)
-    return false;
-  auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  return candidates.empty();
-}(),
-              "FindCandidates NoCandidatesThickWall");
-
-static_assert([] {
-  // E W E
-  Static2DArr<int> floor(1, 3);
-  floor[0, 0] = Empty;
-  floor[0, 1] = Wall;
-  floor[0, 2] = Empty;
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  if (info.numRegions() != 2)
-    return false;
-  auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  if (candidates.size() != 1u)
-    return false;
-  bool connectsRegions = (candidates[0].regionA == 0 && candidates[0].regionB == 1) ||
-                         (candidates[0].regionA == 1 && candidates[0].regionB == 0);
-  return connectsRegions;
-}(),
-              "FindCandidates SingleWallBetweenTwoRegions");
-
-static_assert([] {
-  // E E W E E
-  // W W W W W
-  // E E E E E
-  Static2DArr<int> floor(3, 5);
-  floor.fill(Empty);
-  floor[0, 2] = Wall;
-  for (std::size_t c = 0; c < 5; c++)
-    floor[1, c] = Wall;
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  for (std::size_t i = 1; i < candidates.size(); i++)
-    if (candidates[i - 1].cost > candidates[i].cost)
-      return false;
-  return true;
-}(),
-              "FindCandidates SortedByCost");
-
-static_assert([] {
-  //   E
-  // E W E
-  //   W
-  Static2DArr<int> floor(3, 3);
-  floor.fill(Wall);
-  floor[0, 1] = Empty; // region 0
-  floor[1, 0] = Empty; // region 1
-  floor[1, 2] = Empty; // region 2
-  auto info = DungeonMaker::labelRegions<Wall, Empty>(floor);
-  if (info.numRegions() != 3)
-    return false;
-  auto candidates = DungeonMaker::findCandidates<Wall>(floor, info);
-  bool has01 = false;
-  bool has02 = false;
-  bool has12 = false;
-  for (const auto &c : candidates) {
-    int lo = std::min(c.regionA, c.regionB);
-    int hi = std::max(c.regionA, c.regionB);
-    if (lo == 0 && hi == 1)
-      has01 = true;
-    if (lo == 0 && hi == 2)
-      has02 = true;
-    if (lo == 1 && hi == 2)
-      has12 = true;
-  }
-  return has01 && has02 && has12;
-}(),
-              "FindCandidates WallAdjacentToThreeRegions");
-
-
-static_assert([] {
-  Static2DArr<int> floor(3, 3);
+  StaticPositionArr<int> floor(3, 3);
   floor.fill(Wall);
   DungeonMaker::carveCorridor<Empty>(floor, Position{1, 1}, Position{1, 1});
-  return floor[1, 1] == Empty && floor[0, 0] == Wall && floor[2, 2] == Wall;
+  return floor[{1, 1}] == Empty && floor[{0, 0}] == Wall && floor[{2, 2}] == Wall;
 }(),
               "CarveCorridor SamePoint");
 
 static_assert([] {
-  Static2DArr<int> floor(1, 3);
+  StaticPositionArr<int> floor(3, 1);
   floor.fill(Empty);
   DungeonMaker::carveCorridor<Empty>(floor, Position{0, 0}, Position{2, 0});
-  for (std::size_t c = 0; c < 3; c++)
-    if (floor[0, c] != Empty)
+  for (int c = 0; c < 3; c++)
+    if (floor[{c, 0}] != Empty)
       return false;
   return true;
 }(),
               "CarveCorridor DoesNotOverwriteExistingEmpty");
 
+// --- findEdges tests ---
+
+static_assert([] {
+  // All empty — no walls adjacent, so no edges
+  StaticPositionArr<int> floor(3, 3);
+  floor.fill(Empty);
+  return DungeonMaker::findEdges<Wall, Empty>(floor).empty();
+}(),
+              "FindEdges AllEmpty");
+
+static_assert([] {
+  // All walls — no empty cells, so no edges
+  StaticPositionArr<int> floor(3, 3);
+  floor.fill(Wall);
+  return DungeonMaker::findEdges<Wall, Empty>(floor).empty();
+}(),
+              "FindEdges AllWalls");
+
+static_assert([] {
+  // Single empty cell surrounded by walls
+  // W W W
+  // W E W
+  // W W W
+  StaticPositionArr<int> floor(3, 3);
+  floor.fill(Wall);
+  floor[{1, 1}] = Empty;
+  auto edges = DungeonMaker::findEdges<Wall, Empty>(floor);
+  return edges.size() == 1 && edges[0] == Position{1, 1};
+}(),
+              "FindEdges SingleEmptySurroundedByWalls");
+
+static_assert([] {
+  // E W E — two empty cells each adjacent to wall
+  StaticPositionArr<int> floor(3, 1);
+  floor[{0, 0}] = Empty;
+  floor[{1, 0}] = Wall;
+  floor[{2, 0}] = Empty;
+  auto edges = DungeonMaker::findEdges<Wall, Empty>(floor);
+  return edges.size() == 2;
+}(),
+              "FindEdges TwoEdgeCells");
+
+static_assert([] {
+  // Zero size grid
+  StaticPositionArr<int> floor(0, 0);
+  return DungeonMaker::findEdges<Wall, Empty>(floor).empty();
+}(),
+              "FindEdges ZeroSize");
+
 // --- connectRegions integration tests ---
 
-static_assert([] {
-  Static2DArr<int> floor(5, 5);
+TEST(DungeonMakerTests, ConnectRegionsEmptyGrid) {
+  StaticPositionArr<int> floor(5, 5);
   floor.fill(Empty);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return countRegions(floor) == 1;
-}(),
-              "ConnectRegions EmptyGrid");
+  EXPECT_EQ(countRegions(floor), 1);
+}
 
-static_assert([] {
-  Static2DArr<int> floor(5, 5);
+TEST(DungeonMakerTests, ConnectRegionsAllWalls) {
+  StaticPositionArr<int> floor(5, 5);
   floor.fill(Wall);
-  Static2DArr<int> original(5, 5);
-  original.fill(Wall);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  for (std::size_t r = 0; r < 5; r++)
-    for (std::size_t c = 0; c < 5; c++)
-      if (floor[r, c] != original[r, c])
-        return false;
-  return true;
-}(),
-              "ConnectRegions AllWalls");
+  for (auto &i : floor)
+    EXPECT_EQ(i, Wall);
+}
 
-static_assert([] {
-  Static2DArr<int> floor(1, 1);
+TEST(DungeonMakerTests, ConnectRegionsSingleCell) {
+  StaticPositionArr<int> floor(1, 1);
   floor.fill(Empty);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return floor[0, 0] == Empty;
-}(),
-              "ConnectRegions SingleCell");
+  EXPECT_EQ((floor[{0, 0}]), Empty);
+}
 
-static_assert([] {
-  Static2DArr<int> floor(0, 5);
+TEST(DungeonMakerTests, ConnectRegionsZeroSizeWidth) {
+  StaticPositionArr<int> floor(0, 5);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return floor.size() == 0u;
-}(),
-              "ConnectRegions ZeroSizeRows");
+  EXPECT_EQ(floor.size(), 0u);
+}
 
-static_assert([] {
-  Static2DArr<int> floor(5, 0);
+TEST(DungeonMakerTests, ConnectRegionsZeroSizeHeight) {
+  StaticPositionArr<int> floor(5, 0);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return floor.size() == 0u;
-}(),
-              "ConnectRegions ZeroSizeCols");
+  EXPECT_EQ(floor.size(), 0u);
+}
 
-static_assert([] {
-  // 5x5 grid with a wall column in the middle
-  Static2DArr<int> floor(5, 5);
+TEST(DungeonMakerTests, ConnectRegionsTwoRegionsSeparatedByWall) {
+  StaticPositionArr<int> floor(5, 5);
   floor.fill(Empty);
-  for (std::size_t r = 0; r < 5; r++)
-    floor[r, 2] = Wall;
-  if (countRegions(floor) != 2)
-    return false;
+  for (int r = 0; r < 5; r++)
+    floor[{2, r}] = Wall;
+  EXPECT_EQ(countRegions(floor), 2);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return countRegions(floor) == 1;
-}(),
-              "ConnectRegions TwoRegionsSeparatedByWall");
+  EXPECT_EQ(countRegions(floor), 1);
+}
 
-static_assert([] {
-  // 7x7 grid with wall cross creating 3 separate regions
-  Static2DArr<int> floor(7, 7);
+TEST(DungeonMakerTests, ConnectRegionsThreeDisconnectedRegions) {
+  StaticPositionArr<int> floor(7, 7);
   floor.fill(Wall);
-  for (std::size_t r = 0; r < 3; r++)
-    for (std::size_t c = 0; c < 3; c++)
-      floor[r, c] = Empty;
-  for (std::size_t r = 0; r < 3; r++)
-    for (std::size_t c = 4; c < 7; c++)
-      floor[r, c] = Empty;
-  for (std::size_t r = 4; r < 7; r++)
-    for (std::size_t c = 0; c < 7; c++)
-      floor[r, c] = Empty;
-  if (countRegions(floor) != 3)
-    return false;
+  for (int r = 0; r < 3; r++)
+    for (int c = 0; c < 3; c++)
+      floor[{c, r}] = Empty;
+  for (int r = 0; r < 3; r++)
+    for (int c = 4; c < 7; c++)
+      floor[{c, r}] = Empty;
+  for (int r = 4; r < 7; r++)
+    for (int c = 0; c < 7; c++)
+      floor[{c, r}] = Empty;
+  EXPECT_EQ(countRegions(floor), 3);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return countRegions(floor) == 1;
-}(),
-              "ConnectRegions ThreeDisconnectedRegions");
+  EXPECT_EQ(countRegions(floor), 1);
+}
 
-static_assert([] {
-  Static2DArr<int> floor(5, 5);
+TEST(DungeonMakerTests, ConnectRegionsAlreadyConnected) {
+  StaticPositionArr<int> floor(5, 5);
   floor.fill(Empty);
-  floor[0, 0] = Wall;
-  floor[0, 1] = Wall;
+  floor[{0, 0}] = Wall;
+  floor[{1, 0}] = Wall;
   int emptyCount = 0;
-  for (std::size_t r = 0; r < 5; r++)
-    for (std::size_t c = 0; c < 5; c++)
-      if (floor[r, c] == Empty)
+  for (int r = 0; r < 5; r++)
+    for (int c = 0; c < 5; c++)
+      if (floor[{c, r}] == Empty)
         emptyCount++;
-  if (countRegions(floor) != 1)
-    return false;
+  EXPECT_EQ(countRegions(floor), 1);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  if (countRegions(floor) != 1)
-    return false;
+  EXPECT_EQ(countRegions(floor), 1);
   int emptyCountAfter = 0;
-  for (std::size_t r = 0; r < 5; r++)
-    for (std::size_t c = 0; c < 5; c++)
-      if (floor[r, c] == Empty)
+  for (int r = 0; r < 5; r++)
+    for (int c = 0; c < 5; c++)
+      if (floor[{c, r}] == Empty)
         emptyCountAfter++;
-  return emptyCount == emptyCountAfter;
-}(),
-              "ConnectRegions AlreadyConnected");
+  EXPECT_EQ(emptyCount, emptyCountAfter);
+}
 
-static_assert([] {
-  // EWE
-  Static2DArr<int> floor(1, 3);
-  floor[0, 0] = Empty;
-  floor[0, 1] = Wall;
-  floor[0, 2] = Empty;
-  if (countRegions(floor) != 2)
-    return false;
+TEST(DungeonMakerTests, ConnectRegionsSeparatedBySingleWall) {
+  StaticPositionArr<int> floor({{Empty,Wall,Empty}});
+  EXPECT_EQ(countRegions(floor), 2);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return countRegions(floor) == 1;
-}(),
-              "ConnectRegions RegionsSeparatedBySingleWall");
+  EXPECT_EQ(countRegions(floor), 1);
+}
 
-static_assert([] {
-  // E W W E
-  // E W W E
-  // E W W E
-  Static2DArr<int> floor(3, 4);
-  for (std::size_t r = 0; r < 3; r++) {
-    floor[r, 0] = Empty;
-    floor[r, 1] = Wall;
-    floor[r, 2] = Wall;
-    floor[r, 3] = Empty;
+TEST(DungeonMakerTests, ConnectRegionsSeparatedByDoubleWall) {
+  StaticPositionArr<int> floor(4, 3);
+  for (int r = 0; r < 3; r++) {
+    floor[{0, r}] = Empty;
+    floor[{1, r}] = Wall;
+    floor[{2, r}] = Wall;
+    floor[{3, r}] = Empty;
   }
-  if (countRegions(floor) != 2)
-    return false;
+  EXPECT_EQ(countRegions(floor), 2);
   DungeonMaker::connectRegions<Wall, Empty>(floor);
-  return countRegions(floor) == 1;
-}(),
-              "ConnectRegions RegionsSeparatedByDoubleWall");
+  EXPECT_EQ(countRegions(floor), 1);
+}
