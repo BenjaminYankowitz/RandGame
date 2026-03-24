@@ -3,7 +3,7 @@ import :Random;
 import :Static2DArr;
 import std;
 
-[[nodiscard]] constexpr auto abs(auto n) noexcept { 
+[[nodiscard]] constexpr auto abs(auto n) noexcept {
   return n < 0 ? -n : n;
 }
 export class Dir {
@@ -25,30 +25,34 @@ public:
   };
   [[nodiscard]] constexpr bool operator==(const Dir &pos) const = default;
   [[nodiscard]] constexpr Dir operator-() const noexcept { return {-dx, -dy}; }
+  constexpr static const auto &boxDirsArr() {
+    constexpr static auto Arr = std::to_array<Dir>({{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
+    return Arr;
+  };
   [[nodiscard]] constexpr static auto boxDirs() {
-    constexpr static auto BoxDirs = std::to_array<Dir>({{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
-    return std::ranges::ref_view(BoxDirs);
+    return std::ranges::ref_view(boxDirsArr());
   }
   [[nodiscard]] constexpr static Dir getBoxDir(int n) {
-    return boxDirs()[n];
+    return boxDirsArr()[n];
   }
+  constexpr static const auto &directDirsArr() {
+    constexpr static auto Arr = std::to_array<Dir>({{0, -1}, {-1, 0}, {1, 0}, {0, 1}});
+    return Arr;
+  };
   [[nodiscard]] constexpr static auto directDirs() {
-    constexpr static auto DirectDirs = std::to_array<Dir>({{0,-1},{-1,0},{1,0},{0,1}});
-    return std::ranges::ref_view(DirectDirs);
+    return std::ranges::ref_view(directDirsArr());
   }
   [[nodiscard]] constexpr static Dir getDirectDir(int n) {
-    return directDirs()[n];
+    return directDirsArr()[n];
   }
   [[nodiscard]] static constexpr int chessboard(Dir d) noexcept {
-    return std::max(abs(d.dx),abs(d.dy));
+    return std::max(abs(d.dx), abs(d.dy));
   }
   int dx;
   int dy;
 };
 
-constexpr auto V = std::same_as<decltype(Dir::boxDirs()),decltype(Dir::directDirs())>;
-
-
+constexpr auto V = std::same_as<decltype(Dir::boxDirs()), decltype(Dir::directDirs())>;
 
 export constexpr Dir capDir(Dir d) noexcept {
   constexpr auto Cap = [](int &x) {
@@ -68,6 +72,19 @@ export std::ostream &operator<<(std::ostream &out, Dir dir) {
   return out;
 }
 
+export constexpr Dir &operator+=(Dir &lhs, Dir rhs) noexcept {
+  lhs.dx += rhs.dx;
+  lhs.dy += rhs.dy;
+  return lhs;
+}
+export [[nodiscard]] constexpr Dir operator+(Dir lhs, Dir rhs) noexcept { return lhs += rhs; }
+export constexpr Dir &operator-=(Dir &lhs, Dir rhs) noexcept {
+  lhs.dx -= rhs.dx;
+  lhs.dy -= rhs.dy;
+  return lhs;
+}
+export [[nodiscard]] constexpr Dir operator-(Dir lhs, Dir rhs) noexcept { return lhs -= rhs; }
+
 struct PathIterSentinal {};
 
 export struct PathIterable {
@@ -82,8 +99,8 @@ export struct PathIterable {
       return ret;
     }
     constexpr PathIter &operator++() noexcept {
-      if(e.noMove()){
-        c = {1,0};
+      if (e.noMove()) {
+        c = {1, 0};
       }
       auto v1 = abs<std::int64_t>(e.dy) * ((2 * abs<std::int64_t>(c.dx)) + 1);
       auto v2 = abs<std::int64_t>(e.dx) * ((2 * abs<std::int64_t>(c.dy)) + 1);
@@ -102,7 +119,7 @@ export struct PathIterable {
     }
     [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
     [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const {
-      return Dir::chessboard(c)>Dir::chessboard(e);
+      return Dir::chessboard(c) > Dir::chessboard(e);
     };
   };
   [[nodiscard]] constexpr PathIter begin() const noexcept {
@@ -112,7 +129,6 @@ export struct PathIterable {
     return {};
   }
   Dir e;
-  // bool favor
 };
 template <>
 const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
@@ -132,21 +148,21 @@ export struct PathIterableShort {
       return *this;
     }
     [[nodiscard]] constexpr Dir operator*() const noexcept {
-      if(dist==0){
-        return {0,0};
+      if (dist == 0) {
+        return {0, 0};
       }
       int bDG = Dir::chessboard(e);
-      int sDG = std::min(abs(e.dx),abs(e.dy));
-      int sDC = ((dist*sDG)+(bDG/2))/bDG;
+      int sDG = std::min(abs(e.dx), abs(e.dy));
+      int sDC = ((dist * sDG) + (bDG / 2)) / bDG;
       auto capEnd = capDir(e);
-      if(abs(e.dx) < abs(e.dy)){
-        return {sDC*capEnd.dx,dist*capEnd.dy};
+      if (abs(e.dx) < abs(e.dy)) {
+        return {sDC * capEnd.dx, dist * capEnd.dy};
       }
-      return {dist*capEnd.dx,sDC*capEnd.dy};
+      return {dist * capEnd.dx, sDC * capEnd.dy};
     }
     [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
-    [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const noexcept{
-      return dist>Dir::chessboard(e);
+    [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const noexcept {
+      return dist > Dir::chessboard(e);
     }
   };
   [[nodiscard]] constexpr PathIter begin() const noexcept {
@@ -183,28 +199,26 @@ public:
   int y;
 };
 
-static_assert(Position{2, 1}.within({2, 2}));
-
-export template<class T>
-class StaticPositionArr : public Static2DArr<T,int> {
-  public:
-  constexpr StaticPositionArr(int width, int height) noexcept: Static2DArr<T,int>(height,width){}
-  template<std::size_t size>
-  constexpr StaticPositionArr(std::initializer_list<T[size]> list) noexcept: Static2DArr<T,int>(list){} //NOLINT(modernize-avoid-c-arrays)
-  [[nodiscard]] constexpr auto& operator[](this auto&& self, Position p) noexcept {
-    return self.Static2DArr<T,int>::operator[](p.y,p.x);
+export template <class T>
+class StaticPositionArr : public Static2DArr<T, int> {
+public:
+  constexpr StaticPositionArr(int width, int height) noexcept : Static2DArr<T, int>(height, width) {}
+  template <std::size_t size>
+  constexpr StaticPositionArr(std::initializer_list<T[size]> list) noexcept : Static2DArr<T, int>(list) {} // NOLINT(modernize-avoid-c-arrays)
+  [[nodiscard]] constexpr auto &operator[](this auto &&self, Position p) noexcept {
+    return self.Static2DArr<T, int>::operator[](p.y, p.x);
   }
-  [[nodiscard]] constexpr int width() const noexcept{
-    return Static2DArr<T,int>::cols();
+  [[nodiscard]] constexpr int width() const noexcept {
+    return Static2DArr<T, int>::cols();
   }
-  [[nodiscard]] constexpr int height() const noexcept{
-    return Static2DArr<T,int>::rows();
+  [[nodiscard]] constexpr int height() const noexcept {
+    return Static2DArr<T, int>::rows();
   }
   [[nodiscard]] constexpr bool inBounds(Position p) const noexcept {
-    return Static2DArr<T,int>::inBounds(p.y,p.x);
+    return Static2DArr<T, int>::inBounds(p.y, p.x);
   }
   [[nodiscard]] constexpr auto indexIter() const noexcept {
-    return std::views::transform(Static2DArr<T,int>::indexIter(),[](std::pair<int,int> p){return Position{p.second,p.first};});
+    return std::views::transform(Static2DArr<T, int>::indexIter(), [](std::pair<int, int> p) { return Position{p.second, p.first}; });
   }
 };
 
@@ -224,12 +238,20 @@ export [[nodiscard]] constexpr Dir operator-(Position pos1, Position pos2) noexc
   return {pos1.x - pos2.x, pos1.y - pos2.y};
 }
 
+export auto PosPathIterable(Position b, Position e) {
+  return std::views::transform(PathIterable{e - b}, [b](Dir d) { return b + d; });
+}
+
+export auto PosPathIterableShort(Position b, Position e) {
+  return std::views::transform(PathIterable{e - b}, [b](Dir d) { return b + d; });
+}
+
 export class FloorSpecifier {
 public:
   [[nodiscard]] constexpr explicit FloorSpecifier(int floorI) noexcept : floor(floorI) {}
   [[nodiscard]] constexpr bool operator==(FloorSpecifier o) const noexcept { return floor == o.floor; }
-  [[nodiscard]] constexpr FloorSpecifier up(int n = 1) const noexcept {return FloorSpecifier(floor-n);}
-  [[nodiscard]] constexpr FloorSpecifier down(int n = 1) const noexcept {return FloorSpecifier(floor+n);}
+  [[nodiscard]] constexpr FloorSpecifier up(int n = 1) const noexcept { return FloorSpecifier(floor - n); }
+  [[nodiscard]] constexpr FloorSpecifier down(int n = 1) const noexcept { return FloorSpecifier(floor + n); }
   int floor;
 };
 
@@ -237,8 +259,8 @@ export class Location {
 public:
   [[nodiscard]] constexpr Location(int x, int y, int floor) noexcept : pos(x, y), mapPos(floor) {}
   [[nodiscard]] constexpr Location(Position p, FloorSpecifier mp) noexcept : pos(p), mapPos(mp) {}
-  [[nodiscard]] constexpr Location up(int n = 1) const noexcept {return {pos,mapPos.up(n)};}
-  [[nodiscard]] constexpr Location down(int n = 1) const noexcept {return {pos,mapPos.down(n)};}
+  [[nodiscard]] constexpr Location up(int n = 1) const noexcept { return {pos, mapPos.up(n)}; }
+  [[nodiscard]] constexpr Location down(int n = 1) const noexcept { return {pos, mapPos.down(n)}; }
   Position pos;
   FloorSpecifier mapPos;
 };

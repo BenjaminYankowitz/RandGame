@@ -22,21 +22,137 @@ Health MonsterInterface::getHealth() const noexcept { return monster_->getHealth
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(monster_->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 
-MonsterInterface toInterface(const Monster &m) noexcept {
+[[nodiscard]] MonsterInterface toInterface(const Monster &m) noexcept {
   return MonsterInterface(static_cast<const IMonster &>(m));
 }
-MonsterInterface toInterface(const Monster *m) noexcept {
+[[nodiscard]] MonsterInterface toInterface(const Monster *m) noexcept {
   return MonsterInterface(static_cast<const IMonster *>(m));
 }
-
-WorldTileInterface toInterface(const GameState &gameState, ConstWorldTile tile) noexcept {
-  auto mInter = toInterface(tile.monster.isNull() ? nullptr : &gameState.getMonster(tile.monster));
-  WorldTileInterface ret(ObjectContainerInterface(tile.objects), mInter, tile.terrainType);
-  return ret;
+[[nodiscard]] MonsterInterface toInterface(const IGameState& gameState, Monster::ID id) noexcept {
+  return id.isNull() ? MonsterInterface(nullptr) : toInterface(gameState.getMonster(id));
 }
 
-WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor) noexcept : gameState_(&gameState), floor_(&floor) {}
-WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept { return toInterface(*gameState_, floor_->getTile(pos)); }
+
+enum class Directions : std::uint8_t {
+  None = 0,
+  Left = 1,
+  Up = Left << 1,
+  Right = Up << 1,
+  Down = Right << 1
+};
+
+
+[[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept {
+  return static_cast<Directions>(std::to_underlying(d1) | std::to_underlying(d2));
+}
+constexpr Directions &operator|=(Directions &d1, Directions d2) noexcept {
+  d1 = d1 | d2;
+  return d1;
+}
+constexpr auto WallType = []() {
+  class RetType {
+  public:
+    [[nodiscard]] constexpr TerrainTypeInterface &operator[](Directions dir) noexcept {
+      return impl_[std::to_underlying(dir)];
+    }
+    [[nodiscard]] constexpr TerrainTypeInterface operator[](Directions dir) const noexcept {
+      return impl_[std::to_underlying(dir)];
+    }
+    [[nodiscard]] constexpr TerrainTypeInterface &operator[](int dir) noexcept {
+      return impl_[dir];
+    }
+    [[nodiscard]] constexpr TerrainTypeInterface operator[](int dir) const noexcept {
+      return impl_[dir];
+    }
+
+  private:
+    std::array<TerrainTypeInterface, (1 << 4)> impl_;
+  };
+  using enum Directions;
+  using enum TerrainTypeInterface;
+  RetType ret;
+  ret[None] = CWall;
+  ret[Up] = VWall;
+  ret[Down] = VWall;
+  ret[Left] = HWall;
+  ret[Right] = HWall;
+  ret[Up | Down] = HWall;
+  ret[Up | Left] = DRCornerWall;
+  ret[Up | Right] = DLCornerWall;
+  ret[Down | Left] = URCornerWall;
+  ret[Down | Right] = ULCornerWall;
+  ret[Left | Right] = HWall;
+  ret[Up | Down | Left] = RTWall;
+  ret[Up | Down | Right] = LTWall;
+  ret[Up | Left | Right] = DTWall;
+  ret[Down | Left | Right] = UTWall;
+  ret[Up | Down | Left | Right] = TWall;
+  return ret;
+}();
+
+[[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor& floor, Position pos, TerrainType t) noexcept {
+  switch (t) {
+  case TerrainType::DownStair:
+    return TerrainTypeInterface::DownStair;
+  case TerrainType::UpStair:
+    return TerrainTypeInterface::UpStair;
+  case TerrainType::Empty:
+    return TerrainTypeInterface::Empty;
+  case TerrainType::Wall:
+    auto getType = [&floor, pos](Dir dir) {
+      return floor.inBounds(pos+dir) && floor.getTerrainType(pos+dir) == TerrainType::Wall;
+    };
+    auto check = [&getType](Dir dir) {
+      if (!getType(dir)) {
+        return false;
+      }
+      auto [dx, dy] = dir;
+      Dir oDir(dy, dx);
+      return !(getType(oDir) && getType(- oDir) && getType(dir + oDir) && getType(dir - oDir));
+    };
+    int dirs = 0;
+    for (auto [i, checkD] : std::views::zip(std::views::iota(0), Dir::directDirs())) {
+      if (check(checkD))
+        dirs |= (1 << i);
+    }
+    if(dirs==0 && getType(Dir::up())){
+      return TerrainTypeInterface::SWall;
+    }
+    return WallType[dirs];
+  }
+}
+
+bool isWall(TerrainTypeInterface type) noexcept{
+  switch (type){
+    using enum TerrainTypeInterface;
+  case TerrainTypeInterface::CWall:
+  case TerrainTypeInterface::HWall:
+  case TerrainTypeInterface::VWall:
+  case TerrainTypeInterface::UTWall:
+  case TerrainTypeInterface::DTWall:
+  case TerrainTypeInterface::LTWall:
+  case TerrainTypeInterface::RTWall:
+  case TerrainTypeInterface::TWall:
+  case TerrainTypeInterface::ULCornerWall:
+  case TerrainTypeInterface::URCornerWall:
+  case TerrainTypeInterface::DLCornerWall:
+  case TerrainTypeInterface::DRCornerWall:
+  case TerrainTypeInterface::SWall:
+    return true;
+  default:
+    return false;
+  }
+}
+
+WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept : gameState_(&gameState), floor_(&floor), controlled_(controlled) {}
+std::optional<WorldTileInterface> WorldFloorInterface::getTile(Position pos) const noexcept {
+  const auto &monster = gameState_->getMonster(controlled_);
+  if (!inBounds(pos) || /*!monster.inLineOfSight(*gameState_, pos)*/ false)
+    return std::nullopt;
+  auto tile = floor_->getTile(pos);
+  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toInterface(*gameState_,tile.monster), toInterface(*floor_,pos, tile.terrainType));
+  return ret;
+}
 std::size_t WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
 std::size_t WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
 bool WorldFloorInterface::inBounds(Position pos) const { return floor_->inBounds(pos); }
@@ -48,7 +164,7 @@ ObjectInterface ObjectContainerInterface::front() const noexcept { return Object
 ObjectInterface ObjectContainerInterface::back() const noexcept { return ObjectInterface(container_->back()); }
 ObjectInterface ObjectContainerInterface::operator[](std::size_t i) const noexcept { return ObjectInterface((*container_)[i]); }
 
-GameInterface::GameInterface(IGameState& gs, MonsterID controlled) noexcept : gs_(&gs), controlled_(controlled) {}
+GameInterface::GameInterface(IGameState &gs, MonsterID controlled) noexcept : gs_(&gs), controlled_(controlled) {}
 namespace {
 class EventViewerTranslator : public EventViewer {
 public:
@@ -96,28 +212,28 @@ void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer)
 }
 void GameInterface::exit() noexcept {}
 void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
   passTime(self.generalMove(*gs_, capDir(d), mode));
 }
 void GameInterface::goUpStair(MoveMode mode) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
   passTime(self.goUpStair(*gs_, mode));
 }
 void GameInterface::goDownStair(MoveMode mode) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
   passTime(self.goDownStair(*gs_, mode));
 }
 void GameInterface::pickUpItem(std::size_t selected) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
@@ -131,7 +247,7 @@ void GameInterface::pickUpItem(std::size_t selected) noexcept {
 }
 
 WorldFloorInterface GameInterface::getFloor(FloorSpecifier floorId) const noexcept {
-  return {static_cast<const IGameState &>(*gs_), static_cast<const IWorldFloor &>(gs_->getFloor(floorId))};
+  return {static_cast<const IGameState &>(*gs_), static_cast<const IWorldFloor &>(gs_->getFloor(floorId)), controlled_};
 }
 
 ObjectContainerInterface GameInterface::lookAtFloor() const noexcept {
@@ -159,7 +275,7 @@ TimePeriod GameInterface::getSpeed() const noexcept {
 }
 
 void GameInterface::dropItem(std::size_t i) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
@@ -171,7 +287,7 @@ void GameInterface::dropItem(std::size_t i) noexcept {
 }
 
 void GameInterface::eatItem(std::size_t i, bool fromFloor) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }
@@ -190,7 +306,7 @@ bool GameInterface::canEat(ObjectInterface obj) const noexcept {
 }
 
 void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
-  auto& self = gs_->getMonster(controlled_);
+  auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
     return;
   }

@@ -6,8 +6,8 @@ constexpr TimePeriod BaseSpeed{60};
 
 
 export struct MonsterBrainInit{
-  MustInit<bool> isPlayer =  false;
-  MustInit<bool> hatesItemPickups = false;
+  bool isPlayer =  false;
+  bool hatesItemPickups = false;
 };
 
 export struct MonsterBrain {
@@ -29,7 +29,7 @@ export constexpr MonsterBrain PlayerBrain(MonsterBrainInit{.isPlayer=true});
 export class MonsterClassInfo {
 public:
   TimePeriod speed = BaseSpeed;
-  Health maxHealth;
+  Health maxHealth = 10;
   Dice::Group damage;
   MonsterBrain brain = MonsterBrainInit{};
   MonsterClass mClass;

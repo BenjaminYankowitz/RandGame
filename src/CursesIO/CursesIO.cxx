@@ -258,7 +258,8 @@ struct FloorInterfaceWrapper {
     }
   }
   [[nodiscard]] bool operator[](int row, int col) const noexcept {
-    return floor.getTile(Position{col, row}).terrainType != TerrainType::Wall;
+    auto tile = floor.getTile(Position{col, row});
+    return tile && !isWall(tile->terrainType);
   }
 };
 

@@ -126,7 +126,8 @@ TEST(GameInterfaceTests, PlayerTileIsNotWall) {
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
-  EXPECT_NE(tile.terrainType, TerrainType::Wall);
+  ASSERT_TRUE(tile.has_value());
+  EXPECT_FALSE(isWall(tile->terrainType));
 }
 
 TEST(GameInterfaceTests, PlayerTileHasPlayer) {
@@ -135,9 +136,10 @@ TEST(GameInterfaceTests, PlayerTileHasPlayer) {
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
-  EXPECT_FALSE(tile.monster.isNull());
-  EXPECT_TRUE(tile.monster.isPlayer());
-  EXPECT_TRUE(tile.monster.isAlive());
+  ASSERT_TRUE(tile.has_value());
+  EXPECT_FALSE(tile->monster.isNull());
+  EXPECT_TRUE(tile->monster.isPlayer());
+  EXPECT_TRUE(tile->monster.isAlive());
 }
 
 TEST(GameInterfaceTests, SetEventViewerWorks) {

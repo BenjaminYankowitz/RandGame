@@ -196,54 +196,6 @@ constexpr chtype Down = KEY_DOWN;
 constexpr chtype Left = KEY_LEFT;
 constexpr chtype Right = KEY_RIGHT;
 constexpr chtype Backspace = KEY_BACKSPACE;
-enum class Directions : std::uint8_t {
-  None = 0,
-  Up = 1,
-  Down = Up << 1,
-  Left = Down << 1,
-  Right = Left << 1
-};
-[[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept {
-  return static_cast<Directions>(std::to_underlying(d1) | std::to_underlying(d2));
-}
-constexpr Directions &operator|=(Directions &d1, Directions d2) noexcept {
-  d1 = d1 | d2;
-  return d1;
-}
-constexpr auto Walls = []() { // NOLINT says Walls is unused even though it is exported
-  class RetType {
-  public:
-    [[nodiscard]] constexpr chtype &operator[](Directions dir) noexcept {
-      return impl_[std::to_underlying(dir)];
-    }
-    [[nodiscard]] constexpr chtype operator[](Directions dir) const noexcept {
-      return impl_[std::to_underlying(dir)];
-    }
-
-  private:
-    std::array<chtype, (1 << 4)> impl_;
-  };
-  using enum Directions;
-  RetType ret;
-  // auto q = 0x00002610;
-  ret[None] = L'▯';
-  ret[Up] = L'│';
-  ret[Down] = L'│';
-  ret[Left] = L'─';
-  ret[Right] = L'─';
-  ret[Up | Down] = L'│';
-  ret[Up | Left] = L'┘';
-  ret[Up | Right] = L'└';
-  ret[Down | Left] = L'┐';
-  ret[Down | Right] = L'┌';
-  ret[Left | Right] = L'─';
-  ret[Up | Down | Left] = L'┤';
-  ret[Up | Down | Right] = L'├';
-  ret[Up | Left | Right] = L'┴';
-  ret[Down | Left | Right] = L'┬';
-  ret[Up | Down | Left | Right] = L'┼';
-  return ret;
-}();
 } // namespace SpecialChar
 
 namespace {

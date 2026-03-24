@@ -21,7 +21,7 @@ public:
   std::string_view weirdPlural{}; // NOLINT(readability-redundant-member-init)
 };
 
-[[nodiscard]] constexpr std::string_view getPluralSuffix(Noun noun) noexcept{
+[[nodiscard]] constexpr std::string_view getPluralSuffix(Noun noun) noexcept {
   return noun.word.back() == 's' ? "es" : "s";
 }
 
@@ -29,7 +29,8 @@ class Adjective : public Word {};
 
 [[nodiscard]]
 
-[[nodiscard]] Adjective getMatAdj(ObjectInterface obj) noexcept {
+[[nodiscard]] Adjective
+getMatAdj(ObjectInterface obj) noexcept {
   switch (obj.mat()) {
     using enum Material;
   case Gold:
@@ -45,11 +46,11 @@ class Adjective : public Word {};
   }
 }
 
-[[nodiscard]] constexpr std::size_t getCount(TerrainType /*terrain*/) noexcept{
+[[nodiscard]] constexpr std::size_t getCount(TerrainType /*terrain*/) noexcept {
   return 1;
 }
 
-[[nodiscard]] constexpr Noun getNoun(TerrainType terrain) noexcept{
+[[nodiscard]] constexpr Noun getNoun(TerrainType terrain) noexcept {
   switch (terrain) {
   case TerrainType::Empty:
     return {{"empty spot"}};
@@ -62,15 +63,15 @@ class Adjective : public Word {};
   }
 }
 
-[[nodiscard]] constexpr auto getAdjectives(TerrainType /*terrain*/) noexcept{
+[[nodiscard]] constexpr auto getAdjectives(TerrainType /*terrain*/) noexcept {
   return std::views::empty<Adjective>;
 }
 
-[[nodiscard]] constexpr std::string_view specialArticle(TerrainType /*monster*/) noexcept{
+[[nodiscard]] constexpr std::string_view specialArticle(TerrainType /*monster*/) noexcept {
   return {};
 }
 
-[[nodiscard]] constexpr std::size_t getCount(MonsterInterface /*monster*/) noexcept{
+[[nodiscard]] constexpr std::size_t getCount(MonsterInterface /*monster*/) noexcept {
   return 1;
 }
 
@@ -86,23 +87,23 @@ class Adjective : public Word {};
   case GreedyWeasel:
     return {{"greedy weasel"}};
   case Bryozoan:
-    return {{"bryozoan"},"bryozoa"};
+    return {{"bryozoan"}, "bryozoa"};
   }
 }
 
-[[nodiscard]] constexpr Noun getNoun(MonsterInterface monster) noexcept{
+[[nodiscard]] constexpr Noun getNoun(MonsterInterface monster) noexcept {
   return getClassNoun(monster.getClass());
 }
 
-[[nodiscard]] constexpr auto getAdjectives(MonsterInterface /*monster*/) noexcept{
+[[nodiscard]] constexpr auto getAdjectives(MonsterInterface /*monster*/) noexcept {
   return std::views::empty<Adjective>;
 }
 
-[[nodiscard]] constexpr std::string_view specialArticle(MonsterInterface  /*monster*/) noexcept{
+[[nodiscard]] constexpr std::string_view specialArticle(MonsterInterface /*monster*/) noexcept {
   return {};
 }
 
-[[nodiscard]] constexpr std::size_t getCount(ObjectInterface obj) noexcept{
+[[nodiscard]] constexpr std::size_t getCount(ObjectInterface obj) noexcept {
   return obj.count();
 }
 
@@ -132,32 +133,32 @@ class Adjective : public Word {};
   }
 }
 
-[[nodiscard]] constexpr auto getAdjectives(ObjectInterface obj) noexcept{
+[[nodiscard]] constexpr auto getAdjectives(ObjectInterface obj) noexcept {
   std::vector<Adjective> ret;
-  if(printDefaultMat(obj.type()) || defaultMat(obj.type())!=obj.mat()){
+  if (printDefaultMat(obj.type()) || defaultMat(obj.type()) != obj.mat()) {
     ret.push_back(getMatAdj(obj));
   }
-  if(isCorpse(obj.type())){
+  if (isCorpse(obj.type())) {
     ret.emplace_back(getClassNoun(corpseOfWhat(obj.type())));
   }
   return ret;
 }
 
-[[nodiscard]] constexpr std::string_view specialArticle(ObjectInterface obj) noexcept{
+[[nodiscard]] constexpr std::string_view specialArticle(ObjectInterface obj) noexcept {
   return obj.artifactStatus() == ArtifactId::Normal ? std::string_view{} : "the";
 }
 
-template<class T>
-void printThing(std::ostream &out, T thing){
+template <class T>
+void printThing(std::ostream &out, T thing) {
   auto count = getCount(thing);
   auto adjectives = getAdjectives(thing);
   auto noun = getNoun(thing);
-  if(auto article = specialArticle(thing); !article.empty()){
+  if (auto article = specialArticle(thing); !article.empty()) {
     out << article;
   } else {
-    if(count == 1){
+    if (count == 1) {
       bool useAn = adjectives.empty() ? noun.usesAn : adjectives.begin()->usesAn;
-      if(useAn){
+      if (useAn) {
         out << "an";
       } else {
         out << 'a';
@@ -171,12 +172,12 @@ void printThing(std::ostream &out, T thing){
     out << adjective.word << ' ';
   }
 
-  if (count!=1 && !noun.weirdPlural.empty()) {
+  if (count != 1 && !noun.weirdPlural.empty()) {
     out << noun.weirdPlural;
     return;
   }
   out << noun.word;
-  if (count!=1) {
+  if (count != 1) {
     out << ((noun.word.back() == 's') ? "es" : "s");
   }
 }
@@ -195,11 +196,10 @@ export std::ostream &operator<<(std::ostream &out, MonsterInterface monster) {
   if (monster.isPlayer()) {
     out << "you";
   } else {
-    printThing(out,monster);
+    printThing(out, monster);
   }
   return out;
 }
-
 
 export [[nodiscard]] attr_t toModifierChar(const MonsterInterface &monst) noexcept {
   if (monst.isPlayer()) {
@@ -279,7 +279,7 @@ export constexpr Color ObjectToColor(ObjectInterface obj) noexcept {
     return Brown;
   case Material::Flesh:
     const auto type = obj.type();
-    if(type==ObjectType::Corpse){
+    if (type == ObjectType::Corpse) {
       return toColorChar(corpseOfWhat(obj.type()));
     }
     return Red;
@@ -294,54 +294,55 @@ export Symbol ObjectToSymbol(ObjectInterface obj) noexcept {
 }
 
 export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexcept {
-  const auto tile = floor.getTile(pos);
+  const auto tile = *floor.getTile(pos);
   const auto c = tile.terrainType;
   switch (c) {
-    using enum TerrainType;
+    using enum TerrainTypeInterface;
   case Empty:
     return '.';
   case UpStair:
     return '<';
   case DownStair:
     return '>';
-  case Wall:
-    auto getType = [floor](Position pos) {
-      return floor.inBounds(pos) && floor.getTile(pos).terrainType == Wall;
-    };
-    auto check = [&getType, pos](Dir dir) {
-      if (!getType(pos + dir)) {
-        return false;
-      }
-      auto [dx, dy] = dir;
-      Dir oDir(dy, dx);
-      // return true;
-      return !(getType(pos + oDir) && getType(pos - oDir) && getType(pos + dir + oDir) && getType(pos + dir - oDir));
-    };
-    using enum SpecialChar::Directions;
-    SpecialChar::Directions dir = None;
-    if (check(Dir::up()))
-      dir |= Up;
-    if (check(Dir::down()))
-      dir |= Down;
-    if (check(Dir::left()))
-      dir |= Left;
-    if (check(Dir::right()))
-      dir |= Right;
-    if (dir == None && getType(pos.up())) {
-      return ' ';
-    }
-    return SpecialChar::Walls[dir];
+  case CWall:
+    return L'▯';
+  case HWall:
+    return L'─';
+  case VWall:
+    return L'│';
+  case UTWall:
+    return L'┬';
+  case DTWall:
+    return L'┴';
+  case LTWall:
+    return L'├';
+  case RTWall:
+    return L'┤';
+  case TWall:
+    return  L'┼';
+  case ULCornerWall:
+    return L'┌';
+  case URCornerWall:
+    return L'┐';
+  case DLCornerWall:
+    return L'└';
+  case DRCornerWall:
+    return L'┘';
+  case SWall:
+    return ' ';
   }
 }
 
 export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
   const auto tile = floor.getTile(pos);
-  auto monstPtr = tile.monster;
+  if (!tile)
+    return 'X';
+  auto monstPtr = tile->monster;
   if (!monstPtr.isNull()) {
     return MonsterToSymbol(monstPtr);
   }
-  if (!tile.objects.empty()) {
-    return ObjectToSymbol(tile.objects.back());
+  if (!tile->objects.empty()) {
+    return ObjectToSymbol(tile->objects.back());
   }
   return TerrainTypeToSymbol(floor, pos);
 }

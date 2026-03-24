@@ -46,7 +46,9 @@ public:
   [[nodiscard]] constexpr const ObjectContainer &viewInventory() const noexcept { return inventory_; }
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return brain_.isPlayer(); }
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
-  [[nodiscard]] constexpr bool canEat(const Object & /*unused*/) const noexcept { return mClass_!=MonsterClass::Bryozoan; }
+  [[nodiscard]] constexpr bool canEat(const Object &obj) const noexcept { return mClass_ != MonsterClass::Bryozoan && obj.mat() == Material::Flesh; }
+  [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return mClass_ == MonsterClass::SeaSlug && obj.mat() == Material::Flesh && obj.type() == corpseOf(MonsterClass::Bryozoan); }
+  [[nodiscard]] constexpr bool inLineOfSight(const GameState &state, Position pos) const noexcept;
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
   constexpr void informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept;
@@ -71,9 +73,9 @@ public:
       using enum ReThinkReason;
     case CanNotMove:
     case CanNotPathToTarget:
+      return TimePeriod(10);
     case FailedAttack:
     case Unknown:
-      return TimePeriod(10);
     case TargetDead:
       target_.clear();
     case ReachedDestination: // Fallthrough
@@ -138,13 +140,16 @@ public:
 
   [[nodiscard]] constexpr auto getTile(Position pos) noexcept { return WorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto getTile(Position pos) const noexcept { return ConstWorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
+  [[nodiscard]] constexpr auto seeThrough(Position pos) const noexcept {
+    return inBounds(pos) && getTerrainType(pos) != TerrainType::Wall;
+  }
   [[nodiscard]] constexpr auto isOpenTerrain(Position pos) const noexcept {
     return inBounds(pos) && getTerrainType(pos) != TerrainType::Wall;
   }
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
   }
-  constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x,y), MonsterArr_(x,y), TerrainTypeArr_(x,y) {}
+  constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x, y), MonsterArr_(x, y), TerrainTypeArr_(x, y) {}
   [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
   [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
   [[nodiscard]] constexpr bool inBounds(Position pos) const noexcept {
@@ -206,7 +211,7 @@ constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIter
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8,-0.2);
+  DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
   }
@@ -474,10 +479,15 @@ Dir monsterPath(const GameState &state, const Monster &start, Location end) {
 constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   return state.getFloor(loc_.mapPos).isOpenTile(loc_.pos + d);
 }
+
+constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) const noexcept {
+  const auto &floor = state.getFloor(loc_.mapPos);
+  auto path = PosPathIterable(loc_.pos, pos) | std::views::drop(1) | std::views::take_while([pos](Position p){return p!=pos;});
+  return std::ranges::all_of(path, [&floor](Position p) { return floor.seeThrough(p); });
+}
+
 [[nodiscard]] TimePeriod Monster::wander(GameState &state) noexcept {
-  std::array IntToDir = {
-      Dir(-1, -1), Dir(-1, 0), Dir(-1, 1), Dir(0, -1),
-      Dir(0, 1), Dir(1, -1), Dir(1, 0), Dir(1, 1)};
+  std::array IntToDir = Dir::boxDirsArr();
   auto *const endIter = std::ranges::remove_if(IntToDir, [this, &state](Dir d) {
                           return !isOpenMove(state, d);
                         }).begin();
@@ -485,8 +495,7 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
   if (validDirs == 0) {
     return reThink(ReThinkReason::CanNotMove);
   }
-  const std::size_t index = Rnd::rnd(validDirs);
-  TimePeriod ret = generalMove(state, IntToDir[index], MoveMode::move());
+  TimePeriod ret = generalMove(state, IntToDir[Rnd::rnd(validDirs)], MoveMode::move());
   if (ret.future()) {
     return ret;
   }
@@ -624,11 +633,10 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
 }
 
 constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, const Monster &source, Dir dir) {
-  Dir lastDir;
   auto [mapPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
-  for (Dir cDir : PathIterable{dir} | std::views::drop(1)) {
-    Position cSpot = mapPos + cDir;
+  Position lastPos = mapPos;
+  for (Position cSpot : PosPathIterable(mapPos,mapPos+dir) | std::views::drop(1)) {
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
@@ -638,9 +646,9 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, con
       }
       break;
     }
-    lastDir = cDir;
+    lastPos = cSpot;
   }
-  floor.getObjects(mapPos + lastDir).addObject(std::move(obj));
+  floor.getObjects(lastPos).addObject(std::move(obj));
 }
 
 constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir) noexcept {
@@ -649,14 +657,14 @@ constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir
   return getSpeed() / ThrowItemSpeedFraction;
 }
 
-constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept{
+constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept {
   static constexpr std::size_t EatItemSpeedFraction = 1;
-  ObjectContainer& container = fromFloor ? state.getObjects(loc_) : inventory_;
-  Object& toEat = container[i];
-  if(--toEat.count()==0){
-    (void) container.remove(i);
+  ObjectContainer &container = fromFloor ? state.getObjects(loc_) : inventory_;
+  Object &toEat = container[i];
+  if (--toEat.count() == 0) {
+    (void)container.remove(i);
   }
-  return getSpeed()/EatItemSpeedFraction;
+  return getSpeed() / EatItemSpeedFraction;
 }
 constexpr void Monster::deathDrop(GameState &state) noexcept {
   while (!inventory_.empty()) {

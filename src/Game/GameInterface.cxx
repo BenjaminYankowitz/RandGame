@@ -41,6 +41,26 @@ private:
 class IMonster;
 export class IGameState;
 class IWorldFloor;
+export enum class TerrainTypeInterface : std::uint8_t{
+  Empty,
+  UpStair,
+  DownStair,
+  CWall,
+  HWall,
+  VWall,
+  UTWall,
+  DTWall,
+  LTWall,
+  RTWall,
+  TWall,
+  ULCornerWall,
+  URCornerWall,
+  DLCornerWall,
+  DRCornerWall,
+  SWall
+};
+
+export [[nodiscard]] bool isWall(TerrainTypeInterface) noexcept;
 
 export class MonsterInterface {
 public:
@@ -62,13 +82,13 @@ export class WorldTileInterface {
 public:
   ObjectContainerInterface objects;
   MonsterInterface monster;
-  TerrainType terrainType;
+  TerrainTypeInterface terrainType;
 };
 
 export class WorldFloorInterface {
 public:
-  WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor) noexcept;
-  [[nodiscard]] WorldTileInterface getTile(Position pos) const noexcept;
+  WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept;
+  [[nodiscard]] std::optional<WorldTileInterface> getTile(Position pos) const noexcept;
   [[nodiscard]] std::size_t rows() const noexcept;
   [[nodiscard]] std::size_t cols() const noexcept;
   [[nodiscard]] bool inBounds(Position pos) const;
@@ -76,6 +96,7 @@ public:
 private:
   const IGameState *gameState_;
   const IWorldFloor *floor_;
+  MonsterID controlled_;
 };
 
 export class EventViewerInterface {
@@ -94,7 +115,7 @@ public:
 
 export class GameInterface {
 public:
-  explicit GameInterface(IGameState& gs, MonsterID controlled) noexcept;
+  explicit GameInterface(IGameState &gs, MonsterID controlled) noexcept;
   void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
@@ -116,6 +137,6 @@ public:
   ~GameInterface();
 
 private:
-  IGameState* gs_;
+  IGameState *gs_;
   MonsterID controlled_;
 };
