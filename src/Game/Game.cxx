@@ -482,7 +482,7 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
 
 constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) const noexcept {
   const auto &floor = state.getFloor(loc_.mapPos);
-  auto path = PosPathIterable(loc_.pos, pos) | std::views::drop(1) | std::views::take_while([pos](Position p){return p!=pos;});
+  auto path = PosPathIterableShort(loc_.pos, pos) | std::views::drop(1) | std::views::take_while([pos](Position p){return p!=pos;});
   return std::ranges::all_of(path, [&floor](Position p) { return floor.seeThrough(p); });
 }
 

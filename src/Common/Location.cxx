@@ -243,7 +243,7 @@ export auto PosPathIterable(Position b, Position e) {
 }
 
 export auto PosPathIterableShort(Position b, Position e) {
-  return std::views::transform(PathIterable{e - b}, [b](Dir d) { return b + d; });
+  return std::views::transform(PathIterableShort{e - b}, [b](Dir d) { return b + d; });
 }
 
 export class FloorSpecifier {
