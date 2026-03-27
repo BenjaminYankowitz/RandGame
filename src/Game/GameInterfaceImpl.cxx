@@ -35,9 +35,9 @@ bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 
 enum class Directions : std::uint8_t {
   None = 0,
-  Left = 1,
-  Up = Left << 1,
-  Right = Up << 1,
+  Up = 1,
+  Left = Up << 1,
+  Right = Left << 1,
   Down = Right << 1
 };
 
@@ -76,7 +76,7 @@ constexpr auto WallType = []() {
   ret[Down] = VWall;
   ret[Left] = HWall;
   ret[Right] = HWall;
-  ret[Up | Down] = HWall;
+  ret[Up | Down] = VWall;
   ret[Up | Left] = DRCornerWall;
   ret[Up | Right] = DLCornerWall;
   ret[Down | Left] = URCornerWall;
@@ -147,7 +147,7 @@ bool isWall(TerrainTypeInterface type) noexcept{
 WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept : gameState_(&gameState), floor_(&floor), controlled_(controlled) {}
 std::optional<WorldTileInterface> WorldFloorInterface::getTile(Position pos) const noexcept {
   const auto &monster = gameState_->getMonster(controlled_);
-  if (!inBounds(pos) || /*!monster.inLineOfSight(*gameState_, pos)*/ false)
+  if (!(inBounds(pos) && monster.inLineOfSight(*gameState_, pos)))
     return std::nullopt;
   auto tile = floor_->getTile(pos);
   WorldTileInterface ret(ObjectContainerInterface(tile.objects), toInterface(*gameState_,tile.monster), toInterface(*floor_,pos, tile.terrainType));
