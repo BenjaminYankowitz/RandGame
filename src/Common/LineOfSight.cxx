@@ -141,6 +141,6 @@ template <SeeThrough2dArr MapType>
     std::swap(absX,absY);
   }
   MapWrap<MapType> aMap {map,start,flipX,flipY,swapXY};
-  return bnAngle<bool>(aMap,Dir{absX,absY});
+  return bnAngle<false>(aMap,Dir{absX,absY});
 }
 } // namespace LineOfSight
