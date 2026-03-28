@@ -98,7 +98,7 @@ template <bool min,SeeThrough2dArr MapType>
   auto slopeCmp = [](Corner s1, Corner s2){
     if constexpr (min)
       std::swap(s1,s2);
-    return slopeGE(s1,s2);
+    return slopeGT(s1,s2);
   };
   Corner slope = {end.dx+1-xM,end.dy+1-yM};
   Dir cSpot = {0,0};
@@ -113,7 +113,7 @@ template <bool min,SeeThrough2dArr MapType>
     }
     auto [x,y] = nSpot;
     Corner nSlope = {x+xM,y+yM};
-    assert(slopeCmp(nSlope,slope) && !slopeEQ(nSlope, slope));
+    assert(slopeCmp(nSlope,slope));
     slope = nSlope;
     if(slopeCmp(slope,slopeBound)){
       return false;
