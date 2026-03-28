@@ -336,7 +336,7 @@ export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexc
 export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
   const auto tile = floor.getTile(pos);
   if (!tile)
-    return 'X';
+    return ' ';
   auto monstPtr = tile->monster;
   if (!monstPtr.isNull()) {
     return MonsterToSymbol(monstPtr);

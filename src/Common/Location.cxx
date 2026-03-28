@@ -87,43 +87,43 @@ export [[nodiscard]] constexpr Dir operator-(Dir lhs, Dir rhs) noexcept { return
 
 struct PathIterSentinal {};
 
-export struct PathIterable {
-  struct PathIter {
-    using difference_type = std::ptrdiff_t;
-    using value_type = Dir;
-    Dir c;
-    Dir e;
-    constexpr PathIter operator++(int) noexcept {
-      PathIter ret = *this;
-      ++(*this);
-      return ret;
+struct SlopeIter {
+  using difference_type = std::ptrdiff_t;
+  using value_type = Dir;
+  Dir c;
+  Dir e;
+  constexpr SlopeIter operator++(int) noexcept {
+    SlopeIter ret = *this;
+    ++(*this);
+    return ret;
+  }
+  constexpr SlopeIter &operator++() noexcept {
+    if (e.noMove()) {
+      c = {1, 0};
     }
-    constexpr PathIter &operator++() noexcept {
-      if (e.noMove()) {
-        c = {1, 0};
-      }
-      auto v1 = abs<std::int64_t>(e.dy) * ((2 * abs<std::int64_t>(c.dx)) + 1);
-      auto v2 = abs<std::int64_t>(e.dx) * ((2 * abs<std::int64_t>(c.dy)) + 1);
-      if (v1 < v2) {
-        c.dx += capDir(e).dx;
-      } else if (v1 == v2) {
-        c.dx += capDir(e).dx;
-        c.dy += capDir(e).dy;
-      } else {
-        c.dy += capDir(e).dy;
-      }
-      return *this;
+    auto v1 = abs<std::int64_t>(e.dy) * ((2 * abs<std::int64_t>(c.dx)) + 1);
+    auto v2 = abs<std::int64_t>(e.dx) * ((2 * abs<std::int64_t>(c.dy)) + 1);
+    if (v1 < v2) {
+      c.dx += capDir(e).dx;
+    } else if (v1 == v2) {
+      c.dx += capDir(e).dx;
+      c.dy += capDir(e).dy;
+    } else {
+      c.dy += capDir(e).dy;
     }
-    [[nodiscard]] constexpr Dir operator*() const noexcept {
-      return c;
-    }
-    [[nodiscard]] constexpr bool operator==(const PathIter &) const = default;
-    [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const {
-      return Dir::chessboard(c) > Dir::chessboard(e);
-    };
+    return *this;
+  }
+  [[nodiscard]] constexpr Dir operator*() const noexcept {
+    return c;
+  }
+  [[nodiscard]] constexpr bool operator==(const SlopeIter &) const = default;
+  [[nodiscard]] constexpr bool operator==(PathIterSentinal /*unused*/) const {
+    return Dir::chessboard(c) > Dir::chessboard(e);
   };
-  [[nodiscard]] constexpr PathIter begin() const noexcept {
-    return PathIter{{0, 0}, e};
+};
+export struct PathIterable {
+  [[nodiscard]] constexpr SlopeIter begin() const noexcept {
+    return SlopeIter{{0, 0}, e};
   }
   [[nodiscard]] static constexpr PathIterSentinal end() noexcept {
     return {};

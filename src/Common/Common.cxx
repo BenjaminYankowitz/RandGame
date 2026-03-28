@@ -1,6 +1,7 @@
 export module Common;
 export import :Location;
 export import :PathFind;
+export import :LineOfSight;
 export import :Shared;
 export import :Random;
 export import :CompileTimeHashMap;

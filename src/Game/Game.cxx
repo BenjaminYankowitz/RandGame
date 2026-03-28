@@ -481,9 +481,16 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
 }
 
 constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) const noexcept {
-  const auto &floor = state.getFloor(loc_.mapPos);
-  auto path = PosPathIterableShort(loc_.pos, pos) | std::views::drop(1) | std::views::take_while([pos](Position p){return p!=pos;});
-  return std::ranges::all_of(path, [&floor](Position p) { return floor.seeThrough(p); });
+  if(!state.getFloor(loc_.mapPos).inBounds(pos)){
+    return false;
+  }
+  struct SeeThroughWrapper {
+    const WorldFloor &floor;
+    [[nodiscard]] bool operator[](Position p) const noexcept {
+      return floor.seeThrough(p);
+    }
+  };
+  return LineOfSight::inLineOfSight(SeeThroughWrapper(state.getFloor(loc_.mapPos)), loc_.pos, pos);
 }
 
 [[nodiscard]] TimePeriod Monster::wander(GameState &state) noexcept {
@@ -636,7 +643,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, con
   auto [mapPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
   Position lastPos = mapPos;
-  for (Position cSpot : PosPathIterable(mapPos,mapPos+dir) | std::views::drop(1)) {
+  for (Position cSpot : PosPathIterable(mapPos, mapPos + dir) | std::views::drop(1)) {
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
