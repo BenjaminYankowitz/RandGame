@@ -68,6 +68,10 @@ add_executable(DungeonMakerTests DungeonMakerTests.cpp)
 target_link_libraries(DungeonMakerTests PRIVATE DungeonMaker TestHeader)
 add_test(NAME DungeonMakerTests COMMAND DungeonMakerTests)
 
+add_executable(LOSTests LOSTests.cpp)
+target_link_libraries(LOSTests PRIVATE Common TestHeader)
+add_test(NAME LOSTests COMMAND LOSTests)
+
 set(CURSES_NEED_NCURSES TRUE)
 find_package(Curses REQUIRED)
 add_executable(LOSVisualizer LOSVisualizer.cpp)

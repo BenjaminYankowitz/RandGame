@@ -16,10 +16,10 @@ public:
       impl_[i] = vector[i];
     }
   }
-  [[nodiscard]] constexpr double operator*(const MathVector other) const noexcept {
+  [[nodiscard]] constexpr double operator*(const MathVector& other) const noexcept {
     return std::inner_product(impl_.begin(), impl_.end(), other.impl_.begin(), 0.0);
   }
-  [[nodiscard]] constexpr MathVector operator-(const MathVector other) const noexcept {
+  [[nodiscard]] constexpr MathVector operator-(const MathVector& other) const noexcept {
     std::array<double, N> ret;
     std::ranges::transform(std::views::zip(impl_, other.impl_), ret.begin(), [](auto a) {
       return std::get<0>(a) - std::get<1>(a);
@@ -33,7 +33,7 @@ public:
     return ret;
   }
   [[nodiscard]] constexpr static std::size_t cornerNum() noexcept {
-    return 1 << N;
+    return 1ul << N;
   }
   std::array<double, N> impl_;
 };

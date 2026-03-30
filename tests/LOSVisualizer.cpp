@@ -8,6 +8,16 @@ constexpr int MapH = 20;
 
 struct InstrumentedMap {
   const StaticPositionArr<bool> &real;
+  [[nodiscard]] constexpr int extent(int n) const noexcept {
+    switch (n) {
+    case 0:
+      return real.rows();
+    case 1:
+      return real.cols();
+    default:
+      std::unreachable();
+    }
+  }
   mutable std::vector<Position> checked;
   [[nodiscard]] bool operator[](Position p) const {
     checked.push_back(p);
@@ -85,6 +95,16 @@ Dir keyToDir(int key) {
 
 struct BoolMap {
   const StaticPositionArr<bool> &real;
+  [[nodiscard]] constexpr int extent(int n) const noexcept {
+    switch (n) {
+    case 0:
+      return real.rows();
+    case 1:
+      return real.cols();
+    default:
+      std::unreachable();
+    }
+  }
   [[nodiscard]] bool operator[](Position p) const { return real[p]; }
 };
 
