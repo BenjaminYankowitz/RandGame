@@ -9,7 +9,7 @@ export class GameState;
 export class Monster {
 private:
   struct CreateKey {};
-
+  
   struct MonsterBody {
     TimePeriod speed;
     MustInit<Health> health;
@@ -25,6 +25,9 @@ public:
   };
 
   struct NoTarget {};
+  struct EatTarget {
+    Location loc;
+  };
 
   struct AttackInfo {
     MustInit<Health> damage;
@@ -48,7 +51,7 @@ public:
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
   [[nodiscard]] constexpr bool canEat(const Object &obj) const noexcept { return getClass() != MonsterClass::Bryozoan && obj.mat() == Material::Flesh; }
   [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return getClass() == MonsterClass::SeaSlug && obj.mat() == Material::Flesh && obj.type() == corpseOf(MonsterClass::Bryozoan); }
-  [[nodiscard]] constexpr bool wantsToKill(const Monster& monst) const noexcept {return getClass() == MonsterClass::SeaSlug && monst.getClass() == MonsterClass::Bryozoan;}
+  [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return getClass() == MonsterClass::SeaSlug && monst.getClass() == MonsterClass::Bryozoan; }
   [[nodiscard]] constexpr bool inLineOfSight(const GameState &state, Position pos) const noexcept;
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
@@ -58,8 +61,10 @@ public:
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Monster> kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
-  [[nodiscard]] TimePeriod wander(GameState &state) noexcept;
-  [[nodiscard]] TimePeriod goToEnemey(GameState &state) noexcept;
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, NoTarget /*unused*/) noexcept;
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, ID target) noexcept;
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, Location target) noexcept;
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, EatTarget target) noexcept;
   [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, bool attack) noexcept;
   void findTask(GameState &state) noexcept;
   enum class ReThinkReason : std::uint8_t {
@@ -69,18 +74,20 @@ public:
     FailedAttack,
     ReachedDestination,
     Unknown,
+    FoodGone,
   };
   [[nodiscard]] TimePeriod reThink(ReThinkReason reason) noexcept {
     switch (reason) {
       using enum ReThinkReason;
     case CanNotMove:
-    case CanNotPathToTarget:
       return TimePeriod(10);
+    case CanNotPathToTarget:
     case FailedAttack:
     case Unknown:
     case TargetDead:
-      target_.clear();
     case ReachedDestination: // Fallthrough
+    case FoodGone:
+      target_ = NoTarget{};
       return TimePeriod(1);
     }
   }
@@ -99,7 +106,7 @@ private:
   Location loc_;
   Health health_;
   ID id_;
-  ID target_;
+  std::variant<NoTarget,ID,Location,EatTarget> target_;
   Dice::Group damage_;
   MonsterBrain brain_;
   MonsterClass mClass_;
@@ -161,6 +168,7 @@ public:
   [[nodiscard]] constexpr auto getEventListeners(GameState &state) noexcept {
     return EventListenersIterable(state, EventListenerArr_);
   }
+
 private:
   StaticPositionArr<ObjectContainer> ObjectsArr_;
   StaticPositionArr<Monster::ID> MonsterArr_;
@@ -205,7 +213,7 @@ private:
 
   static_assert(std::input_or_output_iterator<EventListenersIterable::EventListenerIterator>);
 };
-template<>
+template <>
 constexpr bool std::ranges::enable_borrowed_range<WorldFloor::EventListenersIterable> = true; // NOLINT
 using WorldFloorFunc = bool (WorldFloor::*)(Position) const noexcept;
 template <WorldFloorFunc F>
@@ -225,7 +233,7 @@ struct WorldFloorWrapper {
     return operator[](Position{col, row});
   }
   [[nodiscard]] constexpr bool operator[](Position p) const noexcept {
-    return std::invoke(F,floor,p);
+    return std::invoke(F, floor, p);
   }
 };
 
@@ -477,13 +485,13 @@ constexpr bool Monster::isOpenMove(GameState &state, Dir d) const noexcept {
 }
 
 constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) const noexcept {
-  if(!state.getFloor(loc_.mapPos).inBounds(pos)){
+  if (!state.getFloor(loc_.mapPos).inBounds(pos)) {
     return false;
   }
   return LineOfSight::inLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(state.getFloor(loc_.mapPos)), loc_.pos, pos);
 }
 
-[[nodiscard]] TimePeriod Monster::wander(GameState &state) noexcept {
+[[nodiscard]] TimePeriod Monster::goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
   std::array IntToDir = Dir::boxDirsArr();
   auto *const endIter = std::ranges::remove_if(IntToDir, [this, &state](Dir d) {
                           return !isOpenMove(state, d);
@@ -500,10 +508,31 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
   return reThink(ReThinkReason::CanNotMove);
 }
 
-TimePeriod Monster::goToEnemey(GameState &state) noexcept {
-  return state.tryGetMonster(target_).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), true); }, [&]() { return reThink(ReThinkReason::TargetDead); });
+TimePeriod Monster::goToTarget(GameState &state, ID target) noexcept {
+  return state.tryGetMonster(target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), true); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
+
+
+TimePeriod Monster::goToTarget(GameState &state, Location target) noexcept {
+  return pathTo(state, target,false);
+}
+
+TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noexcept {
+  if(target.loc==getLoc()){
+    for (auto [i, obj] : enumerate(state.getObjects(getLoc()))) {
+      if (wantsToEat(obj)) {
+        return eatItem(state, i, true);
+      }
+    }
+    return reThink(ReThinkReason::FoodGone);
+  }
+  return pathTo(state, target.loc,false);
+}
+
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
+  if(target==getLoc()){
+    return reThink(ReThinkReason::ReachedDestination);
+  }
   auto movePlan = monsterPath(state, *this, target);
   if (movePlan == Dir{0, 0}) {
     return reThink(ReThinkReason::CanNotPathToTarget);
@@ -531,12 +560,18 @@ TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexc
 }
 void Monster::findTask(GameState &state) noexcept {
   auto [pos, mapPos] = getLoc();
-  const auto& cFloor = state.getFloor(mapPos);
-  for(auto cPos : LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(cFloor),pos)){
-    auto [obj,monst,tile] = cFloor.getTile(cPos);
-    if(!monst.isNull() && wantsToKill(state.getMonster(monst))){
+  const auto &cFloor = state.getFloor(mapPos);
+  for (auto cPos : LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(cFloor), pos)) {
+    auto [objs, monst, tile] = cFloor.getTile(cPos);
+    if (!monst.isNull() && wantsToKill(state.getMonster(monst))) {
       target_ = monst;
       return;
+    }
+    for(const auto& obj : objs){
+      if(wantsToEat(obj)){
+        target_ = Monster::EatTarget{{cPos,mapPos}};
+        return;
+      }
     }
   }
 }
@@ -617,15 +652,10 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
-  TimePeriod timeTaken(0);
-  if(target_.isNull()){
+  if (std::holds_alternative<NoTarget>(target_)) {
     findTask(state);
   }
-  if (target_.isNull()) {
-    timeTaken = wander(state);
-  } else {
-    timeTaken = goToEnemey(state);
-  }
+  TimePeriod timeTaken = target_.visit([&](auto target){return goToTarget(state,target);});
   if (!isAlive()) {
     return TimePeriod(0);
   }
@@ -698,7 +728,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   ID id = game.nextMonsterId();
   MonsterBody body{mInfo.speed, mInfo.maxHealth, mInfo.damage, mClass};
   MonsterBrain brain = isPlayer ? PlayerBrain : mInfo.brain;
-  Monster& mstr = game.insertMonster(std::make_unique<Monster>(CreateKey{}, body, loc, id, brain));
+  Monster &mstr = game.insertMonster(std::make_unique<Monster>(CreateKey{}, body, loc, id, brain));
   if (mstr.caresEvent()) {
     game.getFloor(loc.mapPos).addEventListener(id);
   }

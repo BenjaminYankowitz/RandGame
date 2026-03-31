@@ -249,7 +249,7 @@ export auto PosPathIterableShort(Position b, Position e) {
 export class FloorSpecifier {
 public:
   [[nodiscard]] constexpr explicit FloorSpecifier(int floorI) noexcept : floor(floorI) {}
-  [[nodiscard]] constexpr bool operator==(FloorSpecifier o) const noexcept { return floor == o.floor; }
+  [[nodiscard]] constexpr bool operator==(const FloorSpecifier& o) const noexcept = default;
   [[nodiscard]] constexpr FloorSpecifier up(int n = 1) const noexcept { return FloorSpecifier(floor - n); }
   [[nodiscard]] constexpr FloorSpecifier down(int n = 1) const noexcept { return FloorSpecifier(floor + n); }
   int floor;
@@ -261,6 +261,7 @@ public:
   [[nodiscard]] constexpr Location(Position p, FloorSpecifier mp) noexcept : pos(p), mapPos(mp) {}
   [[nodiscard]] constexpr Location up(int n = 1) const noexcept { return {pos, mapPos.up(n)}; }
   [[nodiscard]] constexpr Location down(int n = 1) const noexcept { return {pos, mapPos.down(n)}; }
+  [[nodiscard]] constexpr bool operator==(const Location&) const noexcept = default;
   Position pos;
   FloorSpecifier mapPos;
 };

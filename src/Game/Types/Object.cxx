@@ -22,7 +22,7 @@ public:
   constexpr void combine(std::unique_ptr<Object> other) noexcept {
     count_ += other->count_;
   }
-  [[nodiscard]] constexpr int count() const noexcept { return count_; }
+  [[nodiscard]] constexpr const int& count() const noexcept { return count_; }
   [[nodiscard]] constexpr int& count() noexcept { return count_; }
   [[nodiscard]] constexpr ObjectType type() const noexcept { return type_; }
   [[nodiscard]] constexpr Material mat() const noexcept { return mat_; }
@@ -35,10 +35,13 @@ private:
   ArtifactId artifactStatus_ = ArtifactId::Normal;
 };
 
+template<class T>
+[[nodiscard]] constexpr auto& deref(T& p) noexcept{return std::forward_like<T&>(*p);};
+
 export class ObjectContainer {
 public:
-  using iterator = IteratorImpl<std::unique_ptr<Object>, ObjectContainer, Object &, [](std::unique_ptr<Object> &p) -> Object & { return *p; }>;
-  using const_iterator = IteratorImpl<const std::unique_ptr<Object>, ObjectContainer, const Object &, [](const std::unique_ptr<Object> &p) -> const Object & { return *p; }>;
+  using iterator = IteratorImpl<std::unique_ptr<Object>, ObjectContainer, Object &, deref>;
+  using const_iterator = IteratorImpl<const std::unique_ptr<Object>, ObjectContainer, const Object &, deref>;
   ObjectContainer() = default;
   ObjectContainer(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;

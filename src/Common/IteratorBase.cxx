@@ -1,9 +1,15 @@
 export module Common:IteratorBase;
 import std;
 
-export template <class RefValueT, class Parent, class RetValueT = RefValueT &, RetValueT (*F)(RefValueT &) = [](auto &v) -> RetValueT { return static_cast<RetValueT>(v); }>
+template <class RefValueT, class RetValueT>
+[[nodiscard]] constexpr RetValueT defaultConvert(RefValueT &v) { return static_cast<RetValueT>(v); }
+
+template <class RefValueT, class RetValueT> 
+using ConvertFType = decltype(defaultConvert<RefValueT,RetValueT>);
+
+export template <class RefValueT, class Parent, class RetValueT = RefValueT &, ConvertFType<RefValueT,RetValueT>* F = defaultConvert<RefValueT,RetValueT>>
 class IteratorImpl {
-  template <class ORefValueT, class OParent, class ORetValueT, ORetValueT (*OF)(ORefValueT &)>
+  template <class ORefValueT, class OParent, class ORetValueT, decltype(defaultConvert<ORefValueT,ORetValueT>)* OF>
   friend class IteratorImpl;
 
 public:
@@ -18,7 +24,7 @@ public:
   IteratorImpl() = default;
   constexpr IteratorImpl(const IteratorImpl &) = default;
   constexpr IteratorImpl& operator=(const IteratorImpl&) = default;
-  template <class ORetValueT, ORetValueT (*OF)(RefValueT &)>
+  template <class ORetValueT, ConvertFType<std::remove_const_t<RefValueT>,ORetValueT>* OF>
   constexpr IteratorImpl(IteratorImpl<std::remove_const_t<RefValueT>, Parent, ORetValueT, OF> other) noexcept : impl_(other.impl_) {}; // NOLINT(google-explicit-constructor)
   constexpr IteratorImpl &operator++() noexcept { return operator+=(1); }
   constexpr IteratorImpl operator++(int) noexcept {
@@ -60,9 +66,9 @@ private:
   RefValueT *impl_ = nullptr;
 };
 
-export template <class ParentIterator, class RetValueT, RetValueT (*F)(typename ParentIterator::value_type &) = [](auto &v) -> RetValueT { return static_cast<RetValueT>(v); }>
+export template <class ParentIterator, class RetValueT, ConvertFType<typename ParentIterator::value_type,RetValueT>* F = defaultConvert<typename ParentIterator::value_type,RetValueT>>
 class IteratorWrapper {
-  template <class ORefValueT, class OParent, class ORetValueT, ORetValueT (*OF)(ORefValueT &)>
+  template <class ORefValueT, class OParent, class ORetValueT, ConvertFType<ORefValueT,ORetValueT> *OF>
   friend class IteratorImpl;
 
 public:
