@@ -41,7 +41,8 @@ private:
 class IMonster;
 export class IGameState;
 class IWorldFloor;
-export enum class TerrainTypeInterface : std::uint8_t{
+export enum class TerrainTypeInterface : std::uint8_t {
+  Unknown,
   Empty,
   UpStair,
   DownStair,
@@ -88,7 +89,7 @@ public:
 export class WorldFloorInterface {
 public:
   WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept;
-  [[nodiscard]] std::optional<WorldTileInterface> getTile(Position pos) const noexcept;
+  [[nodiscard]] WorldTileInterface getTile(Position pos) const noexcept;
   [[nodiscard]] std::size_t rows() const noexcept;
   [[nodiscard]] std::size_t cols() const noexcept;
   [[nodiscard]] bool inBounds(Position pos) const;

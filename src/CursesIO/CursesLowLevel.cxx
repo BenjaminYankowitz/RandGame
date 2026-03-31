@@ -196,6 +196,10 @@ constexpr chtype Down = KEY_DOWN;
 constexpr chtype Left = KEY_LEFT;
 constexpr chtype Right = KEY_RIGHT;
 constexpr chtype Backspace = KEY_BACKSPACE;
+constexpr chtype ShiftLeft = KEY_SLEFT;
+constexpr chtype ShiftRight = KEY_SRIGHT;
+constexpr chtype ShiftUp = KEY_SR;
+constexpr chtype ShiftDown = KEY_SF;
 } // namespace SpecialChar
 
 namespace {
@@ -263,6 +267,8 @@ public:
   WindowWrapper(int width, int height, int xoffset, int yoffset) noexcept : impl_(newwin(height, width, yoffset, xoffset)), width_(width), height_(height), xoffset_(xoffset), yoffset_(yoffset) {}
   void clear() const {
     if (werase(impl_.get()) == ERR) {
+      if(impl_.get()==nullptr){
+      }
       throw EraseFailure{};
     }
   }
@@ -427,7 +433,6 @@ public:
   [[nodiscard]] constexpr int prntWidth() const noexcept { return impl_.GetWidth() - 2; }
   [[nodiscard]] constexpr int prntHeight() const noexcept { return impl_.GetHeight() - 2; }
   void clear() {
-    impl_.clear();
     makeBox();
   }
   [[nodiscard]] std::size_t leftOnLine() const noexcept { return std::max(prntWidth() - impl_.cursorX(), 0); }

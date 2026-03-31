@@ -34,23 +34,21 @@ constexpr Dir keyToDir(chtype key) noexcept {
   }
 }
 } // namespace
+std::array InventLettersArr = std::to_array({std::views::iota('a', 'z' + 1), std::views::iota('A', 'Z' + 1)});
+constexpr auto InventLetters = std::views::join(InventLettersArr);
+
+auto firstNInvent(std::size_t n) {
+  return std::views::zip(std::views::iota(static_cast<std::size_t>(0), n), InventLetters);
+}
 
 // static BoxedWindow *EventWindow;
 namespace {
-void displayInvent(BoxedWindow &window, ObjectContainerInterface items) {
+void displayInvent(BoxedWindow &window, ObjectContainerInterface items, int sY = 0) {
   window.clear();
-  std::array front = {'a', ' ', '-', ' '};
-  for (int y = 0; y < std::min(window.prntHeight(), static_cast<int>(items.size())); y++) {
-    window.moveCursor(0, y);
-    window << std::string_view(front);
-    front[0]++;
-    if (front[0] == 'z' + 1)
-      front[0] = 'A';
-    if (front[0] == 'Z' + 1)
-      break;
-    window << items[y];
+  for (auto [y, c] : firstNInvent(std::min<int>(window.prntHeight(), items.size()))) {
+    window.moveCursor(0, sY+y);
+    window << c << " - " << items[y];
   }
-  window.updateScreen();
 }
 
 void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
@@ -61,7 +59,6 @@ void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
     window.moveCursor(0, i);
     window << std::string_view(arr[i + offSet]);
   }
-  window.updateScreen();
 }
 
 } // namespace
@@ -144,12 +141,12 @@ namespace {
 export namespace IOModule {
 class Interface {
 public:
-  explicit Interface(std::unique_ptr<GameInterface> interface) : gState_(std::move(interface)), printToViewer_(this) {
+  explicit Interface(std::unique_ptr<GameInterface> interface) : gState_(std::move(interface)), debugViewer_(this), interfaceViewer_(this), interfaceStream_(&interfaceViewer_) {
     eventWindow_ = BoxedWindow(0, 0, 0, 0);
     mainWindow_ = BoxedWindow(0, 0, 0, 0);
     inventWindow_ = BoxedWindow(0, 0, 0, 0);
     statusWindow_ = BoxedWindow(0, 0, 0, 0);
-    oldBuffer_ = Logging::log.rdbuf(&printToViewer_);
+    oldBuffer_ = Logging::log.rdbuf(&debugViewer_);
     gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
   }
   ~Interface() {
@@ -170,21 +167,33 @@ public:
     inventWindow_.setDims(width - Mapwidth - 4, height - 2);
     statusWindow_.move(0, height - 4);
     statusWindow_.setDims(Mapwidth, 2);
+    auto &memory = getMemoryGrid(gState_->getLocation().mapPos, Mapwidth, MapHeight);
     for (int y = 0; y < MapHeight; y++) {
       mainWindow_.moveCursor(0, y);
       for (int x = 0; x < Mapwidth; x++) {
-        mainWindow_ << TileToSymbol(currentMap, {x, y});
+        Position pos{x, y};
+        auto tile = currentMap.getTile(pos);
+        if (tile.terrainType != TerrainTypeInterface::Unknown) {
+          memory[pos] = tile.terrainType;
+          mainWindow_ << TileToSymbol(currentMap, pos);
+        } else {
+          mainWindow_ << MemoryTerrainToSymbol(memory[pos]);
+        }
       }
     }
     ObjectContainerInterface playerInvent = gState_->lookAtInventory();
     displayInvent(inventWindow_, playerInvent);
+    inventWindow_.updateScreen();
     mainWindow_.updateScreen();
     statusWindow_.clear();
     statusWindow_.moveCursor(0, 0);
     statusWindow_ << "Health: "sv << gState_->getHealth();
     statusWindow_.updateScreen();
     displayEvents(eventWindow_, eventLog_);
-    // eventWindow_.updateScreen();
+    eventWindow_.updateScreen();
+  }
+  int eventWindowWidth() const noexcept {
+    return eventWindow_.prntWidth();
   }
   [[nodiscard]] bool doAction() {
     chtype userInput = CursesRAII::getChar();
@@ -198,6 +207,9 @@ public:
   }
   void addEvent(std::string str) noexcept {
     eventLog_.emplace_back(std::move(str));
+  }
+  [[nodiscard]] std::ostream &interfacePrinter() {
+    return interfaceStream_;
   }
   [[nodiscard]] GameTime getTime() const noexcept {
     if (gState_)
@@ -223,8 +235,15 @@ private:
   ActionMod mod_;
   std::vector<std::string> eventLog_;
   std::unique_ptr<GameInterface> gState_;
+  std::unordered_map<int, StaticPositionArr<TerrainTypeInterface>> terrainMemory_;
   streambufT *oldBuffer_;
-  PrintToViewer printToViewer_;
+  PrintToViewer debugViewer_;
+  PrintToViewer interfaceViewer_;
+  std::ostream interfaceStream_;
+  StaticPositionArr<TerrainTypeInterface> &getMemoryGrid(FloorSpecifier floor, int width, int height) {
+    auto [it, inserted] = terrainMemory_.try_emplace(floor.floor, width, height);
+    return it->second;
+  }
 };
 } // namespace IOModule
 
@@ -259,42 +278,96 @@ struct FloorInterfaceWrapper {
   }
   [[nodiscard]] bool operator[](int row, int col) const noexcept {
     auto tile = floor.getTile(Position{col, row});
-    return tile && !isWall(tile->terrainType);
+    return tile.terrainType != TerrainTypeInterface::Unknown && !isWall(tile.terrainType);
   }
 };
 
+bool askYesNo(IOModule::Interface &iterface, std::string_view question) noexcept {
+  std::ostream &out = iterface.interfacePrinter();
+  out << question << " (y/n)\n";
+  iterface.updateGameScreen();
+  while (true) {
+    auto input = CursesRAII::getChar();
+    if (input == 'y')
+      return true;
+    if (input == 'n' || input == SpecialChar::Escape)
+      return false;
+  }
+}
 struct ItemFromInterfaceSettings {
-  bool doDisplay = true;
-  bool autoSelectOne = true;
+  bool doStandAloneDisplay = true;
+  bool autoSelectOne = false;
+  const std::function<bool(ObjectInterface)>& isEligible = [](ObjectInterface /**/){return true;};
 };
+
 
 constexpr std::size_t NoItem = std::numeric_limits<std::size_t>::max();
-template <ItemFromInterfaceSettings settings = {}>
-std::size_t getItemFromInterface(ObjectContainerInterface interface) noexcept {
-  if (interface.size() == 0) {
+constexpr std::size_t NoChoice = std::numeric_limits<std::size_t>::max()-1;
+[[nodiscard]] std::size_t displayItemInterfaceForChoosing(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings& settings) noexcept {
+  if(items.empty()){
     return NoItem;
   }
-  if (settings.autoSelectOne && interface.size() == 1) {
-    return 0;
-  }
-  if constexpr (settings.doDisplay) {
+  if(settings.doStandAloneDisplay){
+    if(settings.autoSelectOne && items.size() == 1){
+      return 0;
+    }
     auto [height, width] = getMaxDims();
-    height = std::min<int>(height - 2, interface.size());
-    constexpr int DesiredWidth = 30;
+    height = std::min<int>(height - 2, items.size() + 2);
+    constexpr int DesiredWidth = 40;
     width = std::min<int>(width - 3, DesiredWidth);
-    auto window = BoxedWindow(width, height, 1, 1);
-    displayInvent(window, interface);
+    auto window = BoxedWindow(width, height, interface.eventWindowWidth()-DesiredWidth, 0);
+    displayInvent(window, items,2);
+    window.moveCursor(0, 0);
+    window << prompt;
+    window.updateScreen();
+  } else {
+    std::ostream &out = interface.interfacePrinter();
+    std::size_t cnt = 0;
+    std::size_t item1;
+    char letter1;
+    auto validItems = firstNInvent(items.size()) | std::views::filter([&settings, &items](auto v) { return settings.isEligible(items[std::get<0>(v)]); });
+    for (auto [i, letter] : validItems) {
+      cnt++;
+      if (cnt == 1) {
+        item1 = i;
+        letter1 = letter;
+        continue;
+      }
+      if (cnt == 2) {
+        out << prompt << " [" << letter1;
+      }
+      out << letter;
+    }
+    if (cnt == 0)
+      return NoItem;
+    if (cnt == 1) {
+      if (settings.autoSelectOne) {
+        return item1;
+      }
+      out << prompt << " [" << letter1;
+    }
+    out << "]\n";
+  }
+  return NoChoice;
+}
+std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings& settings = {}) noexcept {
+  auto ret = displayItemInterfaceForChoosing(interface,items,prompt,settings);
+  if(ret!=NoChoice){
+    return ret;
   }
   while (true) {
     auto userInput = CursesRAII::getChar();
-    if (userInput == SpecialChar::Escape) {
-      return NoItem;
+    if(userInput==SpecialChar::Escape){
+      break;
     }
-    if (userInput >= 'a' && userInput < 'a' + static_cast<std::int64_t>(interface.size())) {
-      return userInput - 'a';
+    if (userInput >= 'a' && userInput < 'a' + static_cast<std::int64_t>(items.size())) {
+      auto index = static_cast<std::size_t>(userInput - 'a');
+      if (settings.isEligible(items[index]))
+        return index;
     }
   }
-}
+  return NoItem;
+  }
 
 void toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::move());
@@ -304,8 +377,8 @@ void toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*
   mod.toggleMoveMode(MoveMode::fight());
 }
 
-void pickUpItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) {
-  std::size_t index = getItemFromInterface(gState.lookAtFloor());
+void pickUpItem(GameInterface &gState, IOModule::Interface & interface, ActionMod & /*mod*/) {
+  std::size_t index = getItemFromInterface(interface,gState.lookAtFloor(),"What do you want to pick up?",{.autoSelectOne=true});
   if (index != NoItem) {
     gState.pickUpItem(index);
   }
@@ -328,8 +401,11 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
 }
 
 void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
-  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
-  if (index == NoItem)
+  auto inventory = gState.lookAtInventory();
+  if (inventory.empty())
+    return;
+  auto index = getItemFromInterface(iterface, inventory, "What do you want to throw?",{.doStandAloneDisplay=false});
+  if (index==NoItem)
     return;
   auto target = chooseTile(gState, iterface);
   if (!target)
@@ -337,37 +413,21 @@ void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod &
   gState.throwItem(index, (*target) - gState.getLocation().pos);
 }
 
-void eatItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
   bool fromFloor = false;
   ObjectContainerInterface floorItems = gState.lookAtFloor();
-  bool floorHasEdible = false;
-  for (std::size_t i = 0; i < floorItems.size(); i++) {
-    if (gState.canEat(floorItems[i])) {
-      floorHasEdible = true;
-      break;
-    }
-  }
-  if (floorHasEdible) {
-    while (true) {
-      auto input = CursesRAII::getChar();
-      if (input == 'y') {
-        fromFloor = true;
-        break;
-      }
-      if (input == 'n' || input == SpecialChar::Escape) {
-        break;
-      }
-    }
+  if (std::ranges::any_of(floorItems, [&gState](ObjectInterface item) { return gState.canEat(item); })) {
+    fromFloor = askYesNo(iterface, "Do you want to eat from the floor?");
   }
   ObjectContainerInterface items = fromFloor ? gState.lookAtFloor() : gState.lookAtInventory();
-  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(items);
-  if (index != NoItem) {
+  auto index = getItemFromInterface(iterface, items, "What do you want to eat?",
+  {.doStandAloneDisplay=fromFloor,.isEligible=[&gState](ObjectInterface item) { return gState.canEat(item); }});
+  if (index!=NoItem)
     gState.eatItem(index, fromFloor);
-  }
 }
 
-void dropItem(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
-  std::size_t index = getItemFromInterface<{.doDisplay = false, .autoSelectOne = false}>(gState.lookAtInventory());
+void dropItem(GameInterface &gState, IOModule::Interface & interface, ActionMod & /*mod*/) noexcept {
+  std::size_t index = getItemFromInterface(interface,gState.lookAtInventory(),"What do you want to drop?",{.doStandAloneDisplay=false});
   if (index != NoItem) {
     gState.dropItem(index);
   }
@@ -406,6 +466,24 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
   }
 }
 
+template <int Dx, int Dy>
+void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
+  constexpr static Dir D = Dir(Dx, Dy);
+  while (true) {
+    const Position posBefore = gState.getLocation().pos;
+    const Health healthBefore = gState.getHealth();
+    gState.generalMove(D, MoveMode::move());
+    interface.updateGameScreen();
+    if (gState.getLocation().pos == posBefore)
+      break;
+    if (gState.getHealth() < healthBefore)
+      break;
+    if (CursesRAII::tryGetChar().has_value())
+      break;
+  }
+}
+
 template <int n>
 void addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   static_assert(n >= 0 && n <= 9);
@@ -430,6 +508,19 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'u', movePlayer<1, -1>},
     {'b', movePlayer<-1, 1>},
     {'n', movePlayer<1, 1>},
+
+    {SpecialChar::ShiftLeft, runInDir<-1, 0>},
+    {'H', runInDir<-1, 0>},
+    {SpecialChar::ShiftDown, runInDir<0, 1>},
+    {'J', runInDir<0, 1>},
+    {SpecialChar::ShiftUp, runInDir<0, -1>},
+    {'K', runInDir<0, -1>},
+    {SpecialChar::ShiftRight, runInDir<1, 0>},
+    {'L', runInDir<1, 0>},
+    {'Y', runInDir<-1, -1>},
+    {'U', runInDir<1, -1>},
+    {'B', runInDir<-1, 1>},
+    {'N', runInDir<1, 1>},
 
     {'<', goUpStair},
     {'>', goDownStair},

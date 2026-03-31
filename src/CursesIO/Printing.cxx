@@ -293,11 +293,11 @@ export Symbol ObjectToSymbol(ObjectInterface obj) noexcept {
   return sym;
 }
 
-export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexcept {
-  const auto tile = *floor.getTile(pos);
-  const auto c = tile.terrainType;
+export Symbol TerrainTypeInterfaceToSymbol(TerrainTypeInterface c) noexcept {
   switch (c) {
     using enum TerrainTypeInterface;
+  case Unknown:
+    return ' ';
   case Empty:
     return '.';
   case UpStair:
@@ -319,7 +319,7 @@ export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexc
   case RTWall:
     return L'┤';
   case TWall:
-    return  L'┼';
+    return L'┼';
   case ULCornerWall:
     return L'┌';
   case URCornerWall:
@@ -333,16 +333,23 @@ export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexc
   }
 }
 
+export Symbol TerrainTypeToSymbol(WorldFloorInterface floor, Position pos) noexcept {
+  return TerrainTypeInterfaceToSymbol(floor.getTile(pos).terrainType);
+}
+
+export Symbol MemoryTerrainToSymbol(TerrainTypeInterface terrain) noexcept {
+  Symbol sym = TerrainTypeInterfaceToSymbol(terrain);
+  sym.setFrontColor(Grey);
+  return sym;
+}
+
 export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
   const auto tile = floor.getTile(pos);
-  if (!tile)
-    return ' ';
-  auto monstPtr = tile->monster;
-  if (!monstPtr.isNull()) {
-    return MonsterToSymbol(monstPtr);
+  if (!tile.monster.isNull()) {
+    return MonsterToSymbol(tile.monster);
   }
-  if (!tile->objects.empty()) {
-    return ObjectToSymbol(tile->objects.back());
+  if (!tile.objects.empty()) {
+    return ObjectToSymbol(tile.objects.back());
   }
-  return TerrainTypeToSymbol(floor, pos);
+  return TerrainTypeInterfaceToSymbol(tile.terrainType);
 }

@@ -28,10 +28,9 @@ bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 [[nodiscard]] MonsterInterface toInterface(const Monster *m) noexcept {
   return MonsterInterface(static_cast<const IMonster *>(m));
 }
-[[nodiscard]] MonsterInterface toInterface(const IGameState& gameState, Monster::ID id) noexcept {
+[[nodiscard]] MonsterInterface toInterface(const IGameState &gameState, Monster::ID id) noexcept {
   return id.isNull() ? MonsterInterface(nullptr) : toInterface(gameState.getMonster(id));
 }
-
 
 enum class Directions : std::uint8_t {
   None = 0,
@@ -40,7 +39,6 @@ enum class Directions : std::uint8_t {
   Right = Left << 1,
   Down = Right << 1
 };
-
 
 [[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept {
   return static_cast<Directions>(std::to_underlying(d1) | std::to_underlying(d2));
@@ -90,7 +88,7 @@ constexpr auto WallType = []() {
   return ret;
 }();
 
-[[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor& floor, Position pos, TerrainType t) noexcept {
+[[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor &floor, Position pos, TerrainType t) noexcept {
   switch (t) {
   case TerrainType::DownStair:
     return TerrainTypeInterface::DownStair;
@@ -100,7 +98,7 @@ constexpr auto WallType = []() {
     return TerrainTypeInterface::Empty;
   case TerrainType::Wall:
     auto getType = [&floor, pos](Dir dir) {
-      return floor.inBounds(pos+dir) && floor.getTerrainType(pos+dir) == TerrainType::Wall;
+      return floor.inBounds(pos + dir) && floor.getTerrainType(pos + dir) == TerrainType::Wall;
     };
     auto check = [&getType](Dir dir) {
       if (!getType(dir)) {
@@ -108,22 +106,22 @@ constexpr auto WallType = []() {
       }
       auto [dx, dy] = dir;
       Dir oDir(dy, dx);
-      return !(getType(oDir) && getType(- oDir) && getType(dir + oDir) && getType(dir - oDir));
+      return !(getType(oDir) && getType(-oDir) && getType(dir + oDir) && getType(dir - oDir));
     };
     int dirs = 0;
     for (auto [i, checkD] : std::views::zip(std::views::iota(0), Dir::directDirs())) {
       if (check(checkD))
         dirs |= (1 << i);
     }
-    if(dirs==0 && getType(Dir::up())){
+    if (dirs == 0 && getType(Dir::up())) {
       return TerrainTypeInterface::SWall;
     }
     return WallType[dirs];
   }
 }
 
-bool isWall(TerrainTypeInterface type) noexcept{
-  switch (type){
+bool isWall(TerrainTypeInterface type) noexcept {
+  switch (type) {
     using enum TerrainTypeInterface;
   case TerrainTypeInterface::CWall:
   case TerrainTypeInterface::HWall:
@@ -145,12 +143,13 @@ bool isWall(TerrainTypeInterface type) noexcept{
 }
 
 WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept : gameState_(&gameState), floor_(&floor), controlled_(controlled) {}
-std::optional<WorldTileInterface> WorldFloorInterface::getTile(Position pos) const noexcept {
+WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept {
+  static constexpr ObjectContainer EmptyContainer;
   const auto &monster = gameState_->getMonster(controlled_);
   if (!(inBounds(pos) && monster.inLineOfSight(*gameState_, pos)))
-    return std::nullopt;
+    return {ObjectContainerInterface(EmptyContainer), MonsterInterface(nullptr), TerrainTypeInterface::Unknown};
   auto tile = floor_->getTile(pos);
-  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toInterface(*gameState_,tile.monster), toInterface(*floor_,pos, tile.terrainType));
+  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toInterface(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType));
   return ret;
 }
 std::size_t WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
