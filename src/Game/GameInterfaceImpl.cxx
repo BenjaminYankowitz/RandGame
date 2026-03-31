@@ -200,6 +200,14 @@ public:
     } catch (...) {
     }
   }
+  void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
+    try {
+      impl_->monsterAte(toInterface(eater), ObjectInterface(eaten));
+    } catch (const std::exception &e) {
+      impl_->exception(e);
+    } catch (...) {
+    }
+  }
 
 private:
   std::unique_ptr<EventViewerInterface> impl_;

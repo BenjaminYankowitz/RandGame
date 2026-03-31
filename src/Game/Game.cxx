@@ -9,7 +9,7 @@ export class GameState;
 export class Monster {
 private:
   struct CreateKey {};
-  
+
   struct MonsterBody {
     TimePeriod speed;
     MustInit<Health> health;
@@ -50,14 +50,15 @@ public:
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return brain_.isPlayer(); }
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
   [[nodiscard]] constexpr bool canEat(const Object &obj) const noexcept { return getClass() != MonsterClass::Bryozoan && obj.mat() == Material::Flesh; }
-  [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return getClass() == MonsterClass::SeaSlug && obj.mat() == Material::Flesh && obj.type() == corpseOf(MonsterClass::Bryozoan); }
-  [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return getClass() == MonsterClass::SeaSlug && monst.getClass() == MonsterClass::Bryozoan; }
+  [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return canEat(obj); }
+  [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return MonsterClassHunts(getClass(),monst.getClass()); }
   [[nodiscard]] constexpr bool inLineOfSight(const GameState &state, Position pos) const noexcept;
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
   constexpr void informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept;
   constexpr void informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
   constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept;
+  constexpr void informMonsterAte(GameState &state, const Monster &eater, const Object &eaten) noexcept;
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Monster> kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
@@ -106,7 +107,7 @@ private:
   Location loc_;
   Health health_;
   ID id_;
-  std::variant<NoTarget,ID,Location,EatTarget> target_;
+  std::variant<NoTarget, ID, Location, EatTarget> target_;
   Dice::Group damage_;
   MonsterBrain brain_;
   MonsterClass mClass_;
@@ -261,6 +262,7 @@ public:
   virtual void itemPickup(const Monster &grabber, const Object &grabbed) noexcept = 0;
   virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
   virtual void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept = 0;
+  virtual void monsterAte(const Monster &eater, const Object &eaten) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
   virtual ~EventViewer() = default;
 };
@@ -341,10 +343,11 @@ public:
       });
     }
   }
-  constexpr void broadcastEvent(FloorSpecifier floor, auto &&func) noexcept;
+  constexpr void broadcastEvent(Location eventLoc, auto &&func) noexcept;
   constexpr void broadcastItemPickup(const Monster &monster, const Object &object) noexcept;
   constexpr void broadcastMonsterHitMonster(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept;
   constexpr void broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept;
+  constexpr void broadcastMonsterAte(const Monster &eater, const Object &eaten) noexcept;
   void printDebug(std::string_view v) noexcept {
     eventViewer_->debug(v);
   }
@@ -356,6 +359,9 @@ public:
   }
   void printMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
     eventViewer_->monsterHitWall(attacker, attacked);
+  }
+  void printMonsterAte(const Monster &eater, const Object &eaten) noexcept {
+    eventViewer_->monsterAte(eater, eaten);
   }
   [[nodiscard]] Monster &getPlayer() noexcept {
     return getMonster(player_);
@@ -442,13 +448,13 @@ constexpr WorldFloor::EventListenersIterable::EventListenerIterator &WorldFloor:
   return state_->getMonster((*arr_)[pos_]);
 }
 
-constexpr void GameState::broadcastEvent(FloorSpecifier floor, auto &&func) noexcept {
-  auto ItemPickers = getFloor(floor).getEventListeners(*this);
-  std::ranges::for_each(ItemPickers, func);
+constexpr void GameState::broadcastEvent(Location eventLoc, auto &&func) noexcept {
+  auto listeners = getFloor(eventLoc.mapPos).getEventListeners(*this) | std::views::filter([this, eventLoc](Monster &viewer) { return viewer.inLineOfSight(*this, eventLoc.pos); });
+  std::ranges::for_each(listeners,func);
 }
 
 constexpr void GameState::broadcastItemPickup(const Monster &monster, const Object &object) noexcept {
-  broadcastEvent(monster.getLoc().mapPos, [this, &monster, &object](Monster &viewer) {
+  broadcastEvent(monster.getLoc(), [this, &monster, &object](Monster &viewer) {
     viewer.informItemPickup(*this, monster, object);
   });
 }
@@ -459,14 +465,20 @@ constexpr void GameState::broadcastMonsterHitMonster(const Monster::HitReturn &h
   };
   if (attacked.isAlive() && !attacked.caresEvent())
     inform(attacked);
-  broadcastEvent(attacker.getLoc().mapPos, inform);
+  broadcastEvent(attacker.getLoc(), inform);
 }
 
 constexpr void GameState::broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
   auto inform = [this, &attacker, &attacked](Monster &viewer) {
     viewer.informMonsterHitWall(*this, attacker, attacked);
   };
-  broadcastEvent(attacker.getLoc().mapPos, inform);
+  broadcastEvent(attacker.getLoc(), inform);
+}
+
+constexpr void GameState::broadcastMonsterAte(const Monster &eater, const Object &eaten) noexcept {
+  broadcastEvent(eater.getLoc(), [this, &eater, &eaten](Monster &viewer) {
+    viewer.informMonsterAte(*this, eater, eaten);
+  });
 }
 
 Dir monsterPath(const GameState &state, const Monster &start, Location end) {
@@ -512,13 +524,12 @@ TimePeriod Monster::goToTarget(GameState &state, ID target) noexcept {
   return state.tryGetMonster(target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), true); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
 
-
 TimePeriod Monster::goToTarget(GameState &state, Location target) noexcept {
-  return pathTo(state, target,false);
+  return pathTo(state, target, false);
 }
 
 TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noexcept {
-  if(target.loc==getLoc()){
+  if (target.loc == getLoc()) {
     for (auto [i, obj] : enumerate(state.getObjects(getLoc()))) {
       if (wantsToEat(obj)) {
         return eatItem(state, i, true);
@@ -526,11 +537,11 @@ TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noex
     }
     return reThink(ReThinkReason::FoodGone);
   }
-  return pathTo(state, target.loc,false);
+  return pathTo(state, target.loc, false);
 }
 
 TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
-  if(target==getLoc()){
+  if (target == getLoc()) {
     return reThink(ReThinkReason::ReachedDestination);
   }
   auto movePlan = monsterPath(state, *this, target);
@@ -567,9 +578,9 @@ void Monster::findTask(GameState &state) noexcept {
       target_ = monst;
       return;
     }
-    for(const auto& obj : objs){
-      if(wantsToEat(obj)){
-        target_ = Monster::EatTarget{{cPos,mapPos}};
+    for (const auto &obj : objs) {
+      if (wantsToEat(obj)) {
+        target_ = Monster::EatTarget{{cPos, mapPos}};
         return;
       }
     }
@@ -648,6 +659,13 @@ constexpr void Monster::informMonsterHitWall(GameState &state, const Monster &at
   }
 }
 
+constexpr void Monster::informMonsterAte(GameState &state, const Monster &eater, const Object &eaten) noexcept { // NOLINT(readability-make-member-function-const)
+  if (isPlayer()) {
+    state.printMonsterAte(eater, eaten);
+    return;
+  }
+}
+
 TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
@@ -655,7 +673,7 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (std::holds_alternative<NoTarget>(target_)) {
     findTask(state);
   }
-  TimePeriod timeTaken = target_.visit([&](auto target){return goToTarget(state,target);});
+  TimePeriod timeTaken = target_.visit([&](auto target) { return goToTarget(state, target); });
   if (!isAlive()) {
     return TimePeriod(0);
   }
@@ -702,6 +720,7 @@ constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool from
   static constexpr std::size_t EatItemSpeedFraction = 1;
   ObjectContainer &container = fromFloor ? state.getObjects(loc_) : inventory_;
   Object &toEat = container[i];
+  state.broadcastMonsterAte(*this, toEat);
   if (--toEat.count() == 0) {
     (void)container.remove(i);
   }

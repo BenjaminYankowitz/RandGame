@@ -12,6 +12,7 @@ class NullEventViewer final : public EventViewerInterface {
   void monsterHitMonster(HitInfo /*hitinfo*/, MonsterInterface /*attacker*/, MonsterInterface /*attacked*/) override {}
   void monsterHitWall(MonsterInterface /*attacker*/, TerrainType /*attacked*/) override {}
   void exception(const std::exception & /*e*/) noexcept override {}
+  void monsterAte(MonsterInterface /*eater*/, ObjectInterface /*eaten*/) override {}
 };
 
 std::unique_ptr<EventViewerInterface> makeNullViewer() {

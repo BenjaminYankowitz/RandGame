@@ -8,8 +8,6 @@ import Common;
 // ============================================================
 
 static_assert(PlayerBrain.isPlayer());
-static_assert(PlayerBrain.caresItemPickup());
-static_assert(PlayerBrain.caresMonsterAttack());
 static_assert(PlayerBrain.caresEvent());
 
 // MonsterBrain - Setters mutate correctly

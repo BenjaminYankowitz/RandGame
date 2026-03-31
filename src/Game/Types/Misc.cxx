@@ -105,19 +105,19 @@ public:
     impl_ &= o.impl_;
     return *this;
   }
-  constexpr MoveMode operator^(MoveMode o) const noexcept {
+  [[nodiscard]] constexpr MoveMode operator^(MoveMode o) const noexcept {
     auto cp = *this;
     return cp ^= o;
   }
-  constexpr MoveMode operator|(MoveMode o) const noexcept {
+  [[nodiscard]] constexpr MoveMode operator|(MoveMode o) const noexcept {
     auto cp = *this;
     return cp |= o;
   }
-  constexpr MoveMode operator&(MoveMode o) const noexcept {
+  [[nodiscard]] constexpr MoveMode operator&(MoveMode o) const noexcept {
     auto cp = *this;
     return cp &= o;
   }
-  constexpr MoveMode operator~() const noexcept { return MoveMode(~impl_); }
+  [[nodiscard]] constexpr MoveMode operator~() const noexcept { return MoveMode(~impl_); }
 
 private:
   constexpr explicit MoveMode(ImplT v) noexcept : impl_(v) {}

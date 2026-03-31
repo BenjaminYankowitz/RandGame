@@ -46,7 +46,7 @@ namespace {
 void displayInvent(BoxedWindow &window, ObjectContainerInterface items, int sY = 0) {
   window.clear();
   for (auto [y, c] : firstNInvent(std::min<int>(window.prntHeight(), items.size()))) {
-    window.moveCursor(0, sY+y);
+    window.moveCursor(0, sY + y);
     window << c << " - " << items[y];
   }
 }
@@ -124,6 +124,7 @@ public:
   void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
   void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
   void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
+  void monsterAte(MonsterInterface eater, ObjectInterface eaten) final;
   void debug(std::string_view message) final;
   void exception(const std::exception &exception) noexcept final;
 
@@ -297,26 +298,25 @@ bool askYesNo(IOModule::Interface &iterface, std::string_view question) noexcept
 struct ItemFromInterfaceSettings {
   bool doStandAloneDisplay = true;
   bool autoSelectOne = false;
-  const std::function<bool(ObjectInterface)>& isEligible = [](ObjectInterface /**/){return true;};
+  const std::function<bool(ObjectInterface)> &isEligible = [](ObjectInterface /**/) { return true; };
 };
 
-
 constexpr std::size_t NoItem = std::numeric_limits<std::size_t>::max();
-constexpr std::size_t NoChoice = std::numeric_limits<std::size_t>::max()-1;
-[[nodiscard]] std::size_t displayItemInterfaceForChoosing(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings& settings) noexcept {
-  if(items.empty()){
+constexpr std::size_t NoChoice = std::numeric_limits<std::size_t>::max() - 1;
+[[nodiscard]] std::size_t displayItemInterfaceForChoosing(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings &settings) noexcept {
+  if (items.empty()) {
     return NoItem;
   }
-  if(settings.doStandAloneDisplay){
-    if(settings.autoSelectOne && items.size() == 1){
+  if (settings.doStandAloneDisplay) {
+    if (settings.autoSelectOne && items.size() == 1) {
       return 0;
     }
     auto [height, width] = getMaxDims();
     height = std::min<int>(height - 2, items.size() + 2);
     constexpr int DesiredWidth = 40;
     width = std::min<int>(width - 3, DesiredWidth);
-    auto window = BoxedWindow(width, height, interface.eventWindowWidth()-DesiredWidth, 0);
-    displayInvent(window, items,2);
+    auto window = BoxedWindow(width, height, interface.eventWindowWidth() - DesiredWidth, 0);
+    displayInvent(window, items, 2);
     window.moveCursor(0, 0);
     window << prompt;
     window.updateScreen();
@@ -350,14 +350,14 @@ constexpr std::size_t NoChoice = std::numeric_limits<std::size_t>::max()-1;
   }
   return NoChoice;
 }
-std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings& settings = {}) noexcept {
-  auto ret = displayItemInterfaceForChoosing(interface,items,prompt,settings);
-  if(ret!=NoChoice){
+std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainerInterface items, std::string_view prompt, const ItemFromInterfaceSettings &settings = {}) noexcept {
+  auto ret = displayItemInterfaceForChoosing(interface, items, prompt, settings);
+  if (ret != NoChoice) {
     return ret;
   }
   while (true) {
     auto userInput = CursesRAII::getChar();
-    if(userInput==SpecialChar::Escape){
+    if (userInput == SpecialChar::Escape) {
       break;
     }
     if (userInput >= 'a' && userInput < 'a' + static_cast<std::int64_t>(items.size())) {
@@ -367,7 +367,7 @@ std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainer
     }
   }
   return NoItem;
-  }
+}
 
 void toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
   mod.toggleMoveMode(MoveMode::move());
@@ -377,8 +377,8 @@ void toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*
   mod.toggleMoveMode(MoveMode::fight());
 }
 
-void pickUpItem(GameInterface &gState, IOModule::Interface & interface, ActionMod & /*mod*/) {
-  std::size_t index = getItemFromInterface(interface,gState.lookAtFloor(),"What do you want to pick up?",{.autoSelectOne=true});
+void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) {
+  std::size_t index = getItemFromInterface(interface, gState.lookAtFloor(), "What do you want to pick up?", {.autoSelectOne = true});
   if (index != NoItem) {
     gState.pickUpItem(index);
   }
@@ -404,8 +404,8 @@ void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod &
   auto inventory = gState.lookAtInventory();
   if (inventory.empty())
     return;
-  auto index = getItemFromInterface(iterface, inventory, "What do you want to throw?",{.doStandAloneDisplay=false});
-  if (index==NoItem)
+  auto index = getItemFromInterface(iterface, inventory, "What do you want to throw?", {.doStandAloneDisplay = false});
+  if (index == NoItem)
     return;
   auto target = chooseTile(gState, iterface);
   if (!target)
@@ -421,13 +421,13 @@ void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /
   }
   ObjectContainerInterface items = fromFloor ? gState.lookAtFloor() : gState.lookAtInventory();
   auto index = getItemFromInterface(iterface, items, "What do you want to eat?",
-  {.doStandAloneDisplay=fromFloor,.isEligible=[&gState](ObjectInterface item) { return gState.canEat(item); }});
-  if (index!=NoItem)
+                                    {.doStandAloneDisplay = fromFloor, .isEligible = [&gState](ObjectInterface item) { return gState.canEat(item); }});
+  if (index != NoItem)
     gState.eatItem(index, fromFloor);
 }
 
-void dropItem(GameInterface &gState, IOModule::Interface & interface, ActionMod & /*mod*/) noexcept {
-  std::size_t index = getItemFromInterface(interface,gState.lookAtInventory(),"What do you want to drop?",{.doStandAloneDisplay=false});
+void dropItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  std::size_t index = getItemFromInterface(interface, gState.lookAtInventory(), "What do you want to drop?", {.doStandAloneDisplay = false});
   if (index != NoItem) {
     gState.dropItem(index);
   }
@@ -615,6 +615,10 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
 
 void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {
   printWith_ << attacker << " hit " << attacked << '\n';
+}
+
+void CursesEventViewer::monsterAte(MonsterInterface eater, ObjectInterface eaten) {
+  printWith_ << eater << " ate " << eaten << '\n';
 }
 
 // 𐁀
