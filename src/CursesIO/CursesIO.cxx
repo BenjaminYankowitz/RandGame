@@ -10,23 +10,31 @@ namespace {
 constexpr Dir keyToDir(chtype key) noexcept {
   switch (key) {
   case SpecialChar::Left:
+  case 'H':
   case 'h':
     return {-1, 0};
   case SpecialChar::Down:
+  case 'J':
   case 'j':
     return {0, 1};
   case SpecialChar::Up:
+  case 'K':
   case 'k':
     return {0, -1};
   case SpecialChar::Right:
+  case 'L':
   case 'l':
     return {1, 0};
+  case 'Y':
   case 'y':
     return {-1, -1};
+  case 'U':
   case 'u':
     return {1, -1};
+  case 'B':
   case 'b':
     return {-1, 1};
+  case 'N':
   case 'n':
     return {1, 1};
   default:
@@ -217,6 +225,10 @@ public:
       return gState_->getTime();
     return {};
   }
+  [[nodiscard]] const StaticPositionArr<TerrainTypeInterface> &getMemory(FloorSpecifier floor) {
+    auto currentMap = gState_->getFloor(floor);
+    return getMemoryGrid(floor, static_cast<int>(currentMap.cols()), static_cast<int>(currentMap.rows()));
+  }
   bool showSelection(Position pos) {
     Raii_.setCursorState(1);
     if (mainWindow_.inBounds(pos.x, pos.y)) {
@@ -280,6 +292,23 @@ struct FloorInterfaceWrapper {
   [[nodiscard]] bool operator[](int row, int col) const noexcept {
     auto tile = floor.getTile(Position{col, row});
     return tile.terrainType != TerrainTypeInterface::Unknown && !isWall(tile.terrainType);
+  }
+};
+struct MemoryFloorWrapper {
+  const StaticPositionArr<TerrainTypeInterface> &memory;
+  [[nodiscard]] int extent(int n) const noexcept {
+    switch (n) {
+    case 0:
+      return memory.height();
+    case 1:
+      return memory.width();
+    default:
+      std::unreachable();
+    }
+  }
+  [[nodiscard]] bool operator[](int row, int col) const noexcept {
+    auto terrain = memory[Position{col, row}];
+    return terrain != TerrainTypeInterface::Unknown && !isWall(terrain);
   }
 };
 
@@ -394,8 +423,10 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     if (cmnd == '.')
       return pos;
     auto dir = keyToDir(cmnd);
-    if (iterface.showSelection(pos + dir)) {
-      pos += dir;
+    int step = (cmnd >= 'A' && cmnd <= 'Z') ? 10 : 1;
+    auto jump = Dir(dir.dx * step, dir.dy * step);
+    if (iterface.showSelection(pos + jump)) {
+      pos += jump;
     }
   }
 }
@@ -453,7 +484,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
       break;
     const Health healthBefore = gState.getHealth();
     Dir step = FindPath::findPath(
-        FloorInterfaceWrapper{gState.getFloor(currentFloor)},
+        MemoryFloorWrapper{interface.getMemory(currentFloor)},
         currentPos, goal);
     if (step.noMove())
       break;

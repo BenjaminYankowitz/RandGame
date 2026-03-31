@@ -51,7 +51,7 @@ public:
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
   [[nodiscard]] constexpr bool canEat(const Object &obj) const noexcept { return getClass() != MonsterClass::Bryozoan && obj.mat() == Material::Flesh; }
   [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return canEat(obj); }
-  [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return MonsterClassHunts(getClass(),monst.getClass()); }
+  [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return MonsterClassHunts(getClass(), monst.getClass()); }
   [[nodiscard]] constexpr bool inLineOfSight(const GameState &state, Position pos) const noexcept;
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return brain_.caresEvent(); }
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
@@ -394,6 +394,8 @@ private:
   std::unique_ptr<EventViewer> eventViewer_;
 };
 
+export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept;
+
 GameState::GameState() noexcept {
   constexpr int DungeonWidth = 90;
   constexpr int DungeonHeight = 30;
@@ -407,6 +409,7 @@ GameState::GameState() noexcept {
       down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
+    addMonsters(*this, FloorSpecifier(floor), floor == 1 ? 2 : 0);
     up = down;
   }
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
@@ -436,6 +439,20 @@ GameState::GameState() noexcept {
   startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Gold});
 }
 
+export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept {
+  WorldFloor &wf = state.getFloor(floor);
+  for (int i = 0; i < count; ++i) {
+    Position pos;
+    int attempts = 0;
+    do {
+      pos = {Rnd::rnd(wf.cols()), Rnd::rnd(wf.rows())};
+      if (++attempts > 100)
+        return;
+    } while (!wf.isOpenTile(pos));
+    Monster::createMonster(state, {pos, floor}, MonsterClass::Imp);
+  }
+}
+
 constexpr WorldFloor::EventListenersIterable::EventListenerIterator &WorldFloor::EventListenersIterable::EventListenerIterator::operator++() noexcept {
   ++pos_;
   while (pos_ != arr_->size() && !state_->containsMonster((*arr_)[pos_])) {
@@ -450,7 +467,7 @@ constexpr WorldFloor::EventListenersIterable::EventListenerIterator &WorldFloor:
 
 constexpr void GameState::broadcastEvent(Location eventLoc, auto &&func) noexcept {
   auto listeners = getFloor(eventLoc.mapPos).getEventListeners(*this) | std::views::filter([this, eventLoc](Monster &viewer) { return viewer.inLineOfSight(*this, eventLoc.pos); });
-  std::ranges::for_each(listeners,func);
+  std::ranges::for_each(listeners, func);
 }
 
 constexpr void GameState::broadcastItemPickup(const Monster &monster, const Object &object) noexcept {
@@ -599,9 +616,12 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
   }
   auto &destMonster = state.getMonster(nLoc);
   if (destMonster.isNull() && mode.isMove()) {
-    ID &currentSpot = state.getMonster(loc_);
+    ID &currentSpot = state.getMonster(getLoc());
     destMonster = currentSpot;
     currentSpot.clear();
+    if(getLoc().mapPos!=nLoc.mapPos){
+      state.getFloor(nLoc.mapPos).addEventListener(getId());
+    }
     loc_ = nLoc;
     return getSpeed();
   }

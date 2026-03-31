@@ -88,6 +88,8 @@ getMatAdj(ObjectInterface obj) noexcept {
     return {{"greedy weasel"}};
   case Bryozoan:
     return {{"bryozoan"}, "bryozoa"};
+  case Imp:
+    return {{"imp"}};
   }
 }
 
@@ -221,6 +223,8 @@ export [[nodiscard]] Color toColorChar(MonsterClass mClass) noexcept {
     return Brown;
   case Bryozoan:
     return DarkBlue;
+  case Imp:
+    return Red;
   }
 }
 
@@ -241,6 +245,8 @@ export [[nodiscard]] chtype toDisplayChar(const MonsterInterface &monst) noexcep
     return 'w';
   case Bryozoan:
     return L'˚';
+  case Imp:
+    return 'i';
   }
 }
 

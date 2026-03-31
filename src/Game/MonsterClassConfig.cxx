@@ -30,6 +30,7 @@ enum class MonsterCatagories :std::uint8_t {
   Pest = SlugFood<<1,
   Mammal = Pest<<1,
   Humanoid = Mammal<<1,
+  Demon = Humanoid<<1,
 };
 
 [[nodiscard]] constexpr MonsterCatagories operator^(MonsterCatagories lhs, MonsterCatagories rhs) noexcept {
@@ -76,12 +77,13 @@ public:
 
 export constexpr auto MonsterClassInfoArr = []() {
   using namespace Dice::Literals;
-  constexpr MonsterClassInfo Human {.maxHealth = 10, .damage = "1d6"_dice, .catagories=MonsterCatagories::Mammal|MonsterCatagories::Humanoid,.mClass = MonsterClass::Human};
+  constexpr MonsterClassInfo Human {.maxHealth = 10, .damage = "1d6"_dice, .catagories=MonsterCatagories::Mammal|MonsterCatagories::Humanoid,.prey=MonsterCatagories::Pest,.mClass = MonsterClass::Human};
   constexpr MonsterClassInfo Cat   {.speed = BaseSpeed * 11 / 12, .maxHealth = 10, .damage = "2d6"_dice, .catagories=MonsterCatagories::Mammal,.mClass = MonsterClass::Cat};
   constexpr MonsterClassInfo SeaSlug   {.speed = BaseSpeed * 53, .maxHealth = 10, .damage = "10d2"_dice, .catagories=MonsterCatagories::Nothing,.prey=MonsterCatagories::SlugFood,.mClass = MonsterClass::SeaSlug};
   constexpr MonsterClassInfo GreedyWeasel{.speed = BaseSpeed * 11 / 12, .maxHealth = 10, .damage = "d4"_dice, .brain = MonsterBrainInit{.hatesItemPickups = true}, .catagories = MonsterCatagories::Pest, .mClass = MonsterClass::GreedyWeasel};
   constexpr MonsterClassInfo Bryozoan   {.speed = TimePeriod(0), .maxHealth = 10, .damage = "0"_dice, .catagories=MonsterCatagories::SlugFood, .mClass = MonsterClass::Bryozoan};
-  return mkEnumToObject<MonsterClassInfo>({Human,Cat,SeaSlug,GreedyWeasel,Bryozoan});
+  constexpr MonsterClassInfo Imp   {.maxHealth = 5, .damage = "1d3+1"_dice, .catagories=MonsterCatagories::Demon|MonsterCatagories::Pest,.prey=MonsterCatagories::Humanoid, .mClass = MonsterClass::Imp};
+  return mkEnumToObject<MonsterClassInfo>({Human,Cat,SeaSlug,GreedyWeasel,Bryozoan,Imp});
 }();
 
 

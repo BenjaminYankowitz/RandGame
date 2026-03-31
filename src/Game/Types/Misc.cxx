@@ -17,6 +17,7 @@ export enum class MonsterClass : std::uint8_t {
   SeaSlug,
   GreedyWeasel,
   Bryozoan,
+  Imp,
 };
 
 export enum class ObjectTypeImpl : std::uint8_t {
