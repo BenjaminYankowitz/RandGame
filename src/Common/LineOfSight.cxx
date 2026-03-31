@@ -32,6 +32,7 @@ struct MapWrap {
 struct Corner {
   int x;
   int y;
+  [[nodiscard]] constexpr bool operator==(const Corner &) const noexcept = default;
 };
 
 [[nodiscard]] constexpr int getYat(Corner s, int x) noexcept {
@@ -83,41 +84,40 @@ static_assert(slopeCMP({2, 2}, {2, 2}) == 0);
 static_assert(slopeCMP({2, 2}, {2, 1}) < 0);
 static_assert(slopeLE({2, 2}, {2, 1}));
 
-template <bool min, SeeThrough2dArr MapType>
-[[nodiscard]] constexpr bool bnAngle(MapWrap<MapType> map, Dir end) noexcept {
-  int xM = min ? 0 : 1;
-  int yM = min ? 1 : 0;
-  auto pastEnd = [end](Dir nSpot) {
-    if constexpr (min) {
-      return nSpot.dx > end.dx;
-    }
-    return nSpot.dy > end.dy;
-  };
-  const Corner slopeBound = {end.dx + xM, end.dy + yM};
-  auto slopeCmp = [](Corner s1, Corner s2) {
-    if constexpr (min)
+template <SeeThrough2dArr MapType>
+[[nodiscard]] constexpr bool bnAngleV(MapWrap<MapType> map, Dir end) noexcept {
+  const Corner slopeBoundMin = {end.dx, end.dy + 1};
+  const Corner slopeBoundMax = {end.dx + 1, end.dy};
+  auto slopeCmp = [](Corner s1, Corner s2, bool min) {
+    if (min)
       std::swap(s1, s2);
     return slopeGT(s1, s2);
   };
-  Corner slope = {end.dx + 1 - xM, end.dy + 1 - yM};
-  Dir cSpot = {0, 0};
+  Corner slopeMin = slopeBoundMax;
+  Corner slopeMax = slopeBoundMin;
+  Dir cSpotMin = {0, 0};
+  Dir cSpotMax = {0, 0};
   while (true) {
-    auto nSpot = nextSpot(cSpot, slope);
-    if (nSpot == end || pastEnd(nSpot)) {
+    const bool nUpdate = cSpotMin.dx <= cSpotMax.dx;
+    Dir &cSpot = nUpdate ? cSpotMin : cSpotMax;
+    Corner &slope = nUpdate ? slopeMin : slopeMax;
+    const Dir nSpot = nextSpot(cSpot, slope);
+    if (nSpot.dx >= end.dx && nSpot.dy >= end.dy)
       return true;
-    }
     if (map[nSpot]) {
       cSpot = nSpot;
       continue;
     }
-    auto [x, y] = nSpot;
-    Corner nSlope = {x + xM, y + yM};
-    assert(slopeCmp(nSlope, slope));
-    slope = nSlope;
-    if (slopeCmp(slope, slopeBound)) {
+    const auto [x, y] = nSpot;
+    slope = {x + !nUpdate, y + nUpdate};
+    if (slopeEQ(slope, nUpdate ? slopeBoundMin : slopeBoundMax) || slopeCmp(slope, nUpdate ? slopeMax : slopeMin, nUpdate)) {
       return false;
     }
-    cSpot = {0, 0};
+    cSpot = nSpot + Dir{0,-1+(2*nUpdate)};
+    if (cSpot == end)
+      return true;
+    if (!map[cSpot])
+      return false;
   }
 }
 
@@ -140,13 +140,13 @@ template <SeeThrough2dArr MapType>
     std::swap(absX, absY);
   }
   MapWrap<MapType> aMap{map, start, flipX, flipY, swapXY};
-  return bnAngle<false>(aMap, Dir{absX, absY});
+  return bnAngleV(aMap, Dir{absX, absY});
 }
 
 template <SeeThrough2dArr MapType>
 [[nodiscard]] auto allInLineOfSight(const MapType &map, Position start) noexcept {
-  return std::views::iota(0,map.extent(0)*map.extent(1)) | 
-  std::views::transform([mX = map.extent(1)](int i){return Position(i%mX,i/mX);}) |
-  std::views::filter([&map, start](Position end){return inLineOfSight(map,start,end);});
+  return std::views::iota(0, map.extent(0) * map.extent(1)) |
+         std::views::transform([mX = map.extent(1)](int i) { return Position(i % mX, i / mX); }) |
+         std::views::filter([&map, start](Position end) { return inLineOfSight(map, start, end); });
 }
 } // namespace LineOfSight

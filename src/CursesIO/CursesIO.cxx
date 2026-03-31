@@ -376,6 +376,7 @@ constexpr std::size_t NoChoice = std::numeric_limits<std::size_t>::max() - 1;
       out << prompt << " [" << letter1;
     }
     out << "]\n";
+    interface.updateGameScreen();
   }
   return NoChoice;
 }

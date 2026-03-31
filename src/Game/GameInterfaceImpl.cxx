@@ -98,7 +98,7 @@ constexpr auto WallType = []() {
     return TerrainTypeInterface::Empty;
   case TerrainType::Wall:
     auto getType = [&floor, pos](Dir dir) {
-      return floor.inBounds(pos + dir) && floor.getTerrainType(pos + dir) == TerrainType::Wall;
+      return !floor.inBounds(pos + dir) || floor.getTerrainType(pos + dir) == TerrainType::Wall;
     };
     auto check = [&getType](Dir dir) {
       if (!getType(dir)) {

@@ -65,6 +65,7 @@ public:
   [[nodiscard]] constexpr T *operator->() noexcept { return ptr_; }
   [[nodiscard]] constexpr const T *operator->() const noexcept { return ptr_; }
   [[nodiscard]] constexpr T value_or(T value) const noexcept { return has_value() ? *ptr_ : value; }
+  [[nodiscard]] constexpr auto transform(auto&& F) const noexcept { return has_value() ? std::optional(F(*ptr_)) : std::nullopt; }
   [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
   [[nodiscard]] constexpr bool has_value() const noexcept { return ptr_; }
   constexpr void doIfValue(auto &&f) {
