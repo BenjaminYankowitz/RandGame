@@ -19,6 +19,7 @@ bool MonsterInterface::isPlayer() const noexcept { return monster_->isPlayer(); 
 bool MonsterInterface::isAlive() const noexcept { return monster_->isAlive(); }
 Location MonsterInterface::getLoc() const noexcept { return monster_->getLoc(); }
 Health MonsterInterface::getHealth() const noexcept { return monster_->getHealth(); }
+Health MonsterInterface::getMaxHealth() const noexcept { return monster_->getMaxHealth(); }
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(monster_->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
 
@@ -232,6 +233,13 @@ void GameInterface::goUpStair(MoveMode mode) noexcept {
   }
   passTime(self.goUpStair(*gs_, mode));
 }
+void GameInterface::rest() noexcept {
+  auto &self = gs_->getMonster(controlled_);
+  if (!self.isAlive()) {
+    return;
+  }
+  passTime(self.rest());
+}
 void GameInterface::goDownStair(MoveMode mode) noexcept {
   auto &self = gs_->getMonster(controlled_);
   if (!self.isAlive()) {
@@ -271,6 +279,10 @@ Location GameInterface::getLocation() const noexcept {
 
 Health GameInterface::getHealth() const noexcept {
   return gs_->getMonster(controlled_).getHealth();
+}
+
+Health GameInterface::getMaxHealth() const noexcept {
+  return gs_->getMonster(controlled_).getMaxHealth();
 }
 
 GameTime GameInterface::getTime() const noexcept {

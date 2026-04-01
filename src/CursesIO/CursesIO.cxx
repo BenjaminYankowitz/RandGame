@@ -96,10 +96,17 @@ public:
       count_ = NoCount;
     }
     changeDigitLast_ = false;
+    beenHit_ = false;
     return continuePlaying_;
   }
   constexpr void quitGame() noexcept {
     continuePlaying_ = false;
+  }
+  [[nodiscard]] bool interuptAction() const noexcept {
+    return beenHit_ || CursesRAII::tryGetChar().has_value();
+  }
+  constexpr void setBeenHit() noexcept{
+    beenHit_ = true;
   }
 
 private:
@@ -108,6 +115,7 @@ private:
   MoveMode moveMode_ = DefaultMoveMode;
   bool changeDigitLast_ = false;
   bool continuePlaying_ = true;
+  bool beenHit_ = false;
   std::size_t count_ = NoCount;
 };
 namespace IOModule {
@@ -196,7 +204,7 @@ public:
     mainWindow_.updateScreen();
     statusWindow_.clear();
     statusWindow_.moveCursor(0, 0);
-    statusWindow_ << "Health: "sv << gState_->getHealth();
+    statusWindow_ << "Health: "sv << gState_->getHealth() << "/"sv << gState_->getMaxHealth();
     statusWindow_.updateScreen();
     displayEvents(eventWindow_, eventLog_);
     eventWindow_.updateScreen();
@@ -237,6 +245,9 @@ public:
       return true;
     }
     return false;
+  }
+  constexpr void alertBeenHit() noexcept {
+    mod_.setBeenHit();
   }
 
 private:
@@ -469,6 +480,18 @@ void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
 }
 
+void rest(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
+  auto cnt = mod.getCount(1);
+  bool wasFull = gState.getHealth()==gState.getMaxHealth();
+  for(std::size_t i = 0; i < cnt; i++){
+    gState.rest();
+    if (mod.interuptAction())
+      break;
+    if(!wasFull && gState.getHealth()==gState.getMaxHealth())
+      break;
+  }
+}
+
 void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   auto target = chooseTile(gState, interface);
   if (!target)
@@ -479,11 +502,8 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
     const Position currentPos = gState.getLocation().pos;
     if (currentPos == goal)
       break;
-    if (CursesRAII::tryGetChar().has_value())
-      break;
     if (gState.getLocation().mapPos != currentFloor)
       break;
-    const Health healthBefore = gState.getHealth();
     Dir step = FindPath::findPath(
         MemoryFloorWrapper{interface.getMemory(currentFloor)},
         currentPos, goal);
@@ -491,7 +511,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
       break;
     gState.generalMove(step, mod.getMoveMode());
     interface.updateGameScreen();
-    if (gState.getHealth() < healthBefore) // at some point change to getting allerted by message.
+    if(mod.interuptAction())
       break;
     if (gState.getLocation().pos == currentPos)
       break;
@@ -499,19 +519,16 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
 }
 
 template <int Dx, int Dy>
-void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod & mod) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
   while (true) {
     const Position posBefore = gState.getLocation().pos;
-    const Health healthBefore = gState.getHealth();
     gState.generalMove(D, MoveMode::move());
     interface.updateGameScreen();
     if (gState.getLocation().pos == posBefore)
       break;
-    if (gState.getHealth() < healthBefore)
-      break;
-    if (CursesRAII::tryGetChar().has_value())
+    if(mod.interuptAction())
       break;
   }
 }
@@ -575,7 +592,8 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'e', eatItem},
     {'t', throwItem},
     {',', pickUpItem},
-    {'.', passTime},
+    {'.', rest},
+    {'*', passTime},
     {'_', autoPath},
 
     {SpecialChar::Backspace, quit},
@@ -638,6 +656,9 @@ void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface gra
 }
 
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
+  if(attacked.isPlayer()){
+    viewer_.parent_->alertBeenHit();
+  }
   printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ' << attacked;
   if (info.damageDone) {
     printWith_ << ' ' << (info.killed ? "by dealing" : "for") << ' ' << *info.damageDone << " damage";

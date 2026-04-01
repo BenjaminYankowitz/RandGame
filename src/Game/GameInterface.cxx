@@ -72,6 +72,7 @@ public:
   [[nodiscard]] bool isAlive() const noexcept;
   [[nodiscard]] Location getLoc() const noexcept;
   [[nodiscard]] Health getHealth() const noexcept;
+  [[nodiscard]] Health getMaxHealth() const noexcept;
   [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
   [[nodiscard]] bool isNull() const noexcept;
 
@@ -123,12 +124,14 @@ public:
   void generalMove(Dir d, MoveMode mode) noexcept;
   void goUpStair(MoveMode mode) noexcept;
   void goDownStair(MoveMode mode) noexcept;
+  void rest() noexcept;
   void pickUpItem(std::size_t selected) noexcept;
   [[nodiscard]] WorldFloorInterface getFloor(FloorSpecifier floorId) const noexcept;
   [[nodiscard]] ObjectContainerInterface lookAtFloor() const noexcept;
   [[nodiscard]] ObjectContainerInterface lookAtInventory() const noexcept;
   [[nodiscard]] Location getLocation() const noexcept;
   [[nodiscard]] Health getHealth() const noexcept;
+  [[nodiscard]] Health getMaxHealth() const noexcept;
   [[nodiscard]] GameTime getTime() const noexcept;
   [[nodiscard]] TimePeriod getSpeed() const noexcept;
   void dropItem(std::size_t i) noexcept;
