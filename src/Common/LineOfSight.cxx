@@ -20,7 +20,17 @@ struct MapWrap {
       x = -x;
     if (flipY)
       y = -y;
-    return impl[offset + Dir{x, y}];
+    return impl[unDo(p)];
+  }
+  [[nodiscard]] Position unDo(Dir p){
+    auto [x, y] = p;
+    if (swapXY)
+      std::swap(x, y);
+    if (flipX)
+      x = -x;
+    if (flipY)
+      y = -y;
+    return offset + Dir{x, y};
   }
   const MapType &impl;
   Position offset;
@@ -39,7 +49,7 @@ struct Corner {
   std::int64_t xV = x;
   std::int64_t sy = s.y;
   std::int64_t sx = s.x;
-  return (((2 * xV * ((2 * sy) - 1)) / ((2 * sx) - 1)) + 1) / 2;
+  return (((2 * (xV-1) * ((2 * sy) - 1)) / ((2 * sx) - 1)) + 1) / 2;
 }
 
 [[nodiscard]] constexpr auto slopeCMP(Corner s1, Corner s2) {
@@ -119,6 +129,19 @@ template <SeeThrough2dArr MapType>
     if (!map[cSpot])
       return false;
   }
+}
+
+
+template <SeeThrough2dArr MapType>
+void allInLineOfSightOctImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position>& out) noexcept {
+  // if(Slo)
+  // int minY = getYat(min,dist);
+  // int maxY = getYat(min,dist);
+}
+
+template <SeeThrough2dArr MapType>
+void allInLineOfSightOct(MapWrap<MapType> map, std::vector<Position>& out) noexcept {
+  allInLineOfSightOct(map,{1,0},{1,1},1,out);
 }
 
 export namespace LineOfSight {
