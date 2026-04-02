@@ -59,7 +59,7 @@ void displayInvent(BoxedWindow &window, ObjectContainerInterface items, int sY =
   }
 }
 
-void displayEvents(BoxedWindow &window, const std::span<std::pair<GameTime,std::string>> arr) {
+void displayEvents(BoxedWindow &window, const std::span<std::pair<GameTime, std::string>> arr) {
   window.clear();
   const std::size_t printHeight = window.prntHeight();
   const std::size_t offSet = arr.size() < printHeight ? 0 : arr.size() - printHeight;
@@ -221,8 +221,8 @@ public:
     func(*gState_, *this, mod_);
     return mod_.betweenRounds();
   }
-  std::string& addEvent(std::string str) noexcept {
-    eventLog_.emplace_back(getTime(),std::move(str));
+  std::string &addEvent(std::string str) noexcept {
+    eventLog_.emplace_back(getTime(), std::move(str));
     return eventLog_.back().second;
   }
   [[nodiscard]] std::ostream &interfacePrinter() {
@@ -257,10 +257,10 @@ private:
   BoxedWindow statusWindow_;
   BoxedWindow eventWindow_;
   ActionMod mod_;
-  std::vector<std::pair<GameTime,std::string>> eventLog_;
+  std::vector<std::pair<GameTime, std::string>> eventLog_;
   std::unique_ptr<GameInterface> gState_;
   std::unordered_map<int, StaticPositionArr<TerrainTypeInterface>> terrainMemory_;
-  std::basic_streambuf<char>  *oldBuffer_;
+  std::basic_streambuf<char> *oldBuffer_;
   PrintToViewer debugViewer_;
   PrintToViewer interfaceViewer_;
   std::ostream interfaceStream_;
@@ -322,6 +322,39 @@ struct MemoryFloorWrapper {
     return terrain != TerrainTypeInterface::Unknown && !isWall(terrain);
   }
 };
+
+std::vector<Position> findUnexploredFrontier(const StaticPositionArr<TerrainTypeInterface> &memory, Position start) {
+  std::vector<Position> frontier;
+  StaticPositionArr<bool> visited(memory.width(), memory.height());
+  std::queue<Position> queue;
+  StaticPositionArr<bool> frontierAdded(memory.width(), memory.height());
+  visited[start] = true;
+  queue.push(start);
+  while (!queue.empty()) {
+    Position cur = queue.front();
+    queue.pop();
+    for (Dir dir : Dir::boxDirs()) {
+      Position next = cur + dir;
+      if (!memory.inBounds(next))
+        continue;
+      auto terrain = memory[next];
+      if (terrain == TerrainTypeInterface::Unknown) {
+        if (!frontierAdded[next]) {
+          frontierAdded[next] = true;
+          frontier.push_back(next);
+        }
+        continue;
+      }
+      if (!visited[next] && !isWall(terrain)) {
+        visited[next] = true;
+        queue.push(next);
+      }
+    }
+  }
+  if (frontier.empty())
+    frontier.push_back(start);
+  return frontier;
+}
 
 bool askYesNo(IOModule::Interface &iterface, std::string_view question) noexcept {
   std::ostream &out = iterface.interfacePrinter();
@@ -425,32 +458,67 @@ void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod
   }
 }
 
-std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface) noexcept {
+std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface,
+                                   std::span<const Position> cycleTargets = {}) noexcept {
   auto pos = gState.getLocation().pos;
   iterface.showSelection(pos);
+  std::size_t cycleIndex = 0;
   while (true) {
     auto cmnd = CursesRAII::getChar();
     if (cmnd == SpecialChar::Escape)
       return {};
     if (cmnd == '.')
       return pos;
+    if (cmnd == 'x' && !cycleTargets.empty()) {
+      pos = cycleTargets[cycleIndex];
+      cycleIndex = (cycleIndex + 1) % cycleTargets.size();
+      iterface.showSelection(pos);
+      continue;
+    }
     auto dir = keyToDir(cmnd);
     int step = (cmnd >= 'A' && cmnd <= 'Z') ? 10 : 1;
     auto jump = Dir(dir.dx * step, dir.dy * step);
-    if (iterface.showSelection(pos + jump)) {
-      pos += jump;
+    auto desired = pos + jump;
+    auto floor = gState.getFloor(gState.getLocation().mapPos);
+    int maxX = static_cast<int>(floor.cols()) - 1;
+    int maxY = static_cast<int>(floor.rows()) - 1;
+    desired.x = std::clamp(desired.x, 0, maxX);
+    desired.y = std::clamp(desired.y, 0, maxY);
+    if (iterface.showSelection(desired)) {
+      pos = desired;
     }
   }
 }
 
-void throwItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
+void pathTo(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod, Position goal, std::size_t maxStepCount = 10000) {
+  FloorSpecifier currentFloor = gState.getLocation().mapPos;
+  auto mapWrapper = MemoryFloorWrapper{interface.getMemory(currentFloor)};
+  for (std::size_t i = 0; i < maxStepCount; i++) {
+    const Position currentPos = gState.getLocation().pos;
+    if (currentPos == goal)
+      break;
+    if (gState.getLocation().mapPos != currentFloor)
+      break;
+    Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
+    if (step.noMove())
+      break;
+    gState.generalMove(step, MoveMode::move());
+    interface.updateGameScreen();
+    if (mod.interuptAction())
+      break;
+    if (gState.getLocation().pos == currentPos)
+      break;
+  }
+}
+
+void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   auto inventory = gState.lookAtInventory();
   if (inventory.empty())
     return;
-  auto index = getItemFromInterface(iterface, inventory, "What do you want to throw?", {.doStandAloneDisplay = false});
+  auto index = getItemFromInterface(interface, inventory, "What do you want to throw?", {.doStandAloneDisplay = false});
   if (index == NoItem)
     return;
-  auto target = chooseTile(gState, iterface);
+  auto target = chooseTile(gState, interface);
   if (!target)
     return;
   gState.throwItem(index, (*target) - gState.getLocation().pos);
@@ -493,29 +561,13 @@ void rest(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
 }
 
 void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
-  auto target = chooseTile(gState, interface);
+  const FloorSpecifier currentFloor = gState.getLocation().mapPos;
+  auto frontier = findUnexploredFrontier(interface.getMemory(currentFloor), gState.getLocation().pos);
+  auto target = chooseTile(gState, interface, frontier);
   if (!target)
     return;
   const Position goal = *target;
-  const FloorSpecifier currentFloor = gState.getLocation().mapPos;
-  while (true) {
-    const Position currentPos = gState.getLocation().pos;
-    if (currentPos == goal)
-      break;
-    if (gState.getLocation().mapPos != currentFloor)
-      break;
-    Dir step = FindPath::findPath(
-        MemoryFloorWrapper{interface.getMemory(currentFloor)},
-        currentPos, goal);
-    if (step.noMove())
-      break;
-    gState.generalMove(step, mod.getMoveMode());
-    interface.updateGameScreen();
-    if (mod.interuptAction())
-      break;
-    if (gState.getLocation().pos == currentPos)
-      break;
-  }
+  pathTo(gState, interface, mod, goal);
 }
 
 template <int Dx, int Dy>
@@ -544,6 +596,31 @@ void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
   mod.quitGame();
 }
 
+void autoExplore(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
+  const FloorSpecifier currentFloor = gState.getLocation().mapPos;
+  auto mapWrapper = MemoryFloorWrapper{interface.getMemory(currentFloor)};
+  while (true) {
+    auto frontier = findUnexploredFrontier(interface.getMemory(currentFloor), gState.getLocation().pos);
+    if (frontier.size() == 1 && frontier[0] == gState.getLocation().pos)
+      break;
+    Position goal = frontier[0];
+    const Position currentPos = gState.getLocation().pos;
+    if (currentPos == goal)
+      break;
+    if (gState.getLocation().mapPos != currentFloor)
+      break;
+    Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
+    if (step.noMove())
+      break;
+    gState.generalMove(step, MoveMode::move());
+    interface.updateGameScreen();
+    if (mod.interuptAction())
+      break;
+    if (gState.getLocation().pos == currentPos)
+      break;
+  }
+}
+
 struct ExtendedCommand {
   std::string_view text;
   ActionType comand;
@@ -552,10 +629,11 @@ struct ExtendedCommand {
 constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"quit", quit},
     {"wait", passTime},
+    {"autoexplore", autoExplore},
 });
 
 void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {
-  std::string& name = interface.addEvent("#");
+  std::string &name = interface.addEvent("#");
   interface.updateGameScreen();
   while (true) {
     auto ch = CursesRAII::getChar();
@@ -628,7 +706,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'t', throwItem},
     {',', pickUpItem},
     {'.', rest},
-    
+
     {'_', autoPath},
     {'#', extendedCommand},
 });
