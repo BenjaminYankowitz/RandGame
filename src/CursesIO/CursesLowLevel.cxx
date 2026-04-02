@@ -34,7 +34,7 @@ struct BoxResizeFailure : public WindowFailure {
   [[nodiscard]] const char *what() const noexcept override { return "Tried to resize Box and failed"; }
 };
 struct BoxUnderBound : public WindowFailure {
-  [[nodiscard]] const char *what() const noexcept override { return "Tried to resize Box to smaller than max size"; }
+  [[nodiscard]] const char *what() const noexcept override { return "Tried to resize Box to smaller than min size"; }
 };
 struct BoxMoveFailure : public WindowFailure {
   [[nodiscard]] const char *what() const noexcept override { return "Failed to move a box"; }
@@ -405,6 +405,9 @@ public:
     updateScreen();
   }
   void setDims(int width, int height) {
+    if(width < 0 || height < 0){
+      throw BoxUnderBound{};
+    }
     if (impl_.SetDims(width + 2, height + 2)) {
       makeBox();
     }

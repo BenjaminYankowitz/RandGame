@@ -59,13 +59,13 @@ void displayInvent(BoxedWindow &window, ObjectContainerInterface items, int sY =
   }
 }
 
-void displayEvents(BoxedWindow &window, const std::vector<std::string> &arr) {
+void displayEvents(BoxedWindow &window, const std::span<std::pair<GameTime,std::string>> arr) {
   window.clear();
   const std::size_t printHeight = window.prntHeight();
   const std::size_t offSet = arr.size() < printHeight ? 0 : arr.size() - printHeight;
   for (std::size_t i = 0; i < std::min<std::size_t>(arr.size(), printHeight); i++) {
     window.moveCursor(0, i);
-    window << std::string_view(arr[i + offSet]);
+    window << arr[i + offSet].first.impl << ": " << arr[i + offSet].second;
   }
 }
 
@@ -105,7 +105,7 @@ public:
   [[nodiscard]] bool interuptAction() const noexcept {
     return beenHit_ || CursesRAII::tryGetChar().has_value();
   }
-  constexpr void setBeenHit() noexcept{
+  constexpr void setBeenHit() noexcept {
     beenHit_ = true;
   }
 
@@ -122,8 +122,7 @@ namespace IOModule {
 export class Interface;
 }
 using IOModule::Interface;
-using streambufT = std::remove_pointer_t<decltype(Logging::log.rdbuf())>;
-class PrintToViewer : public streambufT {
+class PrintToViewer : public std::basic_streambuf<char> {
 public:
   explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
   Interface *parent_;
@@ -222,8 +221,9 @@ public:
     func(*gState_, *this, mod_);
     return mod_.betweenRounds();
   }
-  void addEvent(std::string str) noexcept {
-    eventLog_.emplace_back(std::move(str));
+  std::string& addEvent(std::string str) noexcept {
+    eventLog_.emplace_back(getTime(),std::move(str));
+    return eventLog_.back().second;
   }
   [[nodiscard]] std::ostream &interfacePrinter() {
     return interfaceStream_;
@@ -257,10 +257,10 @@ private:
   BoxedWindow statusWindow_;
   BoxedWindow eventWindow_;
   ActionMod mod_;
-  std::vector<std::string> eventLog_;
+  std::vector<std::pair<GameTime,std::string>> eventLog_;
   std::unique_ptr<GameInterface> gState_;
   std::unordered_map<int, StaticPositionArr<TerrainTypeInterface>> terrainMemory_;
-  streambufT *oldBuffer_;
+  std::basic_streambuf<char>  *oldBuffer_;
   PrintToViewer debugViewer_;
   PrintToViewer interfaceViewer_;
   std::ostream interfaceStream_;
@@ -482,12 +482,12 @@ void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod
 
 void rest(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
   auto cnt = mod.getCount(1);
-  bool wasFull = gState.getHealth()==gState.getMaxHealth();
-  for(std::size_t i = 0; i < cnt; i++){
+  bool wasFull = gState.getHealth() == gState.getMaxHealth();
+  for (std::size_t i = 0; i < cnt; i++) {
     gState.rest();
     if (mod.interuptAction())
       break;
-    if(!wasFull && gState.getHealth()==gState.getMaxHealth())
+    if (!wasFull && gState.getHealth() == gState.getMaxHealth())
       break;
   }
 }
@@ -511,7 +511,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
       break;
     gState.generalMove(step, mod.getMoveMode());
     interface.updateGameScreen();
-    if(mod.interuptAction())
+    if (mod.interuptAction())
       break;
     if (gState.getLocation().pos == currentPos)
       break;
@@ -519,7 +519,7 @@ void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &
 }
 
 template <int Dx, int Dy>
-void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod & mod) noexcept {
+void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   static_assert(Dx <= 1 && Dy <= 1 && Dx >= -1 && Dy >= -1 && (Dx != Dy || Dx != 0));
   constexpr static Dir D = Dir(Dx, Dy);
   while (true) {
@@ -528,7 +528,7 @@ void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod &
     interface.updateGameScreen();
     if (gState.getLocation().pos == posBefore)
       break;
-    if(mod.interuptAction())
+    if (mod.interuptAction())
       break;
   }
 }
@@ -542,6 +542,41 @@ void addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, Acti
 void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
   gState.exit();
   mod.quitGame();
+}
+
+struct ExtendedCommand {
+  std::string_view text;
+  ActionType comand;
+};
+
+constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
+    {"quit", quit},
+    {"wait", passTime},
+});
+
+void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {
+  std::string& name = interface.addEvent("#");
+  interface.updateGameScreen();
+  while (true) {
+    auto ch = CursesRAII::getChar();
+    if (ch == '\n')
+      break;
+    if (ch == SpecialChar::Escape)
+      return;
+    if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
+      if (!name.empty())
+        name.pop_back();
+    } else if (ch >= ' ' && ch <= '~') {
+      name += static_cast<char>(ch);
+    }
+    interface.updateGameScreen();
+  }
+  for (const auto &cmd : ExtendedCommands) {
+    if (cmd.text == name.subview(1)) {
+      cmd.comand(gState, interface, mod);
+      return;
+    }
+  }
 }
 
 constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
@@ -593,10 +628,9 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'t', throwItem},
     {',', pickUpItem},
     {'.', rest},
-    {'*', passTime},
+    
     {'_', autoPath},
-
-    {SpecialChar::Backspace, quit},
+    {'#', extendedCommand},
 });
 
 [[nodiscard]] constexpr ActionType getActionFromInput(std::int16_t input) noexcept {
@@ -616,10 +650,7 @@ std::streamsize PrintToViewer::xsputn(const char_type *s, std::streamsize count)
       break;
     }
     buffer_ += input.substr(currentStart, nextNewLine - currentStart);
-    std::string ret = std::to_string(parent_->getTime().impl);
-    ret += ": ";
-    ret += buffer_;
-    parent_->addEvent(std::move(ret));
+    parent_->addEvent(std::move(buffer_));
     buffer_.clear();
     currentStart = nextNewLine + 1;
   }
@@ -656,7 +687,7 @@ void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface gra
 }
 
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
-  if(attacked.isPlayer()){
+  if (attacked.isPlayer()) {
     viewer_.parent_->alertBeenHit();
   }
   printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ' << attacked;
