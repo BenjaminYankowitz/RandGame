@@ -39,7 +39,7 @@ public:
     return cp /= div;
   }
 
-  std::size_t impl;
+  std::uint64_t impl;
 };
 
 export class GameTime {
@@ -58,7 +58,7 @@ public:
     ++impl;
     return *this;
   }
-  std::size_t impl = 0;
+  std::uint64_t impl = 0;
 };
 
 

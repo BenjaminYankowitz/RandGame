@@ -402,7 +402,7 @@ GameState::GameState() noexcept {
       down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
-    addMonsters(*this, FloorSpecifier(floor), floor == 1 ? 2 : 0);
+    addMonsters(*this, FloorSpecifier(floor), floor);
     up = down;
   }
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
