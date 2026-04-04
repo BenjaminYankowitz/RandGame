@@ -108,21 +108,22 @@ struct BoolMap {
   [[nodiscard]] bool operator[](Position p) const { return real[p]; }
 };
 
-StaticPositionArr<bool> computeVisibility(const StaticPositionArr<bool> &map, Position from) {
-  StaticPositionArr<bool> visible(MapW, MapH);
+StaticPositionArr<int> computeVisibility(const StaticPositionArr<bool> &map, Position from) {
+  StaticPositionArr<int> visible(MapW, MapH);
+  visible.fill(0);
   BoolMap bmap{map};
   for (int y = 0; y < MapH; y++)
     for (int x = 0; x < MapW; x++)
-      visible[Position{x, y}] = LineOfSight::inLineOfSight(bmap, from, Position{x, y});
+      visible[Position{x, y}] = LineOfSight::inLineOfSight(bmap, from, Position{x, y}) ? 1 : 0;
   return visible;
 }
 
-StaticPositionArr<bool> computeVisibilityAll(const StaticPositionArr<bool> &map, Position from) {
-  StaticPositionArr<bool> visible(MapW, MapH);
-  visible.fill(false);
+StaticPositionArr<int> computeVisibilityAll(const StaticPositionArr<bool> &map, Position from) {
+  StaticPositionArr<int> visible(MapW, MapH);
+  visible.fill(0);
   BoolMap bmap{map};
   for (auto p : LineOfSight::allInLineOfSight(bmap, from))
-    visible[p] = true;
+    visible[p]++;
   return visible;
 }
 
@@ -131,7 +132,7 @@ void drawMap(const StaticPositionArr<bool> &map, Position cursor,
              std::optional<Position> start,
              const std::vector<Position> *checked, Position end,
              bool losResult,
-             const StaticPositionArr<bool> *visibility) {
+             const StaticPositionArr<int> *visibility) {
   // Build a set of checked positions for fast lookup
   auto posHash = [](Position p) { return std::hash<int>()(p.x) ^ (std::hash<int>()(p.y) << 16); };
   auto posEq = [](Position a, Position b) { return a.x == b.x && a.y == b.y; };
@@ -158,14 +159,20 @@ void drawMap(const StaticPositionArr<bool> &map, Position cursor,
         attroff(COLOR_PAIR(4));
       } else if (!map[p]) {
         // Wall: bright if visible from cursor, dim otherwise
-        bool vis = visibility && (*visibility)[p];
-        attron(COLOR_PAIR(vis ? 5 : 6));
+        int vis = visibility ? (*visibility)[p] : 0;
+        int pair = vis > 1 ? 7 : vis > 0 ? 5
+                                         : 6;
+        attron(COLOR_PAIR(pair));
         mvaddch(y, x, '#');
-        attroff(COLOR_PAIR(vis ? 5 : 6));
+        attroff(COLOR_PAIR(pair));
       } else {
-        // Open tile: green if visible, dim dot otherwise
-        bool vis = visibility && (*visibility)[p];
-        if (vis) {
+        // Open tile: green if visible, blue if visible multiple times, dim otherwise
+        int vis = visibility ? (*visibility)[p] : 0;
+        if (vis > 1) {
+          attron(COLOR_PAIR(7));
+          mvaddch(y, x, '.');
+          attroff(COLOR_PAIR(7));
+        } else if (vis > 0) {
           attron(COLOR_PAIR(3));
           mvaddch(y, x, '.');
           attroff(COLOR_PAIR(3));
@@ -206,6 +213,7 @@ int main() {
   init_pair(4, COLOR_CYAN, COLOR_BLACK);   // checked tiles
   init_pair(5, COLOR_WHITE, COLOR_BLACK);  // walls (visible)
   init_pair(6, COLOR_RED, COLOR_BLACK);    // not visible
+  init_pair(7, COLOR_BLUE, COLOR_BLACK);   // visible multiple times
 
   auto map = buildMap();
 

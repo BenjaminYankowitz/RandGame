@@ -170,7 +170,6 @@ void allInLineOfSightQuad(MapWrap<MapType> map, std::vector<Position>& out) noex
   int mY = extentY;
   for(auto cY : std::views::iota(1,extentY)){
     Dir cSpot{0,cY};
-    out.push_back(map.unDo(cSpot));
     if(!map[cSpot]){
       mY = cY;
       break;
