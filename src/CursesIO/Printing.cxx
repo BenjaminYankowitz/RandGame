@@ -27,8 +27,6 @@ public:
 
 class Adjective : public Word {};
 
-[[nodiscard]]
-
 [[nodiscard]] Adjective
 getMatAdj(ObjectInterface obj) noexcept {
   switch (obj.mat()) {

@@ -22,7 +22,7 @@ struct MapWrap {
       y = -y;
     return impl[unDo(p)];
   }
-  [[nodiscard]] Position unDo(Dir p){
+  [[nodiscard]] Position unDo(Dir p) const {
     auto [x, y] = p;
     if (swapXY)
       std::swap(x, y);
@@ -49,7 +49,7 @@ struct Corner {
   std::int64_t xV = x;
   std::int64_t sy = s.y;
   std::int64_t sx = s.x;
-  return (((2 * (xV-1) * ((2 * sy) - 1)) / ((2 * sx) - 1)) + 1) / 2;
+  return (((2 * (xV - 1) * ((2 * sy) - 1)) / ((2 * sx) - 1)) + 1) / 2;
 }
 
 [[nodiscard]] constexpr auto slopeCMP(Corner s1, Corner s2) {
@@ -123,7 +123,7 @@ template <SeeThrough2dArr MapType>
     if (slopeEQ(slope, nUpdate ? slopeBoundMin : slopeBoundMax) || slopeCmp(slope, nUpdate ? slopeMax : slopeMin, nUpdate)) {
       return false;
     }
-    cSpot = nSpot + Dir{0,-1+(2*nUpdate)};
+    cSpot = nSpot + Dir{0, -1 + (2 * nUpdate)};
     if (cSpot == end)
       return true;
     if (!map[cSpot])
@@ -131,17 +131,16 @@ template <SeeThrough2dArr MapType>
   }
 }
 
-
 template <SeeThrough2dArr MapType>
-void allInLineOfSightOctImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position>& out) noexcept {
+void allInLineOfSightOctImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position> &out) noexcept {
   // if(Slo)
   // int minY = getYat(min,dist);
   // int maxY = getYat(min,dist);
 }
 
 template <SeeThrough2dArr MapType>
-void allInLineOfSightOct(MapWrap<MapType> map, std::vector<Position>& out) noexcept {
-  allInLineOfSightOct(map,{1,0},{1,1},1,out);
+void allInLineOfSightOct(MapWrap<MapType> map, std::vector<Position> &out) noexcept {
+  allInLineOfSightOct(map, {1, 0}, {1, 1}, 1, out);
 }
 
 export namespace LineOfSight {

@@ -113,7 +113,7 @@ public:
   virtual void monsterHitWall(MonsterInterface attacker, TerrainType attacked) = 0;
   virtual void monsterAte(MonsterInterface eater, ObjectInterface eaten) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
-  virtual ~EventViewerInterface() {};
+  virtual ~EventViewerInterface() = default;
 };
 
 export class GameInterface {

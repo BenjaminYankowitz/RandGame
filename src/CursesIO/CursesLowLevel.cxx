@@ -267,8 +267,6 @@ public:
   WindowWrapper(int width, int height, int xoffset, int yoffset) noexcept : impl_(newwin(height, width, yoffset, xoffset)), width_(width), height_(height), xoffset_(xoffset), yoffset_(yoffset) {}
   void clear() const {
     if (werase(impl_.get()) == ERR) {
-      if(impl_.get()==nullptr){
-      }
       throw EraseFailure{};
     }
   }

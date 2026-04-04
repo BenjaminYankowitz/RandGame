@@ -1,12 +1,8 @@
 export module Common:Static2DArr;
 import :IteratorBase;
 import :LogStream;
+import :Debug;
 import std;
-#ifdef NDEBUG
-constexpr bool InDebug = false;
-#else
-constexpr bool InDebug = true;
-#endif
 
 export template <class T, class sizeT = std::size_t>
 class Static2DArr {
@@ -33,7 +29,6 @@ private:
   };
   template <class U>
   using piterator = PiteratorImpl<std::is_const_v<U>>::type;
-  
 
 public:
   template <size_type size>

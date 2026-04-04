@@ -182,6 +182,12 @@ public:
   }
   constexpr void removeEventListener(Monster::ID id) {
     auto val = std::ranges::find(EventListenerArr_, id);
+    if constexpr (InDebug) {
+      if (val == EventListenerArr_.end()) {
+        Logging::log << "removeEventListener: ID not found in listener list\n";
+        return;
+      }
+    }
     *val = EventListenerArr_.back();
     EventListenerArr_.pop_back();
   }
@@ -260,6 +266,12 @@ public:
     monsterEvents_.emplace(currentTime_ + time, monst);
   }
   [[nodiscard]] auto &getFloor(this auto &&self, FloorSpecifier floorId) noexcept {
+    if constexpr (InDebug) {
+      if (floorId.floor < 0 || static_cast<std::size_t>(floorId.floor) >= self.floorData_.size()) {
+        Logging::log << "getFloor out of bounds: floor " << floorId.floor << " (size " << self.floorData_.size() << ")\n";
+        return std::forward_like<decltype(self)>(self.floorData_[0]);
+      }
+    }
     return std::forward_like<decltype(self)>(self.floorData_[floorId.floor]);
   }
   [[nodiscard]] bool floorInBound(FloorSpecifier floorId) const noexcept {
@@ -428,6 +440,8 @@ export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexc
     do {
       pos = {Rnd::rnd(floorRef.cols()), Rnd::rnd(floorRef.rows())};
     } while (!floorRef.isOpenTile(pos) && (++attempts < 100));
+    if (!floorRef.isOpenTile(pos))
+      continue;
     Monster::createMonster(state, {pos, floor}, MonsterClass::Imp);
   }
 }
@@ -689,10 +703,10 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
 }
 
 constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Monster &source, Dir dir) {
-  auto [mapPos, floorId] = source.getLoc();
+  auto [startPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
-  Position lastPos = mapPos;
-  for (Position cSpot : PosPathIterable(mapPos, mapPos + dir) | std::views::drop(1)) {
+  Position lastPos = startPos;
+  for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
@@ -751,7 +765,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   }
   const auto &mInfo = MonsterClassInfoArr[mClass];
   ID id = game.nextMonsterId();
-  MonsterBody body{mInfo.speed, mInfo.maxHealth, mInfo.damage, mClass};
+  MonsterBody body{mInfo.speed, mInfo.baseHealth, mInfo.damage, mClass};
   MonsterBrain brain = isPlayer ? PlayerBrain : mInfo.brain;
   Monster &mstr = game.insertMonster(std::make_unique<Monster>(CreateKey{}, body, loc, id, brain));
   if (mstr.caresEvent()) {
