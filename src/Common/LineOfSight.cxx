@@ -12,7 +12,7 @@ concept SeeThrough2dArr = requires(const T &map, int n, Position p) {
 
 template <SeeThrough2dArr MapType>
 struct MapWrap {
-  [[nodiscard]] bool operator[](Dir p) const noexcept {
+  [[nodiscard]] constexpr bool operator[](Dir p) const noexcept {
     auto [x, y] = p;
     if (swapXY)
       std::swap(x, y);
@@ -22,7 +22,7 @@ struct MapWrap {
       y = -y;
     return impl[unDo(p)];
   }
-  [[nodiscard]] Position unDo(Dir p){
+  [[nodiscard]] constexpr Position unDo(Dir p) const noexcept{
     auto [x, y] = p;
     if (swapXY)
       std::swap(x, y);
@@ -31,6 +31,18 @@ struct MapWrap {
     if (flipY)
       y = -y;
     return offset + Dir{x, y};
+  }
+  [[nodiscard]] consteval std::pair<int,int> extentsXY() const noexcept {
+    int xC = impl.extent(1);
+    int yC = impl.extent(0);
+    auto [xO,yO] = offset;
+    if(swapXY){
+      std::swap(xC,yC);
+      std::swap(xO,yO);
+    }
+    int retX = flipX ? xO+1 : xC-xO;
+    int retY = flipY ? yO+1 : yC-yO;
+    return {retX,retY};
   }
   const MapType &impl;
   Position offset;
@@ -133,15 +145,26 @@ template <SeeThrough2dArr MapType>
 
 
 template <SeeThrough2dArr MapType>
-void allInLineOfSightOctImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position>& out) noexcept {
-  // if(Slo)
-  // int minY = getYat(min,dist);
-  // int maxY = getYat(min,dist);
+void allInLineOfSightQuadImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position>& out) noexcept {
+  int minY = getYat(min,dist);
+  int maxY = getYat(min,dist);
+  Corner pSlope = min;
+  for(int cY : std::views::iota(maxY,minY+1)){
+    
+  }
 }
 
 template <SeeThrough2dArr MapType>
-void allInLineOfSightOct(MapWrap<MapType> map, std::vector<Position>& out) noexcept {
-  allInLineOfSightOct(map,{1,0},{1,1},1,out);
+void allInLineOfSightQuad(MapWrap<MapType> map, std::vector<Position>& out) noexcept {
+  auto [extentX, extentY] = map.extentsXY();
+  int mY = extentY;
+  for(auto cY : std::views::iota(1,extentY)){
+    if(!map[{0,cY}]){
+      mY = cY;
+      break;
+    }
+  }
+  allInLineOfSightQuadImpl(map,{1,mY},{1,0},1,out);
 }
 
 export namespace LineOfSight {
