@@ -52,8 +52,6 @@ public:
   int dy;
 };
 
-constexpr auto V = std::same_as<decltype(Dir::boxDirs()), decltype(Dir::directDirs())>;
-
 export constexpr Dir capDir(Dir d) noexcept {
   constexpr auto Cap = [](int &x) {
     if (x > 1) {

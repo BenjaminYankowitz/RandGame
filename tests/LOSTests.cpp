@@ -33,7 +33,7 @@ void verifyMatch(const StaticPositionArr<bool> &map, Position start) {
   for (auto pos : map.indexIter()) {
     bool expected = LineOfSight::inLineOfSight(bmap, start, pos);
     bool inResult = resultSet.contains(pos);
-    EXPECT_EQ(expected, inResult);
+    ASSERT_EQ(expected, inResult);
   }
 }
 
