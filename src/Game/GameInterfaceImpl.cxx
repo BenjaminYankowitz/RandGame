@@ -1,3 +1,5 @@
+module;
+#include "../Common/EnumBitOps.h"
 module GameInterface;
 import Common;
 import Game;
@@ -41,13 +43,7 @@ enum class Directions : std::uint8_t {
   Down = Right << 1
 };
 
-[[nodiscard]] constexpr Directions operator|(Directions d1, Directions d2) noexcept {
-  return static_cast<Directions>(std::to_underlying(d1) | std::to_underlying(d2));
-}
-constexpr Directions &operator|=(Directions &d1, Directions d2) noexcept {
-  d1 = d1 | d2;
-  return d1;
-}
+DEFINE_ENUM_BIT_OPS(Directions)
 constexpr auto WallType = []() {
   class RetType {
   public:
@@ -170,47 +166,31 @@ class EventViewerTranslator : public EventViewer {
 public:
   explicit EventViewerTranslator(std::unique_ptr<EventViewerInterface> impl) noexcept : impl_(std::move(impl)) {}
   void itemPickup(const Monster &grabber, const Object &grabbed) noexcept final {
-    try {
-      impl_->itemPickup(toInterface(grabber), ObjectInterface(grabbed));
-    } catch (const std::exception &e) {
-      impl_->exception(e);
-    } catch (...) {
-    }
+    safeCall([&] { impl_->itemPickup(toInterface(grabber), ObjectInterface(grabbed)); });
   }
   void debug(std::string_view message) noexcept final {
-    try {
-      impl_->debug(message);
-    } catch (const std::exception &e) {
-      impl_->exception(e);
-    } catch (...) {
-    }
+    safeCall([&] { impl_->debug(message); });
   }
   void monsterHitMonster(const Monster::HitReturn &hitreturn, const Monster &attacker, const Monster &attacked) noexcept final {
-    try {
-      impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(attacker), toInterface(attacked));
-    } catch (const std::exception &e) {
-      impl_->exception(e);
-    } catch (...) {
-    }
+    safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(attacker), toInterface(attacked)); });
   }
   void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept final {
-    try {
-      impl_->monsterHitWall(toInterface(attacker), attacked);
-    } catch (const std::exception &e) {
-      impl_->exception(e);
-    } catch (...) {
-    }
+    safeCall([&] { impl_->monsterHitWall(toInterface(attacker), attacked); });
   }
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
-    try {
-      impl_->monsterAte(toInterface(eater), ObjectInterface(eaten));
-    } catch (const std::exception &e) {
-      impl_->exception(e);
-    } catch (...) {
-    }
+    safeCall([&] { impl_->monsterAte(toInterface(eater), ObjectInterface(eaten)); });
   }
 
 private:
+  template <typename F>
+  void safeCall(F &&f) noexcept {
+    try {
+      f();
+    } catch (const std::exception &e) {
+      impl_->exception(e);
+    } catch (...) {
+    }
+  }
   std::unique_ptr<EventViewerInterface> impl_;
 };
 } // namespace
@@ -219,46 +199,33 @@ void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer)
   gs_->setEventViewer(std::make_unique<EventViewerTranslator>(std::move(viewer)));
 }
 void GameInterface::exit() noexcept {}
-void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
+template <typename F>
+void GameInterface::ifAlive(F &&f) noexcept {
   auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
+  if (self.isAlive()) {
+    f(self);
   }
-  passTime(self.generalMove(*gs_, capDir(d), mode));
+}
+void GameInterface::generalMove(Dir d, MoveMode mode) noexcept {
+  ifAlive([&](auto &self) { passTime(self.generalMove(*gs_, capDir(d), mode)); });
 }
 void GameInterface::goUpStair(MoveMode mode) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  passTime(self.goUpStair(*gs_, mode));
+  ifAlive([&](auto &self) { passTime(self.goUpStair(*gs_, mode)); });
 }
 void GameInterface::rest() noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  passTime(self.rest());
+  ifAlive([&](auto &self) { passTime(self.rest()); });
 }
 void GameInterface::goDownStair(MoveMode mode) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  passTime(self.goDownStair(*gs_, mode));
+  ifAlive([&](auto &self) { passTime(self.goDownStair(*gs_, mode)); });
 }
 void GameInterface::pickUpItem(std::size_t selected) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  ObjectContainer &floorItems = gs_->getObjects(self.getLoc());
-  if (selected >= floorItems.size()) {
-    return;
-  }
-  TimePeriod timePassed = self.takeItem(*gs_, floorItems, selected);
-
-  passTime(timePassed);
+  ifAlive([&](auto &self) {
+    ObjectContainer &floorItems = gs_->getObjects(self.getLoc());
+    if (selected >= floorItems.size()) {
+      return;
+    }
+    passTime(self.takeItem(*gs_, floorItems, selected));
+  });
 }
 
 WorldFloorInterface GameInterface::getFloor(FloorSpecifier floorId) const noexcept {
@@ -294,30 +261,26 @@ TimePeriod GameInterface::getSpeed() const noexcept {
 }
 
 void GameInterface::dropItem(std::size_t i) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  const auto &invent = self.viewInventory();
-  if (i >= invent.size()) {
-    return;
-  }
-  passTime(self.dropItem(*gs_, i));
+  ifAlive([&](auto &self) {
+    const auto &invent = self.viewInventory();
+    if (i >= invent.size()) {
+      return;
+    }
+    passTime(self.dropItem(*gs_, i));
+  });
 }
 
 void GameInterface::eatItem(std::size_t i, bool fromFloor) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  const ObjectContainer &container = fromFloor ? gs_->getObjects(self.getLoc()) : self.viewInventory();
-  if (i >= container.size()) {
-    return;
-  }
-  if (!self.canEat(container[i])) {
-    return;
-  }
-  passTime(self.eatItem(*gs_, i, fromFloor));
+  ifAlive([&](auto &self) {
+    const ObjectContainer &container = fromFloor ? gs_->getObjects(self.getLoc()) : self.viewInventory();
+    if (i >= container.size()) {
+      return;
+    }
+    if (!self.canEat(container[i])) {
+      return;
+    }
+    passTime(self.eatItem(*gs_, i, fromFloor));
+  });
 }
 
 bool GameInterface::canEat(ObjectInterface obj) const noexcept {
@@ -325,15 +288,13 @@ bool GameInterface::canEat(ObjectInterface obj) const noexcept {
 }
 
 void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
-  auto &self = gs_->getMonster(controlled_);
-  if (!self.isAlive()) {
-    return;
-  }
-  const ObjectContainer &invent = self.viewInventory();
-  if (i >= invent.size()) {
-    return;
-  }
-  passTime(self.throwItem(*gs_, i, dir));
+  ifAlive([&](auto &self) {
+    const ObjectContainer &invent = self.viewInventory();
+    if (i >= invent.size()) {
+      return;
+    }
+    passTime(self.throwItem(*gs_, i, dir));
+  });
 }
 void GameInterface::passTime(TimePeriod numTurns) noexcept {
   if (!gs_->getMonster(controlled_).isAlive()) {

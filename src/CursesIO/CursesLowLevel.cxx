@@ -73,6 +73,16 @@ consteval int lg(std::size_t n) {
 constexpr NCURSES_COLOR_T NumBaseColor = 1 + COLOR_WHITE;
 constexpr int NumBaseColorBits = lg(NumBaseColor);
 static_assert(std::popcount(static_cast<std::size_t>(NumBaseColor)) == 1);
+constexpr auto ColorMap = std::to_array<std::pair<BaseColor, NCURSES_COLOR_T>>({
+    {BaseColor::Black, COLOR_BLACK},
+    {BaseColor::Red, COLOR_RED},
+    {BaseColor::Green, COLOR_GREEN},
+    {BaseColor::Brown, COLOR_YELLOW},
+    {BaseColor::Blue, COLOR_BLUE},
+    {BaseColor::Magenta, COLOR_MAGENTA},
+    {BaseColor::Cyan, COLOR_CYAN},
+    {BaseColor::White, COLOR_WHITE},
+});
 export class Color {
 public:
   BaseColor baseColor;
@@ -80,47 +90,13 @@ public:
   constexpr Color() = default;
   constexpr Color(BaseColor baseColor_, bool isBright_) noexcept : baseColor(baseColor_), isBright(isBright_) {}
   [[nodiscard]] static constexpr BaseColor getEnum(NCURSES_COLOR_T color) noexcept {
-    switch (color) {
-    case COLOR_BLACK:
-      return BaseColor::Black;
-    case COLOR_RED:
-      return BaseColor::Red;
-    case COLOR_GREEN:
-      return BaseColor::Green;
-    case COLOR_YELLOW:
-      return BaseColor::Brown;
-    case COLOR_BLUE:
-      return BaseColor::Blue;
-    case COLOR_MAGENTA:
-      return BaseColor::Magenta;
-    case COLOR_CYAN:
-      return BaseColor::Cyan;
-    case COLOR_WHITE:
-      return BaseColor::White;
-    default:
-      assert(false);
-      return BaseColor::White;
-    }
-  };
+    const auto *it = std::ranges::find(ColorMap, color, &std::pair<BaseColor, NCURSES_COLOR_T>::second);
+    assert(it != ColorMap.end());
+    return it != ColorMap.end() ? it->first : BaseColor::White;
+  }
   [[nodiscard]] static constexpr NCURSES_COLOR_T getDef(BaseColor color) noexcept {
-    switch (color) {
-    case BaseColor::Black:
-      return COLOR_BLACK;
-    case BaseColor::Red:
-      return COLOR_RED;
-    case BaseColor::Green:
-      return COLOR_GREEN;
-    case BaseColor::Brown:
-      return COLOR_YELLOW;
-    case BaseColor::Blue:
-      return COLOR_BLUE;
-    case BaseColor::Magenta:
-      return COLOR_MAGENTA;
-    case BaseColor::Cyan:
-      return COLOR_CYAN;
-    case BaseColor::White:
-      return COLOR_WHITE;
-    }
+    const auto *it = std::ranges::find(ColorMap, color, &std::pair<BaseColor, NCURSES_COLOR_T>::first);
+    return it->second;
   }
   [[nodiscard]] static constexpr NCURSES_PAIRS_T getId(NCURSES_COLOR_T front, NCURSES_COLOR_T back) noexcept { return static_cast<NCURSES_PAIRS_T>(1 + (2 * (front + (back * NumBaseColor)))); }
   [[nodiscard]] static constexpr NCURSES_PAIRS_T getId(Color front, Color back) noexcept {
@@ -325,6 +301,10 @@ public:
     }
     place_impl(str);
   }
+  void placeAt(auto toPlace, int x, int y){
+    moveCursor(x,y);
+    place(toPlace);
+  }
   [[nodiscard]] int cursorX() const noexcept { return getcurx(impl_.get()); }
   [[nodiscard]] int cursorY() const noexcept { return getcury(impl_.get()); }
 
@@ -403,7 +383,7 @@ public:
     updateScreen();
   }
   void setDims(int width, int height) {
-    if(width < 0 || height < 0){
+    if (width < 0 || height < 0) {
       throw BoxUnderBound{};
     }
     if (impl_.SetDims(width + 2, height + 2)) {
@@ -440,27 +420,21 @@ public:
 
 private:
   void makeBox() {
+    const int rSide = prntWidth() + 1;
+    const int dSide = prntHeight() + 1;
     impl_.clear();
-    impl_.moveCursor(0, 0);
-    impl_.place(L'┌');
-    impl_.moveCursor(prntWidth() + 1, 0);
-    impl_.place(L'┐');
-    impl_.moveCursor(0, prntHeight() + 1);
-    impl_.place(L'└');
-    impl_.moveCursor(prntWidth() + 1, prntHeight() + 1);
-    impl_.place(L'┘');
+    impl_.placeAt(L'┌',0,0);
+    impl_.placeAt(L'┐',rSide, 0);
+    impl_.placeAt(L'└',0, dSide);
+    impl_.placeAt(L'┘',rSide, dSide);
     impl_.moveCursor(1, 0);
-    for (auto _ : std::views::iota(0, 2)) {
-      for (int i = 1; i < prntWidth() + 1; i++) {
-        impl_.place(L'─');
-      }
-      impl_.moveCursor(1, prntHeight() + 1);
+    for (int i : std::views::iota(1,rSide)) {
+      impl_.placeAt(L'─', i, 0);
+      impl_.placeAt(L'─', i, dSide);
     }
-    for (int i = 1; i < prntHeight() + 1; i++) {
-      impl_.moveCursor(0, i);
-      impl_.place(L'│');
-      impl_.moveCursor(prntWidth() + 1, i);
-      impl_.place(L'│');
+    for (int i  : std::views::iota(1,dSide)) {
+      impl_.placeAt(L'│',0,i);
+      impl_.placeAt(L'│',rSide, i);
     }
   }
   WindowWrapper impl_;

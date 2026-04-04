@@ -16,29 +16,17 @@ public:
   [[nodiscard]] constexpr bool doThinSkip() const noexcept {
     return xE() - xB() <= 2;
   }
-  [[nodiscard]] constexpr int &xB() noexcept {
-    return dir_ ? rowB_ : colB_;
+  [[nodiscard]] constexpr auto &&xB(this auto &&self) noexcept {
+    return self.dir_ ? self.rowB_ : self.colB_;
   }
-  [[nodiscard]] constexpr int &xE() noexcept {
-    return dir_ ? rowE_ : colE_;
+  [[nodiscard]] constexpr auto &&xE(this auto &&self) noexcept {
+    return self.dir_ ? self.rowE_ : self.colE_;
   }
-  [[nodiscard]] constexpr int &yB() noexcept {
-    return dir_ ? colB_ : rowB_;
+  [[nodiscard]] constexpr auto &&yB(this auto &&self) noexcept {
+    return self.dir_ ? self.colB_ : self.rowB_;
   }
-  [[nodiscard]] constexpr int &yE() noexcept {
-    return dir_ ? colE_ : rowE_;
-  }
-  [[nodiscard]] constexpr int xB() const noexcept {
-    return dir_ ? rowB_ : colB_;
-  }
-  [[nodiscard]] constexpr int xE() const noexcept {
-    return dir_ ? rowE_ : colE_;
-  }
-  [[nodiscard]] constexpr int yB() const noexcept {
-    return dir_ ? colB_ : rowB_;
-  }
-  [[nodiscard]] constexpr int yE() const noexcept {
-    return dir_ ? colE_ : rowE_;
+  [[nodiscard]] constexpr auto &&yE(this auto &&self) noexcept {
+    return self.dir_ ? self.colE_ : self.rowE_;
   }
   [[nodiscard]] constexpr T &operator[](Position p) noexcept {
     if (dir_) {

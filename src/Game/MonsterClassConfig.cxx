@@ -1,3 +1,5 @@
+module;
+#include "../Common/EnumBitOps.h"
 export module MonsterClassConfig;
 import Common;
 import GameTypes;
@@ -33,27 +35,7 @@ enum class MonsterCategories : std::uint8_t {
   Demon = Humanoid << 1,
 };
 
-[[nodiscard]] constexpr MonsterCategories operator^(MonsterCategories lhs, MonsterCategories rhs) noexcept {
-  return static_cast<MonsterCategories>(std::to_underlying(lhs) ^ std::to_underlying(rhs));
-}
-[[nodiscard]] constexpr MonsterCategories operator|(MonsterCategories lhs, MonsterCategories rhs) noexcept {
-  return static_cast<MonsterCategories>(std::to_underlying(lhs) | std::to_underlying(rhs));
-}
-[[nodiscard]] constexpr MonsterCategories operator&(MonsterCategories lhs, MonsterCategories rhs) noexcept {
-  return static_cast<MonsterCategories>(std::to_underlying(lhs) & std::to_underlying(rhs));
-}
-[[nodiscard]] constexpr MonsterCategories operator~(MonsterCategories v) noexcept {
-  return static_cast<MonsterCategories>(~std::to_underlying(v));
-}
-constexpr MonsterCategories &operator^=(MonsterCategories &lhs, MonsterCategories rhs) noexcept {
-  return lhs = lhs ^ rhs;
-}
-constexpr MonsterCategories &operator|=(MonsterCategories &lhs, MonsterCategories rhs) noexcept {
-  return lhs = lhs | rhs;
-}
-constexpr MonsterCategories &operator&=(MonsterCategories &lhs, MonsterCategories rhs) noexcept {
-  return lhs = lhs & rhs;
-}
+DEFINE_ENUM_BIT_OPS(MonsterCategories)
 
 export class MonsterClassInfo {
 public:

@@ -40,8 +40,8 @@ template<class T>
 
 export class ObjectContainer {
 public:
-  using iterator = IteratorImpl<std::unique_ptr<Object>, ObjectContainer, Object &, deref>;
-  using const_iterator = IteratorImpl<const std::unique_ptr<Object>, ObjectContainer, const Object &, deref>;
+  using iterator = IteratorWrapper<std::unique_ptr<Object>*, Object &, deref>;
+  using const_iterator = IteratorWrapper<const std::unique_ptr<Object>*, const Object &, deref>;
   ObjectContainer() = default;
   ObjectContainer(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;
@@ -105,3 +105,8 @@ public:
 private:
   std::vector<std::unique_ptr<Object>> impl_;
 };
+
+static_assert([](){
+  // ObjectContainer q;
+  return true;
+}());

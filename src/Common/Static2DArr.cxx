@@ -12,8 +12,8 @@ public:
   using constvalue_T = const value_type;
   using size_type = sizeT;
   static_assert(std::integral<size_type>);
-  using iterator = IteratorImpl<value_type, Static2DArr>;
-  using const_iterator = IteratorImpl<const value_type, Static2DArr>;
+  using iterator = value_type*;
+  using const_iterator = constvalue_T*;
 
 private:
   using arr_t = value_type[]; // NOLINT(modernize-avoid-c-arrays)

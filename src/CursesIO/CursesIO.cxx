@@ -288,37 +288,23 @@ void goUpStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMo
 void goDownStair(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &modifer) noexcept {
   gState.goDownStair(modifer.getMoveMode());
 }
-struct FloorInterfaceWrapper {
-  WorldFloorInterface floor;
+template <class GetTerrain>
+struct TerrainWrapper {
+  GetTerrain getTerrain_;
+  int height_;
+  int width_;
   [[nodiscard]] int extent(int n) const noexcept {
     switch (n) {
     case 0:
-      return static_cast<int>(floor.rows());
+      return height_;
     case 1:
-      return static_cast<int>(floor.cols());
+      return width_;
     default:
       std::unreachable();
     }
   }
   [[nodiscard]] bool operator[](int row, int col) const noexcept {
-    auto tile = floor.getTile(Position{col, row});
-    return tile.terrainType != TerrainTypeInterface::Unknown && !isWall(tile.terrainType);
-  }
-};
-struct MemoryFloorWrapper {
-  const StaticPositionArr<TerrainTypeInterface> &memory;
-  [[nodiscard]] int extent(int n) const noexcept {
-    switch (n) {
-    case 0:
-      return memory.height();
-    case 1:
-      return memory.width();
-    default:
-      std::unreachable();
-    }
-  }
-  [[nodiscard]] bool operator[](int row, int col) const noexcept {
-    auto terrain = memory[Position{col, row}];
+    auto terrain = getTerrain_(Position{col, row});
     return terrain != TerrainTypeInterface::Unknown && !isWall(terrain);
   }
 };
@@ -454,11 +440,16 @@ void toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*
   mod.toggleMoveMode(MoveMode::fight());
 }
 
+void selectAndAct(IOModule::Interface &interface, ObjectContainerInterface items, const char *prompt,
+                  ItemFromInterfaceSettings settings, auto action) {
+  std::size_t index = getItemFromInterface(interface, items, prompt, settings);
+  if (index != NoItem)
+    action(index);
+}
+
 void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) {
-  std::size_t index = getItemFromInterface(interface, gState.lookAtFloor(), "What do you want to pick up?", {.autoSelectOne = true});
-  if (index != NoItem) {
-    gState.pickUpItem(index);
-  }
+  selectAndAct(interface, gState.lookAtFloor(), "What do you want to pick up?", {.autoSelectOne = true},
+               [&](std::size_t i) { gState.pickUpItem(i); });
 }
 
 std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface,
@@ -493,23 +484,34 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   }
 }
 
+enum class StepResult : std::uint8_t { Continue,
+                                       Stop };
+
+StepResult takePathStep(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod,
+                        const auto &mapWrapper, FloorSpecifier currentFloor, Position goal) {
+  const Position currentPos = gState.getLocation().pos;
+  if (currentPos == goal)
+    return StepResult::Stop;
+  if (gState.getLocation().mapPos != currentFloor)
+    return StepResult::Stop;
+  Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
+  if (step.noMove())
+    return StepResult::Stop;
+  gState.generalMove(step, MoveMode::move());
+  interface.updateGameScreen();
+  if (mod.interuptAction())
+    return StepResult::Stop;
+  if (gState.getLocation().pos == currentPos)
+    return StepResult::Stop;
+  return StepResult::Continue;
+}
+
 void pathTo(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod, Position goal, std::size_t maxStepCount = 10000) {
   FloorSpecifier currentFloor = gState.getLocation().mapPos;
-  auto mapWrapper = MemoryFloorWrapper{interface.getMemory(currentFloor)};
+  const auto &mem = interface.getMemory(currentFloor);
+  auto mapWrapper = TerrainWrapper{[&mem](Position p) { return mem[p]; }, mem.height(), mem.width()};
   for (std::size_t i = 0; i < maxStepCount; i++) {
-    const Position currentPos = gState.getLocation().pos;
-    if (currentPos == goal)
-      break;
-    if (gState.getLocation().mapPos != currentFloor)
-      break;
-    Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
-    if (step.noMove())
-      break;
-    gState.generalMove(step, MoveMode::move());
-    interface.updateGameScreen();
-    if (mod.interuptAction())
-      break;
-    if (gState.getLocation().pos == currentPos)
+    if (takePathStep(gState, interface, mod, mapWrapper, currentFloor, goal) == StepResult::Stop)
       break;
   }
 }
@@ -541,10 +543,8 @@ void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /
 }
 
 void dropItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
-  std::size_t index = getItemFromInterface(interface, gState.lookAtInventory(), "What do you want to drop?", {.doStandAloneDisplay = false});
-  if (index != NoItem) {
-    gState.dropItem(index);
-  }
+  selectAndAct(interface, gState.lookAtInventory(), "What do you want to drop?", {.doStandAloneDisplay = false},
+               [&](std::size_t i) { gState.dropItem(i); });
 }
 
 void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
@@ -601,25 +601,11 @@ void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
 
 void autoExplore(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   const FloorSpecifier currentFloor = gState.getLocation().mapPos;
-  auto mapWrapper = MemoryFloorWrapper{interface.getMemory(currentFloor)};
+  const auto &mem = interface.getMemory(currentFloor);
+  auto mapWrapper = TerrainWrapper{[&mem](Position p) { return mem[p]; }, mem.height(), mem.width()};
   while (true) {
     auto frontier = findUnexploredFrontier(interface.getMemory(currentFloor), gState.getLocation().pos);
-    if (frontier.size() == 1 && frontier[0] == gState.getLocation().pos)
-      break;
-    Position goal = frontier[0];
-    const Position currentPos = gState.getLocation().pos;
-    if (currentPos == goal)
-      break;
-    if (gState.getLocation().mapPos != currentFloor)
-      break;
-    Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
-    if (step.noMove())
-      break;
-    gState.generalMove(step, MoveMode::move());
-    interface.updateGameScreen();
-    if (mod.interuptAction())
-      break;
-    if (gState.getLocation().pos == currentPos)
+    if (takePathStep(gState, interface, mod, mapWrapper, currentFloor, frontier[0]) == StepResult::Stop)
       break;
   }
 }

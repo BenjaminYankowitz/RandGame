@@ -85,16 +85,22 @@ export [[nodiscard]] constexpr Dir operator-(Dir lhs, Dir rhs) noexcept { return
 
 struct PathIterSentinal {};
 
-struct SlopeIter {
+// template <class Derived>
+struct PostIncrementMixin {
+  constexpr auto operator++(this auto&& self, int) noexcept {
+    auto ret = self;
+    ++self;
+    return ret;
+  }
+  constexpr bool operator==(const PostIncrementMixin &) const noexcept = default;
+};
+
+struct SlopeIter : PostIncrementMixin {
+  using PostIncrementMixin::operator++;
   using difference_type = std::ptrdiff_t;
   using value_type = Dir;
   Dir c;
   Dir e;
-  constexpr SlopeIter operator++(int) noexcept {
-    SlopeIter ret = *this;
-    ++(*this);
-    return ret;
-  }
   constexpr SlopeIter &operator++() noexcept {
     if (e.noMove()) {
       c = {1, 0};
@@ -121,7 +127,7 @@ struct SlopeIter {
 };
 export struct PathIterable {
   [[nodiscard]] constexpr SlopeIter begin() const noexcept {
-    return SlopeIter{{0, 0}, e};
+    return SlopeIter{{}, {0, 0}, e};
   }
   [[nodiscard]] static constexpr PathIterSentinal end() noexcept {
     return {};
@@ -131,16 +137,12 @@ export struct PathIterable {
 template <>
 const bool std::ranges::enable_borrowed_range<PathIterable> = true; // NOLINT(readability-identifier-naming)
 export struct PathIterableShort {
-  struct PathIter {
+  struct PathIter : PostIncrementMixin {
+    using PostIncrementMixin::operator++;
     using difference_type = std::ptrdiff_t;
     using value_type = Dir;
     int dist;
     Dir e;
-    constexpr PathIter operator++(int) noexcept {
-      PathIter ret = *this;
-      ++(*this);
-      return ret;
-    }
     constexpr PathIter &operator++() noexcept {
       ++dist;
       return *this;
@@ -164,7 +166,7 @@ export struct PathIterableShort {
     }
   };
   [[nodiscard]] constexpr PathIter begin() const noexcept {
-    return PathIter{0, e};
+    return PathIter{{}, 0, e};
   }
   [[nodiscard]] static constexpr PathIterSentinal end() noexcept {
     return {};
@@ -247,7 +249,7 @@ export auto PosPathIterableShort(Position b, Position e) {
 export class FloorSpecifier {
 public:
   [[nodiscard]] constexpr explicit FloorSpecifier(int floorI) noexcept : floor(floorI) {}
-  [[nodiscard]] constexpr bool operator==(const FloorSpecifier& o) const noexcept = default;
+  [[nodiscard]] constexpr bool operator==(const FloorSpecifier &o) const noexcept = default;
   [[nodiscard]] constexpr FloorSpecifier up(int n = 1) const noexcept { return FloorSpecifier(floor - n); }
   [[nodiscard]] constexpr FloorSpecifier down(int n = 1) const noexcept { return FloorSpecifier(floor + n); }
   int floor;
@@ -259,7 +261,7 @@ public:
   [[nodiscard]] constexpr Location(Position p, FloorSpecifier mp) noexcept : pos(p), mapPos(mp) {}
   [[nodiscard]] constexpr Location up(int n = 1) const noexcept { return {pos, mapPos.up(n)}; }
   [[nodiscard]] constexpr Location down(int n = 1) const noexcept { return {pos, mapPos.down(n)}; }
-  [[nodiscard]] constexpr bool operator==(const Location&) const noexcept = default;
+  [[nodiscard]] constexpr bool operator==(const Location &) const noexcept = default;
   Position pos;
   FloorSpecifier mapPos;
 };

@@ -48,8 +48,8 @@ private:
   friend OptionalReference<const T>;
 
 public:
-  using iterator = IteratorImpl<T, OptionalReference>;
-  using const_iterator = IteratorImpl<const T, OptionalReference>;
+  using iterator = IteratorWrapper<T*>;
+  using const_iterator = IteratorWrapper<const T*>;
   constexpr explicit OptionalReference(T *ptr) noexcept : ptr_(ptr) {}
   constexpr explicit OptionalReference(T &value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;

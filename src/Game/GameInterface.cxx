@@ -142,6 +142,8 @@ public:
   ~GameInterface();
 
 private:
+  template <typename F>
+  void ifAlive(F &&f) noexcept;
   IGameState *gs_;
   MonsterID controlled_;
 };
