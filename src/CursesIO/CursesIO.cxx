@@ -434,11 +434,14 @@ std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainer
     if (userInput == SpecialChar::Escape) {
       break;
     }
-    if (userInput >= 'a' && userInput < 'a' + static_cast<std::int64_t>(items.size())) {
-      auto index = static_cast<std::size_t>(userInput - 'a');
-      if (settings.isEligible(items[index]))
-        return index;
+    std::optional<std::size_t> index;
+    if (userInput >= 'a' && userInput <= 'z') {
+      index = static_cast<std::size_t>(userInput - 'a');
+    } else if (userInput >= 'A' && userInput <= 'Z') {
+      index = static_cast<std::size_t>(userInput - 'A') + 26;
     }
+    if (index && *index < items.size() && settings.isEligible(items[*index]))
+      return *index;
   }
   return NoItem;
 }

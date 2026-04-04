@@ -116,23 +116,23 @@ void perlin(StaticPositionArr<decltype(Wall)> &floor, double xscale, double ysca
   const double xRange = maxX - minX;
   const double yRange = maxY - minY;
   PerlinNoise::Generator gen(std::ceil(xRange + xoffset) + 1, std::ceil(yRange + yoffset) + 1);
-  for(auto p : floor.indexIter()){
-      auto [xI,yI] = p;
-      const double x = xI / xscale;
-      const double y = yI / yscale;
-      const double eX = (x * cos) - (y * sin) - minX + xoffset;
-      const double eY = (y * cos) + (x * sin) - minY + yoffset;
-      if (gen.getHeight(eX, eY) >= threshold) {
-        floor[p] = Wall;
-      } else {
-        floor[p] = Empty;
+  for (auto p : floor.indexIter()) {
+    auto [xI, yI] = p;
+    const double x = xI / xscale;
+    const double y = yI / yscale;
+    const double eX = (x * cos) - (y * sin) - minX + xoffset;
+    const double eY = (y * cos) + (x * sin) - minY + yoffset;
+    if (gen.getHeight(eX, eY) >= threshold) {
+      floor[p] = Wall;
+    } else {
+      floor[p] = Empty;
     }
   }
 }
 
 template <auto Wall, decltype(Wall) Empty>
 void openSimplex(StaticPositionArr<decltype(Wall)> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
-  OpenSimplex2S gen(Rnd::uniform_int<std::uint64_t>(0,std::numeric_limits<std::uint64_t>::max()));
+  OpenSimplex2S gen(Rnd::uniform_int<std::uint64_t>(0, std::numeric_limits<std::uint64_t>::max()));
   for (auto p : floor.indexIter()) {
     auto [xI, yI] = p;
     const double x = xI / xscale;
@@ -216,7 +216,7 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<decltype(Wall)> &floor
       auto cPos = dfs.back();
       dfs.pop_back();
       for (auto d : Dir::boxDirs()) {
-        auto nPos = cPos+d;
+        auto nPos = cPos + d;
         if (floor.inBounds(nPos) && floor[nPos] == Empty && regionOf[nPos] == -1) {
           regionOf[nPos] = regionId;
           dfs.push_back(nPos);
@@ -227,19 +227,18 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<decltype(Wall)> &floor
   return {std::move(regionOf), numRegions};
 }
 
-
 template <auto Empty>
 constexpr void carveCorridor(StaticPositionArr<decltype(Empty)> &floor, Position from, Position to) noexcept {
-  for(auto d : PathIterableShort(to-from)){
-    floor[from+d] = Empty;
+  for (auto d : PathIterableShort(to - from)) {
+    floor[from + d] = Empty;
   }
 }
 
 template <auto Wall, decltype(Wall) Empty>
 [[nodiscard]] constexpr std::vector<Position> findEdges(const StaticPositionArr<decltype(Wall)> &floor) noexcept {
   std::vector<Position> ret;
-  for(auto pos : floor.indexIter()){
-    if(std::ranges::any_of(Dir::boxDirs(),[pos, &floor](Dir d){return floor[pos] == Empty && floor.inBounds(pos+d) && floor[pos+d]==Wall;})){
+  for (auto pos : floor.indexIter()) {
+    if (std::ranges::any_of(Dir::boxDirs(), [pos, &floor](Dir d) { return floor[pos] == Empty && floor.inBounds(pos + d) && floor[pos + d] == Wall; })) {
       ret.push_back(pos);
     }
   }
@@ -255,10 +254,10 @@ void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
   if (info.numRegions() <= 1)
     return;
 
-  std::vector<Position> toCheck = findEdges<Wall,Empty>(floor);
-  StaticPositionArr<Position> parent(floor.width(),floor.height());
-  parent.fill({-1,-1});
-  for(auto pos : toCheck){
+  std::vector<Position> toCheck = findEdges<Wall, Empty>(floor);
+  StaticPositionArr<Position> parent(floor.width(), floor.height());
+  parent.fill({-1, -1});
+  for (auto pos : toCheck) {
     parent[pos] = pos;
   }
   std::vector<Position> checking;
@@ -284,11 +283,17 @@ void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
     return false;
   };
   while (true) {
-    std::swap(checking,toCheck);
+    if constexpr (InDebug) {
+      if (toCheck.empty()) {
+        Logging::log << "connectRegions: BFS exhausted without connecting all regions\n";
+        return;
+      }
+    }
+    std::swap(checking, toCheck);
     Rnd::shuffle(checking);
-    for(auto spot : checking){
-      for(auto d : Dir::boxDirs()){
-        if(handleCheck(spot,d)){
+    for (auto spot : checking) {
+      for (auto d : Dir::boxDirs()) {
+        if (handleCheck(spot, d)) {
           return;
         }
       }

@@ -22,7 +22,7 @@ struct MapWrap {
       y = -y;
     return impl[unDo(p)];
   }
-  [[nodiscard]] constexpr Position unDo(Dir p) const noexcept{
+  [[nodiscard]] constexpr Position unDo(Dir p) const noexcept {
     auto [x, y] = p;
     if (swapXY)
       std::swap(x, y);
@@ -136,14 +136,13 @@ template <SeeThrough2dArr MapType>
     if (slopeEQ(slope, nUpdate ? slopeBoundMax : slopeBoundMin) || slopeCmp(slope, nUpdate ? slopeMin : slopeMax, nUpdate)) {
       return false;
     }
-    cSpot = nSpot + Dir{0,-1+(2*nUpdate)};
+    cSpot = nSpot + Dir{0, -1 + (2 * nUpdate)};
     if (cSpot == end)
       return true;
     if (!map[cSpot])
       return false;
   }
 }
-
 
 template <SeeThrough2dArr MapType>
 void allInLineOfSightQuadImpl(MapWrap<MapType> map, Corner min, Corner max, int dist, std::vector<Position>& out) noexcept {
