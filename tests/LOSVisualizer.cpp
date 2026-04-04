@@ -117,6 +117,15 @@ StaticPositionArr<bool> computeVisibility(const StaticPositionArr<bool> &map, Po
   return visible;
 }
 
+StaticPositionArr<bool> computeVisibilityAll(const StaticPositionArr<bool> &map, Position from) {
+  StaticPositionArr<bool> visible(MapW, MapH);
+  visible.fill(false);
+  BoolMap bmap{map};
+  for (auto p : LineOfSight::allInLineOfSight(bmap, from))
+    visible[p] = true;
+  return visible;
+}
+
 // mode=0: normal (with visibility overlay from cursor), mode=1: show checked tiles result
 void drawMap(const StaticPositionArr<bool> &map, Position cursor,
              std::optional<Position> start,
@@ -203,14 +212,17 @@ int main() {
   while (true) {
     Position cursor{MapW / 2, MapH / 2};
 
+    bool useAllLOS = false;
+
     // Phase 1: pick start
     while (true) {
-      auto vis = computeVisibility(map, cursor);
+      auto vis = useAllLOS ? computeVisibilityAll(map, cursor) : computeVisibility(map, cursor);
       erase();
       drawMap(map, cursor, std::nullopt, nullptr, {}, false, &vis);
-      mvprintw(MapH + 1, 0, "Select START tile (hjkl/arrows to move, '.' to confirm, 'w' toggle wall, 'q' quit)");
-      mvprintw(MapH + 2, 0, "Cursor: (%d, %d)  %s", cursor.x, cursor.y,
-               map[cursor] ? "open" : "WALL");
+      mvprintw(MapH + 1, 0, "Select START tile (hjkl/arrows, '.' confirm, 'w' wall, 'a' toggle allLOS, 'q' quit)");
+      mvprintw(MapH + 2, 0, "Cursor: (%d, %d)  %s  [LOS mode: %s]", cursor.x, cursor.y,
+               map[cursor] ? "open" : "WALL",
+               useAllLOS ? "allInLineOfSight" : "per-tile inLineOfSight");
       refresh();
 
       int ch = getch();
@@ -218,6 +230,10 @@ int main() {
         goto done;
       if (ch == '.')
         break;
+      if (ch == 'a') {
+        useAllLOS = !useAllLOS;
+        continue;
+      }
       if (ch == 'w') {
         map[cursor] = !map[cursor];
         continue;
@@ -232,13 +248,14 @@ int main() {
 
     // Phase 2: pick end
     while (true) {
-      auto vis = computeVisibility(map, start);
+      auto vis = useAllLOS ? computeVisibilityAll(map, start) : computeVisibility(map, start);
       erase();
       drawMap(map, cursor, start, nullptr, {}, false, &vis);
-      mvprintw(MapH + 1, 0, "Select END tile (hjkl/arrows to move, '.' to confirm, 'w' toggle wall, Esc cancel)");
-      mvprintw(MapH + 2, 0, "Start: (%d, %d)  Cursor: (%d, %d)  %s",
+      mvprintw(MapH + 1, 0, "Select END tile (hjkl/arrows, '.' confirm, 'w' wall, 'a' toggle allLOS, Esc cancel)");
+      mvprintw(MapH + 2, 0, "Start: (%d, %d)  Cursor: (%d, %d)  %s  [LOS: %s]",
                start.x, start.y, cursor.x, cursor.y,
-               map[cursor] ? "open" : "WALL");
+               map[cursor] ? "open" : "WALL",
+               useAllLOS ? "allInLineOfSight" : "per-tile");
       refresh();
 
       int ch = getch();
@@ -246,6 +263,10 @@ int main() {
         break;
       if (ch == 'q')
         goto done;
+      if (ch == 'a') {
+        useAllLOS = !useAllLOS;
+        continue;
+      }
       if (ch == '.') {
         Position end = cursor;
 
