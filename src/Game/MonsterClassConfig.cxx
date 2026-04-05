@@ -72,5 +72,5 @@ export [[nodiscard]] constexpr TimePeriod MonsterClassBaseSpeed(MonsterClass mCl
 }
 
 export [[nodiscard]] constexpr bool MonsterClassHunts(MonsterClass hunter, MonsterClass prey) noexcept {
-  return (MonsterClassInfoArr[hunter].prey & MonsterClassInfoArr[prey].catagories) != MonsterCategories::Nothing;
+  return hasOverlap(MonsterClassInfoArr[hunter].prey, MonsterClassInfoArr[prey].catagories) ;
 }

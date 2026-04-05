@@ -1,3 +1,5 @@
+module;
+#include "../../Common/EnumBitOps.h"
 export module GameTypes:Misc;
 import :GameTime;
 import Common;
@@ -86,46 +88,17 @@ export enum class ArtifactId : std::uint8_t {
   Normal,
 };
 
-export class MoveMode {
-  using ImplT = std::uint8_t;
-
-public:
-  [[nodiscard]] static constexpr MoveMode fight() noexcept { return MoveMode(Fight); };
-  [[nodiscard]] static constexpr MoveMode move() noexcept { return MoveMode(Move); };
-  [[nodiscard]] constexpr bool isMove() const noexcept { return (impl_ & Move) != 0; };
-  [[nodiscard]] constexpr bool isFight() const noexcept { return (impl_ & Fight) != 0; };
-  constexpr MoveMode &operator^=(MoveMode o) noexcept {
-    impl_ ^= o.impl_;
-    return *this;
-  }
-  constexpr MoveMode &operator|=(MoveMode o) noexcept {
-    impl_ |= o.impl_;
-    return *this;
-  }
-  constexpr MoveMode &operator&=(MoveMode o) noexcept {
-    impl_ &= o.impl_;
-    return *this;
-  }
-  [[nodiscard]] constexpr MoveMode operator^(MoveMode o) const noexcept {
-    auto cp = *this;
-    return cp ^= o;
-  }
-  [[nodiscard]] constexpr MoveMode operator|(MoveMode o) const noexcept {
-    auto cp = *this;
-    return cp |= o;
-  }
-  [[nodiscard]] constexpr MoveMode operator&(MoveMode o) const noexcept {
-    auto cp = *this;
-    return cp &= o;
-  }
-  [[nodiscard]] constexpr MoveMode operator~() const noexcept { return MoveMode(~impl_); }
-
-private:
-  constexpr explicit MoveMode(ImplT v) noexcept : impl_(v) {}
-  ImplT impl_;
-  constexpr static ImplT Fight = 1;
-  constexpr static ImplT Move = Fight << 1;
+export enum class MoveMode : std::uint8_t{
+  None = 0,
+  Fight = 1,
+  Move = Fight << 1,
+  GetWith = Move << 1,
 };
+export {
+DEFINE_ENUM_BIT_OPS(MoveMode)
+}
+
+
 
 export class MonsterID {
   using idImpl = unsigned;

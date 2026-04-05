@@ -168,3 +168,12 @@ public:
 private:
   std::errc errorCode_;
 };
+template <class T>
+concept BitWiseAndAble = requires(T a, T b) {
+  { a & b } -> std::same_as<T>;
+};
+
+export template<BitWiseAndAble T>
+[[nodiscard]] constexpr bool hasOverlap(T a, T b){
+  return (a & b) != static_cast<T>(0);
+}

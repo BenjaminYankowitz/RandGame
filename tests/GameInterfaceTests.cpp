@@ -88,7 +88,7 @@ TEST(GameInterfaceTests, MoveChangesTimeOrPosition) {
   GameInterface gi = makeGI(game);
   auto loc0 = gi.getLocation();
   auto t0 = gi.getTime();
-  gi.generalMove(Dir::right(), MoveMode::move());
+  gi.generalMove(Dir::right(), MoveMode::Move);
   auto loc1 = gi.getLocation();
   auto t1 = gi.getTime();
   EXPECT_TRUE(loc1.pos.x != loc0.pos.x || loc1.pos.y != loc0.pos.y || t1.impl > t0.impl);
@@ -116,7 +116,7 @@ TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
   GameState game;
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
-  gi.throwItem(999, Dir::up());
+  gi.throwItem(999, Dir::up(), 1);
   auto t1 = gi.getTime();
   EXPECT_EQ(t0.impl, t1.impl);
 }

@@ -287,13 +287,13 @@ bool GameInterface::canEat(ObjectInterface obj) const noexcept {
   return gs_->getMonster(controlled_).canEat(*obj.obj_);
 }
 
-void GameInterface::throwItem(std::size_t i, Dir dir) noexcept {
+void GameInterface::throwItem(std::size_t i, Dir dir, int count) noexcept {
   ifAlive([&](auto &self) {
     const ObjectContainer &invent = self.viewInventory();
     if (i >= invent.size()) {
       return;
     }
-    passTime(self.throwItem(*gs_, i, dir));
+    passTime(self.throwItem(*gs_, i, dir, count));
   });
 }
 void GameInterface::passTime(TimePeriod numTurns) noexcept {

@@ -19,6 +19,7 @@ private:
   };
 
 public:
+  using ID = MonsterID;
   struct HitReturn {
     MustInit<Health> damageDone;
     int exp = 0;
@@ -29,11 +30,13 @@ public:
   struct EatTarget {
     Location loc;
   };
+  struct HangTarget {
+    ID target;
+  };
 
   struct AttackInfo {
     MustInit<Health> damage;
   };
-  using ID = MonsterID;
 
   static ID createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer = false) noexcept;
   [[nodiscard]] constexpr TimePeriod generalMove(GameState &state, Location nLoc, MoveMode m) noexcept;
@@ -71,18 +74,25 @@ public:
   [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
   constexpr void gainExp(int n) noexcept { exp_ += n; }
   constexpr void kill(GameState &state) noexcept;
-  [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i) noexcept { return inventory_.remove(i); }
+  [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i, int count = std::numeric_limits<int>::max()) noexcept {
+    if (count >= inventory_[i].count()) {
+      return inventory_.remove(i);
+    }
+    return inventory_[i].split(count);
+  }
   [[nodiscard]] TimePeriod goToTarget(GameState &state, NoTarget /*unused*/) noexcept;
+  [[nodiscard]] TimePeriod goToTarget(GameState &state, HangTarget target) noexcept;
   [[nodiscard]] TimePeriod goToTarget(GameState &state, ID target) noexcept;
   [[nodiscard]] TimePeriod goToTarget(GameState &state, Location target) noexcept;
   [[nodiscard]] TimePeriod goToTarget(GameState &state, EatTarget target) noexcept;
-  [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, bool attack) noexcept;
+  [[nodiscard]] TimePeriod pathTo(GameState &state, Location target, MoveMode onceReached) noexcept;
   void findTask(GameState &state) noexcept;
   enum class ReThinkReason : std::uint8_t {
     CanNotMove,
     TargetDead,
     CanNotPathToTarget,
     FailedAttack,
+    FailedGetWith,
     ReachedDestination,
     Unknown,
     FoodGone,
@@ -96,7 +106,8 @@ public:
     case FailedAttack:
     case Unknown:
     case TargetDead:
-    case ReachedDestination: // Fallthrough
+    case ReachedDestination:
+    case FailedGetWith:
     case FoodGone:
       target_ = NoTarget{};
       return TimePeriod(1);
@@ -104,7 +115,7 @@ public:
   }
   [[nodiscard]] constexpr TimePeriod takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept;
   [[nodiscard]] constexpr TimePeriod dropItem(GameState &state, std::size_t i) noexcept;
-  [[nodiscard]] constexpr TimePeriod throwItem(GameState &state, std::size_t i, Dir dir) noexcept;
+  [[nodiscard]] constexpr TimePeriod throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept;
   [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   constexpr void deathDrop(GameState &state) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
@@ -120,7 +131,9 @@ private:
   Health health_;
   int exp_ = 2;
   ID id_;
-  std::variant<NoTarget, ID, Location, EatTarget> target_;
+  ID next_;
+  ID prev_;
+  std::variant<NoTarget, ID, Location, EatTarget, HangTarget> target_;
   Dice::Group damage_;
   MonsterBrain brain_;
   MonsterClass mClass_;
@@ -423,6 +436,7 @@ GameState::GameState() noexcept {
   };
   player_ = tryPlaceMonster({0, 0}, MonsterClass::Human, true);
   tryPlaceMonster({0, 2}, MonsterClass::SeaSlug);
+  tryPlaceMonster({4, 2}, MonsterClass::SeaSlug);
   tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
   tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
@@ -521,7 +535,7 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
   if (validDirs == 0) {
     return reThink(ReThinkReason::CanNotMove);
   }
-  TimePeriod ret = generalMove(state, IntToDir[Rnd::rnd(validDirs)], MoveMode::move());
+  TimePeriod ret = generalMove(state, IntToDir[Rnd::rnd(validDirs)], MoveMode::Move);
   if (ret.future()) {
     return ret;
   }
@@ -529,12 +543,16 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
   return reThink(ReThinkReason::CanNotMove);
 }
 
+TimePeriod Monster::goToTarget(GameState &state, HangTarget target) noexcept {
+  return state.tryGetMonster(target.target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
+}
+
 TimePeriod Monster::goToTarget(GameState &state, ID target) noexcept {
-  return state.tryGetMonster(target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), true); }, [&]() { return reThink(ReThinkReason::TargetDead); });
+  return state.tryGetMonster(target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), MoveMode::Fight); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
 
 TimePeriod Monster::goToTarget(GameState &state, Location target) noexcept {
-  return pathTo(state, target, false);
+  return pathTo(state, target, MoveMode::Move);
 }
 
 TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noexcept {
@@ -546,10 +564,10 @@ TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noex
     }
     return reThink(ReThinkReason::FoodGone);
   }
-  return pathTo(state, target.loc, false);
+  return goToTarget(state, target.loc);
 }
 
-TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexcept {
+TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReached) noexcept {
   if (target == getLoc()) {
     return reThink(ReThinkReason::ReachedDestination);
   }
@@ -561,18 +579,25 @@ TimePeriod Monster::pathTo(GameState &state, Location target, bool attack) noexc
   const Position cPos = getLoc().pos;
   const Position gPos = cPos + movePlan;
   if (gPos == tPos) {
-    const TimePeriod tTaken = generalMove(state, movePlan, attack ? MoveMode::fight() : MoveMode::move());
+    if(onceReached == MoveMode::None){
+      return reThink(ReThinkReason::ReachedDestination);
+    }
+    const TimePeriod tTaken = generalMove(state, movePlan, onceReached);
     if (tTaken.future()) {
       return tTaken;
     }
-    if (!attack) {
+    if (onceReached == MoveMode::Move) {
       return reThink(ReThinkReason::CanNotPathToTarget);
+    }
+    if(hasOverlap(onceReached, MoveMode::GetWith)){
+    state.printDebug("GetWith attempted but no time taken. This should not be possible.");
+      return reThink(ReThinkReason::FailedGetWith);
     }
     state.printDebug("Attack attempted but no time taken. This should not be possible.");
     state.printDebug("If it is possible logic should probably be reworked.");
     return reThink(ReThinkReason::FailedAttack);
   }
-  const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::move());
+  const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::Move);
   if (tTaken.future()) {
     return tTaken;
   }
@@ -583,9 +608,18 @@ void Monster::findTask(GameState &state) noexcept {
   const auto &cFloor = state.getFloor(mapPos);
   for (auto cPos : LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(cFloor), pos)) {
     auto [objs, monst, tile] = cFloor.getTile(cPos);
-    if (!monst.isNull() && wantsToKill(state.getMonster(monst))) {
-      target_ = monst;
-      return;
+    ID cMonst = monst;
+    while(!cMonst.isNull()){
+      auto& monstRef = state.getMonster(cMonst);
+      if (wantsToKill(monstRef)) {
+        target_ = cMonst;
+        return;
+      }
+      if(mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug){
+        target_ = HangTarget{cMonst};
+        return;
+      }
+      cMonst = monstRef.next_;
     }
     if (std::ranges::any_of(objs, [this](const Object &obj) { return wantsToEat(obj); })) {
       target_ = Monster::EatTarget{{cPos, mapPos}};
@@ -605,10 +639,17 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
     return TimePeriod(0);
   }
   auto &destMonster = state.getMonster(nLoc);
-  if (destMonster.isNull() && mode.isMove()) {
-    ID &currentSpot = state.getMonster(getLoc());
-    destMonster = currentSpot;
-    currentSpot.clear();
+  if (hasOverlap(mode, destMonster.isNull() ? MoveMode::Move : MoveMode::GetWith)) {
+    ID &currentSpot = prev_.isNull() ? state.getMonster(getLoc()) : state.getMonster(prev_).next_;
+    currentSpot = next_;
+    if(!next_.isNull()){
+      state.getMonster(next_).prev_ = prev_;
+    }
+    next_ = destMonster;
+    destMonster = id_;
+    if(!next_.isNull()){
+      state.getMonster(next_).prev_ = id_;
+    }
     if (getLoc().mapPos != nLoc.mapPos && caresEvent()) {
       state.getFloor(getLoc().mapPos).removeEventListener(getId());
       state.getFloor(nLoc.mapPos).addEventListener(getId());
@@ -616,7 +657,7 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
     loc_ = nLoc;
     return getSpeed();
   }
-  if (!destMonster.isNull() && mode.isFight()) {
+  if (!destMonster.isNull() && hasOverlap(mode, MoveMode::Fight)) {
     return hitMonster(state, state.getMonster(destMonster));
   }
   return TimePeriod{0};
@@ -722,9 +763,9 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
   floor.getObjects(lastPos).addObject(std::move(obj));
 }
 
-constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir) noexcept {
+constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept {
   static constexpr std::size_t ThrowItemSpeedFraction = 1;
-  sendItemFlying(state, removeFromInvent(i), *this, dir);
+  sendItemFlying(state, removeFromInvent(i, count), *this, dir);
   return getSpeed() / ThrowItemSpeedFraction;
 }
 
@@ -782,7 +823,16 @@ constexpr void Monster::kill(GameState &state) noexcept {
     state.getFloor(getLoc().mapPos).removeEventListener(getId());
   }
   setDead();
-  state.getMonster(loc_).clear();
+  if(prev_.isNull()){
+    state.getMonster(loc_) = next_;
+  } else {
+    state.getMonster(prev_).next_ = next_;
+  }
+  if(!next_.isNull()){
+    state.getMonster(next_).prev_=prev_;
+  }
+  next_.clear();
+  prev_.clear();
   deathDrop(state);
 }
 Monster::HitReturn Monster::hitBy(GameState &state, AttackInfo info) noexcept {

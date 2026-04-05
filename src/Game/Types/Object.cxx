@@ -11,9 +11,8 @@ export struct ObjectBluePrint {
 
 export class Object {
 public:
-  constexpr Object(const ObjectBluePrint& obj) noexcept : count_(obj.count), type_(obj.type), mat_(obj.mat), artifactStatus_(obj.artifactStatus) {} //NOLINT(google-explicit-constructor)
+  constexpr Object(const ObjectBluePrint &obj) noexcept : count_(obj.count), type_(obj.type), mat_(obj.mat), artifactStatus_(obj.artifactStatus) {} // NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr bool isCombinable() const noexcept {
-
     return artifactStatus_ == ArtifactId::Normal;
   }
   [[nodiscard]] constexpr bool canCombine(const Object &other) const noexcept {
@@ -22,11 +21,16 @@ public:
   constexpr void combine(std::unique_ptr<Object> other) noexcept {
     count_ += other->count_;
   }
-  [[nodiscard]] constexpr const int& count() const noexcept { return count_; }
-  [[nodiscard]] constexpr int& count() noexcept { return count_; }
+  [[nodiscard]] constexpr const int &count() const noexcept { return count_; }
+  [[nodiscard]] constexpr int &count() noexcept { return count_; }
   [[nodiscard]] constexpr ObjectType type() const noexcept { return type_; }
   [[nodiscard]] constexpr Material mat() const noexcept { return mat_; }
   [[nodiscard]] constexpr ArtifactId artifactStatus() const noexcept { return artifactStatus_; }
+  [[nodiscard]] constexpr std::unique_ptr<Object> split(int n) noexcept {
+    count_ -= n;
+    auto obj = std::make_unique<Object>(ObjectBluePrint{type_, mat_, artifactStatus_, n});
+    return obj;
+  }
 
 private:
   int count_;
@@ -35,17 +39,17 @@ private:
   ArtifactId artifactStatus_ = ArtifactId::Normal;
 };
 
-template<class T>
-[[nodiscard]] constexpr auto& deref(T& p) noexcept{return std::forward_like<T&>(*p);};
+template <class T>
+[[nodiscard]] constexpr auto &deref(T &p) noexcept { return std::forward_like<T &>(*p); };
 
 export class ObjectContainer {
 public:
-  using iterator = IteratorWrapper<std::unique_ptr<Object>*, Object &, deref>;
-  using const_iterator = IteratorWrapper<const std::unique_ptr<Object>*, const Object &, deref>;
+  using iterator = IteratorWrapper<std::unique_ptr<Object> *, Object &, deref>;
+  using const_iterator = IteratorWrapper<const std::unique_ptr<Object> *, const Object &, deref>;
   ObjectContainer() = default;
   ObjectContainer(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;
-  ObjectContainer& operator=(ObjectContainer &&) = default;
+  ObjectContainer &operator=(ObjectContainer &&) = default;
   constexpr void addObject(std::unique_ptr<Object> obj) noexcept {
     auto v = std::ranges::find_if(*this, [&obj = *obj](const Object &oObj) { return obj.canCombine(oObj); });
     if (v != end()) {
@@ -54,7 +58,7 @@ public:
       impl_.push_back(std::move(obj));
     }
   }
-  constexpr void addObject(const ObjectBluePrint& obj) noexcept {
+  constexpr void addObject(const ObjectBluePrint &obj) noexcept {
     addObject(std::make_unique<Object>(obj));
   }
   [[nodiscard]] constexpr std::size_t size() const noexcept {
@@ -70,16 +74,16 @@ public:
     return *impl_[i];
   }
   [[nodiscard]] constexpr iterator begin() noexcept {
-    return iterator(impl_.data());
+    return {impl_.data()};
   }
   [[nodiscard]] constexpr const_iterator begin() const noexcept {
-    return const_iterator(impl_.data());
+    return {impl_.data()};
   }
   [[nodiscard]] constexpr iterator end() noexcept {
-    return iterator(impl_.data() + impl_.size());
+    return {impl_.data() + impl_.size()};
   }
   [[nodiscard]] constexpr const_iterator end() const noexcept {
-    return const_iterator(impl_.data() + impl_.size());
+    return {impl_.data() + impl_.size()};
   }
   [[nodiscard]] constexpr std::unique_ptr<Object> remove(std::size_t i) noexcept {
     std::unique_ptr<Object> ptr = std::move(impl_[i]);
@@ -106,7 +110,7 @@ private:
   std::vector<std::unique_ptr<Object>> impl_;
 };
 
-static_assert([](){
+static_assert([]() {
   // ObjectContainer q;
   return true;
 }());

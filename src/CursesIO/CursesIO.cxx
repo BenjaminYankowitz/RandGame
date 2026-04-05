@@ -111,7 +111,7 @@ public:
 
 private:
   static constexpr std::size_t NoCount = std::numeric_limits<std::size_t>::max();
-  static constexpr MoveMode DefaultMoveMode = MoveMode::move() | MoveMode::fight();
+  static constexpr MoveMode DefaultMoveMode = MoveMode::Move | MoveMode::Fight;
   MoveMode moveMode_ = DefaultMoveMode;
   bool changeDigitLast_ = false;
   bool continuePlaying_ = true;
@@ -433,11 +433,11 @@ std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainer
 }
 
 void toggleMoveMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
-  mod.toggleMoveMode(MoveMode::move());
+  mod.toggleMoveMode(MoveMode::Move);
 }
 
 void toggleFightMode(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, ActionMod &mod) {
-  mod.toggleMoveMode(MoveMode::fight());
+  mod.toggleMoveMode(MoveMode::Fight);
 }
 
 void selectAndAct(IOModule::Interface &interface, ObjectContainerInterface items, const char *prompt,
@@ -497,7 +497,7 @@ StepResult takePathStep(GameInterface &gState, IOModule::Interface &interface, A
   Dir step = FindPath::findPath(mapWrapper, currentPos, goal);
   if (step.noMove())
     return StepResult::Stop;
-  gState.generalMove(step, MoveMode::move());
+  gState.generalMove(step, MoveMode::Move);
   interface.updateGameScreen();
   if (mod.interuptAction())
     return StepResult::Stop;
@@ -516,7 +516,7 @@ void pathTo(GameInterface &gState, IOModule::Interface &interface, ActionMod &mo
   }
 }
 
-void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   auto inventory = gState.lookAtInventory();
   if (inventory.empty())
     return;
@@ -526,7 +526,7 @@ void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod 
   auto target = chooseTile(gState, interface);
   if (!target)
     return;
-  gState.throwItem(index, (*target) - gState.getLocation().pos);
+  gState.throwItem(index, (*target) - gState.getLocation().pos, mod.getCount());
 }
 
 void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
@@ -552,9 +552,8 @@ void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod
 }
 
 void rest(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
-  auto cnt = mod.getCount(1);
   bool wasFull = gState.getHealth() == gState.getMaxHealth();
-  for (std::size_t i = 0; i < cnt; i++) {
+  for (auto _ : std::views::repeat(std::monostate{}, mod.getCount())) {
     gState.rest();
     if (mod.interuptAction())
       break;
@@ -579,7 +578,7 @@ void runInDir(GameInterface &gState, IOModule::Interface &interface, ActionMod &
   constexpr static Dir D = Dir(Dx, Dy);
   while (true) {
     const Position posBefore = gState.getLocation().pos;
-    gState.generalMove(D, MoveMode::move());
+    gState.generalMove(D, MoveMode::Move);
     interface.updateGameScreen();
     if (gState.getLocation().pos == posBefore)
       break;
