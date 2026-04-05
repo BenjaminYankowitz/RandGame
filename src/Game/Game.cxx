@@ -218,8 +218,8 @@ private:
   StaticPositionArr<TerrainType> TerrainTypeArr_;
   std::vector<Monster::ID> EventListenerArr_;
 };
-using WorldFloorFunc = bool (WorldFloor::*)(Position) const noexcept;
-template <WorldFloorFunc F>
+export using WorldFloorFunc = bool (WorldFloor::*)(Position) const noexcept;
+export template <WorldFloorFunc F>
 struct WorldFloorWrapper {
   const WorldFloor &floor;
   [[nodiscard]] constexpr int extent(int n) const noexcept {
@@ -579,7 +579,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   const Position cPos = getLoc().pos;
   const Position gPos = cPos + movePlan;
   if (gPos == tPos) {
-    if(onceReached == MoveMode::None){
+    if (onceReached == MoveMode::None) {
       return reThink(ReThinkReason::ReachedDestination);
     }
     const TimePeriod tTaken = generalMove(state, movePlan, onceReached);
@@ -589,8 +589,8 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
     if (onceReached == MoveMode::Move) {
       return reThink(ReThinkReason::CanNotPathToTarget);
     }
-    if(hasOverlap(onceReached, MoveMode::GetWith)){
-    state.printDebug("GetWith attempted but no time taken. This should not be possible.");
+    if (hasOverlap(onceReached, MoveMode::GetWith)) {
+      state.printDebug("GetWith attempted but no time taken. This should not be possible.");
       return reThink(ReThinkReason::FailedGetWith);
     }
     state.printDebug("Attack attempted but no time taken. This should not be possible.");
@@ -609,13 +609,13 @@ void Monster::findTask(GameState &state) noexcept {
   for (auto cPos : LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(cFloor), pos)) {
     auto [objs, monst, tile] = cFloor.getTile(cPos);
     ID cMonst = monst;
-    while(!cMonst.isNull()){
-      auto& monstRef = state.getMonster(cMonst);
+    while (!cMonst.isNull()) {
+      auto &monstRef = state.getMonster(cMonst);
       if (wantsToKill(monstRef)) {
         target_ = cMonst;
         return;
       }
-      if(mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug){
+      if (mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug) {
         target_ = HangTarget{cMonst};
         return;
       }
@@ -642,12 +642,12 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
   if (hasOverlap(mode, destMonster.isNull() ? MoveMode::Move : MoveMode::GetWith)) {
     ID &currentSpot = prev_.isNull() ? state.getMonster(getLoc()) : state.getMonster(prev_).next_;
     currentSpot = next_;
-    if(!next_.isNull()){
+    if (!next_.isNull()) {
       state.getMonster(next_).prev_ = prev_;
     }
     next_ = destMonster;
     destMonster = id_;
-    if(!next_.isNull()){
+    if (!next_.isNull()) {
       state.getMonster(next_).prev_ = id_;
     }
     if (getLoc().mapPos != nLoc.mapPos && caresEvent()) {
@@ -823,13 +823,13 @@ constexpr void Monster::kill(GameState &state) noexcept {
     state.getFloor(getLoc().mapPos).removeEventListener(getId());
   }
   setDead();
-  if(prev_.isNull()){
+  if (prev_.isNull()) {
     state.getMonster(loc_) = next_;
   } else {
     state.getMonster(prev_).next_ = next_;
   }
-  if(!next_.isNull()){
-    state.getMonster(next_).prev_=prev_;
+  if (!next_.isNull()) {
+    state.getMonster(next_).prev_ = prev_;
   }
   next_.clear();
   prev_.clear();

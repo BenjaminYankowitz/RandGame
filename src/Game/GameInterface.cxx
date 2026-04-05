@@ -94,6 +94,7 @@ public:
   [[nodiscard]] std::size_t rows() const noexcept;
   [[nodiscard]] std::size_t cols() const noexcept;
   [[nodiscard]] bool inBounds(Position pos) const;
+  [[nodiscard]] std::vector<std::pair<Position, WorldTileInterface>> getVisibleTiles() const noexcept;
 
 private:
   const IGameState *gameState_;

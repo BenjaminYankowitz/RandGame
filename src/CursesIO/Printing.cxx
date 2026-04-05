@@ -347,8 +347,7 @@ export Symbol MemoryTerrainToSymbol(TerrainTypeInterface terrain) noexcept {
   return sym;
 }
 
-export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
-  const auto tile = floor.getTile(pos);
+export Symbol TileToSymbol(WorldTileInterface tile) noexcept {
   if (!tile.monster.isNull()) {
     return MonsterToSymbol(tile.monster);
   }
@@ -356,4 +355,8 @@ export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
     return ObjectToSymbol(tile.objects.back());
   }
   return TerrainTypeInterfaceToSymbol(tile.terrainType);
+}
+
+export Symbol TileToSymbol(WorldFloorInterface floor, Position pos) noexcept {
+  return TileToSymbol(floor.getTile(pos));
 }

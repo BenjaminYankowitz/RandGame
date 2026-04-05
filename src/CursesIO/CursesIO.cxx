@@ -187,15 +187,13 @@ public:
     for (int y = 0; y < MapHeight; y++) {
       mainWindow_.moveCursor(0, y);
       for (int x = 0; x < Mapwidth; x++) {
-        Position pos{x, y};
-        auto tile = currentMap.getTile(pos);
-        if (tile.terrainType != TerrainTypeInterface::Unknown) {
-          memory[pos] = tile.terrainType;
-          mainWindow_ << TileToSymbol(currentMap, pos);
-        } else {
-          mainWindow_ << MemoryTerrainToSymbol(memory[pos]);
-        }
+        mainWindow_ << MemoryTerrainToSymbol(memory[Position{x, y}]);
       }
+    }
+    for (auto [pos, tile] : currentMap.getVisibleTiles()) {
+      memory[pos] = tile.terrainType;
+      mainWindow_.moveCursor(pos.x, pos.y);
+      mainWindow_ << TileToSymbol(tile);
     }
     ObjectContainerInterface playerInvent = gState_->lookAtInventory();
     displayInvent(inventWindow_, playerInvent);

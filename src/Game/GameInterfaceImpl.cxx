@@ -152,6 +152,17 @@ WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept {
 std::size_t WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
 std::size_t WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
 bool WorldFloorInterface::inBounds(Position pos) const { return floor_->inBounds(pos); }
+std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVisibleTiles() const noexcept {
+  const auto &monster = gameState_->getMonster(controlled_);
+  auto positions = LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(*floor_), monster.getLoc().pos);
+  std::vector<std::pair<Position, WorldTileInterface>> ret;
+  ret.reserve(positions.size());
+  for (auto pos : positions) {
+    auto tile = floor_->getTile(pos);
+    ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toInterface(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType)));
+  }
+  return ret;
+}
 
 ObjectContainerInterface::ObjectContainerInterface(const ObjectContainer &container) noexcept : container_(&container) {}
 std::size_t ObjectContainerInterface::size() const noexcept { return container_->size(); }
