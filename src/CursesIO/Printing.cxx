@@ -349,6 +349,17 @@ export Symbol MemoryTerrainToSymbol(TerrainTypeInterface terrain) noexcept {
 
 export Symbol TileToSymbol(WorldTileInterface tile) noexcept {
   if (!tile.monster.isNull()) {
+    if (tile.monster.getClass() == MonsterClass::SeaSlug) {
+      for (auto it = ++tile.monster.begin(); it != tile.monster.end(); ++it) {
+        if ((*it).getClass() == MonsterClass::SeaSlug) {
+          Symbol sym = L'≈';
+          sym.addModifier(toModifierChar(tile.monster));
+          sym.setFrontColor(toColorChar(tile.monster));
+          sym.setBackColor(Black);
+          return sym;
+        }
+      }
+    }
     return MonsterToSymbol(tile.monster);
   }
   if (!tile.objects.empty()) {

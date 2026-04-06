@@ -65,8 +65,29 @@ export [[nodiscard]] bool isWall(TerrainTypeInterface) noexcept;
 
 export class MonsterInterface {
 public:
-  [[nodiscard]] explicit MonsterInterface(const IMonster &monster) noexcept;
-  [[nodiscard]] explicit MonsterInterface(const IMonster *monster) noexcept;
+  class Iterator {
+  public:
+    using value_type = MonsterInterface;
+    using difference_type = std::ptrdiff_t;
+    constexpr Iterator() noexcept = default;
+    Iterator(const IGameState *gameState, const IMonster *monster) noexcept : gameState_(gameState), monster_(monster) {}
+    [[nodiscard]] MonsterInterface operator*() const noexcept;
+    Iterator &operator++() noexcept;
+    Iterator operator++(int) noexcept {
+      auto tmp = *this;
+      ++*this;
+      return tmp;
+    }
+    [[nodiscard]] bool operator==(const Iterator &other) const noexcept { return monster_ == other.monster_; }
+
+  private:
+    const IGameState *gameState_ = nullptr;
+    const IMonster *monster_ = nullptr;
+  };
+
+  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster &monster) noexcept;
+  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster *monster) noexcept;
+  [[nodiscard]] explicit MonsterInterface(std::nullptr_t) noexcept;
   [[nodiscard]] MonsterClass getClass() const noexcept;
   [[nodiscard]] bool isPlayer() const noexcept;
   [[nodiscard]] bool isAlive() const noexcept;
@@ -75,9 +96,12 @@ public:
   [[nodiscard]] Health getMaxHealth() const noexcept;
   [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
   [[nodiscard]] bool isNull() const noexcept;
+  [[nodiscard]] Iterator begin() const noexcept;
+  [[nodiscard]] Iterator end() const noexcept;
 
 private:
   const IMonster *monster_;
+  const IGameState *gameState_ = nullptr;
 };
 
 export class WorldTileInterface {

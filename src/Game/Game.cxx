@@ -58,6 +58,7 @@ public:
   }
   [[nodiscard]] constexpr Location getLoc() const noexcept { return loc_; }
   [[nodiscard]] constexpr ID getId() const noexcept { return id_; }
+  [[nodiscard]] constexpr ID getNext() const noexcept { return next_; }
   [[nodiscard]] constexpr const ObjectContainer &viewInventory() const noexcept { return inventory_; }
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return brain_.isPlayer(); }
   [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
@@ -242,6 +243,8 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
+  ret.getTerrainTypeArr().fill(TerrainType::Empty);
+  return ret;
   DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
@@ -415,7 +418,7 @@ GameState::GameState() noexcept {
       down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
-    addMonsters(*this, FloorSpecifier(floor), floor);
+    // addMonsters(*this, FloorSpecifier(floor), floor);
     up = down;
   }
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
@@ -437,8 +440,8 @@ GameState::GameState() noexcept {
   player_ = tryPlaceMonster({0, 0}, MonsterClass::Human, true);
   tryPlaceMonster({0, 2}, MonsterClass::SeaSlug);
   tryPlaceMonster({4, 2}, MonsterClass::SeaSlug);
-  tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
-  tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
+  // tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
+  // tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
   startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
   startingFloor.getObjects({4, 2}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
@@ -544,7 +547,11 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
 }
 
 TimePeriod Monster::goToTarget(GameState &state, HangTarget target) noexcept {
-  return state.tryGetMonster(target.target).doIf([&](const Monster &target) { return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
+  return state.tryGetMonster(target.target).doIf([&](const Monster &target) { 
+    if(getLoc()==target.getLoc()){
+      return speed_;
+    }
+    return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
 
 TimePeriod Monster::goToTarget(GameState &state, ID target) noexcept {
@@ -578,30 +585,29 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   const Position tPos = target.pos;
   const Position cPos = getLoc().pos;
   const Position gPos = cPos + movePlan;
-  if (gPos == tPos) {
-    if (onceReached == MoveMode::None) {
-      return reThink(ReThinkReason::ReachedDestination);
-    }
-    const TimePeriod tTaken = generalMove(state, movePlan, onceReached);
+  if (gPos != tPos) {
+    const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::Move);
     if (tTaken.future()) {
       return tTaken;
     }
-    if (onceReached == MoveMode::Move) {
-      return reThink(ReThinkReason::CanNotPathToTarget);
-    }
-    if (hasOverlap(onceReached, MoveMode::GetWith)) {
-      state.printDebug("GetWith attempted but no time taken. This should not be possible.");
-      return reThink(ReThinkReason::FailedGetWith);
-    }
-    state.printDebug("Attack attempted but no time taken. This should not be possible.");
-    state.printDebug("If it is possible logic should probably be reworked.");
-    return reThink(ReThinkReason::FailedAttack);
+    return reThink(ReThinkReason::CanNotPathToTarget);
   }
-  const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::Move);
+  if (onceReached == MoveMode::None) {
+    return reThink(ReThinkReason::ReachedDestination);
+  }
+  const TimePeriod tTaken = generalMove(state, movePlan, onceReached);
   if (tTaken.future()) {
     return tTaken;
   }
-  return reThink(ReThinkReason::ReachedDestination);
+  if (hasOverlap(onceReached, MoveMode::Move)) {
+    return reThink(ReThinkReason::CanNotPathToTarget);
+  }
+  if (hasOverlap(onceReached, MoveMode::GetWith)) {
+    return reThink(ReThinkReason::FailedGetWith);
+  }
+  state.printDebug("Attack attempted but no time taken. This should not be possible.");
+  state.printDebug("If it is possible logic should probably be reworked.");
+  return reThink(ReThinkReason::FailedAttack);
 }
 void Monster::findTask(GameState &state) noexcept {
   auto [pos, mapPos] = getLoc();
@@ -610,6 +616,10 @@ void Monster::findTask(GameState &state) noexcept {
     auto [objs, monst, tile] = cFloor.getTile(cPos);
     ID cMonst = monst;
     while (!cMonst.isNull()) {
+      if (cMonst == getId()) {
+        cMonst = next_;
+        continue;
+      }
       auto &monstRef = state.getMonster(cMonst);
       if (wantsToKill(monstRef)) {
         target_ = cMonst;

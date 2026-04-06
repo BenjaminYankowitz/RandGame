@@ -14,8 +14,9 @@ ObjectType ObjectInterface::type() const noexcept { return obj_->type(); }
 Material ObjectInterface::mat() const noexcept { return obj_->mat(); }
 ArtifactId ObjectInterface::artifactStatus() const noexcept { return obj_->artifactStatus(); }
 
-MonsterInterface::MonsterInterface(const IMonster &monster) noexcept : monster_(&monster) {}
-MonsterInterface::MonsterInterface(const IMonster *monster) noexcept : monster_(monster) {}
+MonsterInterface::MonsterInterface(const IGameState *gameState, const IMonster &monster) noexcept : monster_(&monster), gameState_(gameState) {}
+MonsterInterface::MonsterInterface(const IGameState *gameState, const IMonster *monster) noexcept : monster_(monster), gameState_(gameState) {}
+MonsterInterface::MonsterInterface(std::nullptr_t) noexcept : monster_(nullptr), gameState_(nullptr) {}
 MonsterClass MonsterInterface::getClass() const noexcept { return monster_->getClass(); };
 bool MonsterInterface::isPlayer() const noexcept { return monster_->isPlayer(); }
 bool MonsterInterface::isAlive() const noexcept { return monster_->isAlive(); }
@@ -24,15 +25,28 @@ Health MonsterInterface::getHealth() const noexcept { return monster_->getHealth
 Health MonsterInterface::getMaxHealth() const noexcept { return monster_->getMaxHealth(); }
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(monster_->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
+MonsterInterface::Iterator MonsterInterface::begin() const noexcept { return Iterator(gameState_, monster_); }
+MonsterInterface::Iterator MonsterInterface::end() const noexcept { return Iterator(nullptr, nullptr); }
 
-[[nodiscard]] MonsterInterface toInterface(const Monster &m) noexcept {
-  return MonsterInterface(static_cast<const IMonster &>(m));
+MonsterInterface MonsterInterface::Iterator::operator*() const noexcept { return MonsterInterface(gameState_, monster_); }
+MonsterInterface::Iterator &MonsterInterface::Iterator::operator++() noexcept {
+  auto nextId = monster_->getNext();
+  if (nextId.isNull()) {
+    monster_ = nullptr;
+  } else {
+    monster_ = static_cast<const IMonster *>(&gameState_->getMonster(nextId));
+  }
+  return *this;
 }
-[[nodiscard]] MonsterInterface toInterface(const Monster *m) noexcept {
-  return MonsterInterface(static_cast<const IMonster *>(m));
+
+[[nodiscard]] MonsterInterface toInterface(const IGameState &gameState, const Monster &m) noexcept {
+  return MonsterInterface(&gameState, static_cast<const IMonster &>(m));
+}
+[[nodiscard]] MonsterInterface toInterface(const IGameState &gameState, const Monster *m) noexcept {
+  return MonsterInterface(&gameState, static_cast<const IMonster *>(m));
 }
 [[nodiscard]] MonsterInterface toInterface(const IGameState &gameState, Monster::ID id) noexcept {
-  return id.isNull() ? MonsterInterface(nullptr) : toInterface(gameState.getMonster(id));
+  return id.isNull() ? MonsterInterface(nullptr) : toInterface(gameState, gameState.getMonster(id));
 }
 
 enum class Directions : std::uint8_t {
@@ -175,21 +189,21 @@ GameInterface::GameInterface(IGameState &gs, MonsterID controlled) noexcept : gs
 namespace {
 class EventViewerTranslator : public EventViewer {
 public:
-  explicit EventViewerTranslator(std::unique_ptr<EventViewerInterface> impl) noexcept : impl_(std::move(impl)) {}
+  explicit EventViewerTranslator(const IGameState &gameState, std::unique_ptr<EventViewerInterface> impl) noexcept : gameState_(&gameState), impl_(std::move(impl)) {}
   void itemPickup(const Monster &grabber, const Object &grabbed) noexcept final {
-    safeCall([&] { impl_->itemPickup(toInterface(grabber), ObjectInterface(grabbed)); });
+    safeCall([&] { impl_->itemPickup(toInterface(*gameState_, grabber), ObjectInterface(grabbed)); });
   }
   void debug(std::string_view message) noexcept final {
     safeCall([&] { impl_->debug(message); });
   }
   void monsterHitMonster(const Monster::HitReturn &hitreturn, const Monster &attacker, const Monster &attacked) noexcept final {
-    safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(attacker), toInterface(attacked)); });
+    safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(*gameState_, attacker), toInterface(*gameState_, attacked)); });
   }
   void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept final {
-    safeCall([&] { impl_->monsterHitWall(toInterface(attacker), attacked); });
+    safeCall([&] { impl_->monsterHitWall(toInterface(*gameState_, attacker), attacked); });
   }
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
-    safeCall([&] { impl_->monsterAte(toInterface(eater), ObjectInterface(eaten)); });
+    safeCall([&] { impl_->monsterAte(toInterface(*gameState_, eater), ObjectInterface(eaten)); });
   }
 
 private:
@@ -202,12 +216,13 @@ private:
     } catch (...) {
     }
   }
+  const IGameState *gameState_;
   std::unique_ptr<EventViewerInterface> impl_;
 };
 } // namespace
 
 void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept {
-  gs_->setEventViewer(std::make_unique<EventViewerTranslator>(std::move(viewer)));
+  gs_->setEventViewer(std::make_unique<EventViewerTranslator>(*gs_, std::move(viewer)));
 }
 void GameInterface::exit() noexcept {}
 template <typename F>
