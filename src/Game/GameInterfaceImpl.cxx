@@ -25,11 +25,15 @@ Health MonsterInterface::getHealth() const noexcept { return monster_->getHealth
 Health MonsterInterface::getMaxHealth() const noexcept { return monster_->getMaxHealth(); }
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(monster_->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_ == nullptr; }
-MonsterInterface::Iterator MonsterInterface::begin() const noexcept { return Iterator(gameState_, monster_); }
-MonsterInterface::Iterator MonsterInterface::end() const noexcept { return Iterator(nullptr, nullptr); }
 
-MonsterInterface MonsterInterface::Iterator::operator*() const noexcept { return MonsterInterface(gameState_, monster_); }
-MonsterInterface::Iterator &MonsterInterface::Iterator::operator++() noexcept {
+MonsterListInterface::MonsterListInterface(const IGameState *gameState, const IMonster *monster) noexcept : gameState_(gameState), monster_(monster) {}
+MonsterListInterface::MonsterListInterface(std::nullptr_t) noexcept : gameState_(nullptr), monster_(nullptr) {}
+MonsterListInterface::Iterator MonsterListInterface::begin() const noexcept { return {gameState_, monster_}; }
+MonsterListInterface::Iterator MonsterListInterface::end() noexcept { return {nullptr, nullptr}; }
+MonsterInterface MonsterListInterface::topMonster() const noexcept { return MonsterInterface(gameState_, monster_); }
+
+MonsterInterface MonsterListInterface::Iterator::operator*() const noexcept { return MonsterInterface(gameState_, monster_); }
+MonsterListInterface::Iterator &MonsterListInterface::Iterator::operator++() noexcept {
   auto nextId = monster_->getNext();
   if (nextId.isNull()) {
     monster_ = nullptr;
@@ -47,6 +51,9 @@ MonsterInterface::Iterator &MonsterInterface::Iterator::operator++() noexcept {
 }
 [[nodiscard]] MonsterInterface toInterface(const IGameState &gameState, Monster::ID id) noexcept {
   return id.isNull() ? MonsterInterface(nullptr) : toInterface(gameState, gameState.getMonster(id));
+}
+[[nodiscard]] MonsterListInterface toMonsterList(const IGameState &gameState, Monster::ID id) noexcept {
+  return id.isNull() ? MonsterListInterface(nullptr) : MonsterListInterface(&gameState, static_cast<const IMonster *>(&gameState.getMonster(id)));
 }
 
 enum class Directions : std::uint8_t {
@@ -158,13 +165,13 @@ WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept {
   static constexpr ObjectContainer EmptyContainer;
   const auto &monster = gameState_->getMonster(controlled_);
   if (!(inBounds(pos) && monster.inLineOfSight(*gameState_, pos)))
-    return {ObjectContainerInterface(EmptyContainer), MonsterInterface(nullptr), TerrainTypeInterface::Unknown};
+    return {ObjectContainerInterface(EmptyContainer), MonsterListInterface(nullptr), TerrainTypeInterface::Unknown};
   auto tile = floor_->getTile(pos);
-  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toInterface(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType));
+  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toMonsterList(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType));
   return ret;
 }
-std::size_t WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
-std::size_t WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
+int WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
+int WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
 bool WorldFloorInterface::inBounds(Position pos) const { return floor_->inBounds(pos); }
 std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVisibleTiles() const noexcept {
   const auto &monster = gameState_->getMonster(controlled_);
@@ -173,7 +180,7 @@ std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVis
   ret.reserve(positions.size());
   for (auto pos : positions) {
     auto tile = floor_->getTile(pos);
-    ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toInterface(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType)));
+    ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType)));
   }
   return ret;
 }

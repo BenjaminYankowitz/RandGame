@@ -63,7 +63,7 @@ void displayEvents(BoxedWindow &window, const std::span<std::pair<GameTime, std:
   window.clear();
   const std::size_t printHeight = window.prntHeight();
   const std::size_t offSet = arr.size() < printHeight ? 0 : arr.size() - printHeight;
-  for (std::size_t i = 0; i < std::min<std::size_t>(arr.size(), printHeight); i++) {
+  for (auto i : std::views::iota(static_cast<std::size_t>(0),std::min(arr.size(), printHeight))) {
     window.moveCursor(0, i);
     window << arr[i + offSet].first.impl << ": " << arr[i + offSet].second;
   }
@@ -172,21 +172,21 @@ public:
     Raii_.setCursorState(0);
     mainWindow_.clear();
     const auto &currentMap = gState_->getFloor(gState_->getLocation().mapPos);
-    int Mapwidth = static_cast<int>(currentMap.cols());
-    int MapHeight = static_cast<int>(currentMap.rows());
+    const int mapWidth = currentMap.cols();
+    const int mapHeight = currentMap.rows();
     auto [height, width] = getMaxDims();
-    const int mainWindowHeight = height - 6 - MapHeight;
-    eventWindow_.setDims(Mapwidth, mainWindowHeight - 2);
+    const int mainWindowHeight = height - 6 - mapHeight;
+    eventWindow_.setDims(mapWidth, mainWindowHeight - 2);
     mainWindow_.move(0, mainWindowHeight);
-    mainWindow_.setDims(Mapwidth, MapHeight);
-    inventWindow_.move(Mapwidth + 2, 0);
-    inventWindow_.setDims(width - Mapwidth - 4, height - 2);
+    mainWindow_.setDims(mapWidth, mapHeight);
+    inventWindow_.move(mapWidth + 2, 0);
+    inventWindow_.setDims(width - mapWidth - 4, height - 2);
     statusWindow_.move(0, height - 4);
-    statusWindow_.setDims(Mapwidth, 2);
-    auto &memory = getMemoryGrid(gState_->getLocation().mapPos, Mapwidth, MapHeight);
-    for (int y = 0; y < MapHeight; y++) {
+    statusWindow_.setDims(mapWidth, 2);
+    auto &memory = getMemoryGrid(gState_->getLocation().mapPos, mapWidth, mapHeight);
+    for (auto y : std::views::iota(0,mapHeight)) {
       mainWindow_.moveCursor(0, y);
-      for (int x = 0; x < Mapwidth; x++) {
+      for (auto x : std::views::iota(0,mapWidth)) {
         mainWindow_ << MemoryTerrainToSymbol(memory[Position{x, y}]);
       }
     }
@@ -508,7 +508,7 @@ void pathTo(GameInterface &gState, IOModule::Interface &interface, ActionMod &mo
   FloorSpecifier currentFloor = gState.getLocation().mapPos;
   const auto &mem = interface.getMemory(currentFloor);
   auto mapWrapper = TerrainWrapper{[&mem](Position p) { return mem[p]; }, mem.height(), mem.width()};
-  for (std::size_t i = 0; i < maxStepCount; i++) {
+  for (auto _ : std::views::repeat(std::monostate{},maxStepCount)) {
     if (takePathStep(gState, interface, mod, mapWrapper, currentFloor, goal) == StepResult::Stop)
       break;
   }

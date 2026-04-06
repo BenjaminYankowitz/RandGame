@@ -65,6 +65,25 @@ export [[nodiscard]] bool isWall(TerrainTypeInterface) noexcept;
 
 export class MonsterInterface {
 public:
+  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster &monster) noexcept;
+  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster *monster) noexcept;
+  [[nodiscard]] explicit MonsterInterface(std::nullptr_t) noexcept;
+  [[nodiscard]] MonsterClass getClass() const noexcept;
+  [[nodiscard]] bool isPlayer() const noexcept;
+  [[nodiscard]] bool isAlive() const noexcept;
+  [[nodiscard]] Location getLoc() const noexcept;
+  [[nodiscard]] Health getHealth() const noexcept;
+  [[nodiscard]] Health getMaxHealth() const noexcept;
+  [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
+  [[nodiscard]] bool isNull() const noexcept;
+
+private:
+  const IMonster *monster_;
+  const IGameState *gameState_ = nullptr;
+};
+
+export class MonsterListInterface {
+public:
   class Iterator {
   public:
     using value_type = MonsterInterface;
@@ -85,29 +104,21 @@ public:
     const IMonster *monster_ = nullptr;
   };
 
-  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster &monster) noexcept;
-  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster *monster) noexcept;
-  [[nodiscard]] explicit MonsterInterface(std::nullptr_t) noexcept;
-  [[nodiscard]] MonsterClass getClass() const noexcept;
-  [[nodiscard]] bool isPlayer() const noexcept;
-  [[nodiscard]] bool isAlive() const noexcept;
-  [[nodiscard]] Location getLoc() const noexcept;
-  [[nodiscard]] Health getHealth() const noexcept;
-  [[nodiscard]] Health getMaxHealth() const noexcept;
-  [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
-  [[nodiscard]] bool isNull() const noexcept;
+  MonsterListInterface(const IGameState *gameState, const IMonster *monster) noexcept;
+  explicit MonsterListInterface(std::nullptr_t) noexcept;
   [[nodiscard]] Iterator begin() const noexcept;
-  [[nodiscard]] Iterator end() const noexcept;
+  [[nodiscard]] static Iterator end() noexcept;
+  [[nodiscard]] MonsterInterface topMonster() const noexcept;
 
 private:
-  const IMonster *monster_;
   const IGameState *gameState_ = nullptr;
+  const IMonster *monster_ = nullptr;
 };
 
 export class WorldTileInterface {
 public:
   ObjectContainerInterface objects;
-  MonsterInterface monster;
+  MonsterListInterface monsters;
   TerrainTypeInterface terrainType;
 };
 
@@ -115,8 +126,8 @@ export class WorldFloorInterface {
 public:
   WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept;
   [[nodiscard]] WorldTileInterface getTile(Position pos) const noexcept;
-  [[nodiscard]] std::size_t rows() const noexcept;
-  [[nodiscard]] std::size_t cols() const noexcept;
+  [[nodiscard]] int rows() const noexcept;
+  [[nodiscard]] int cols() const noexcept;
   [[nodiscard]] bool inBounds(Position pos) const;
   [[nodiscard]] std::vector<std::pair<Position, WorldTileInterface>> getVisibleTiles() const noexcept;
 

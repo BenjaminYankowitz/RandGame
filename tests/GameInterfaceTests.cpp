@@ -136,9 +136,9 @@ TEST(GameInterfaceTests, PlayerTileHasPlayer) {
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
   auto tile = floor.getTile(loc.pos);
-  EXPECT_FALSE(tile.monster.isNull());
-  EXPECT_TRUE(tile.monster.isPlayer());
-  EXPECT_TRUE(tile.monster.isAlive());
+  EXPECT_FALSE(tile.monsters.topMonster().isNull());
+  EXPECT_TRUE(tile.monsters.topMonster().isPlayer());
+  EXPECT_TRUE(tile.monsters.topMonster().isAlive());
 }
 
 TEST(GameInterfaceTests, SetEventViewerWorks) {

@@ -348,19 +348,20 @@ export Symbol MemoryTerrainToSymbol(TerrainTypeInterface terrain) noexcept {
 }
 
 export Symbol TileToSymbol(WorldTileInterface tile) noexcept {
-  if (!tile.monster.isNull()) {
-    if (tile.monster.getClass() == MonsterClass::SeaSlug) {
-      for (auto it = ++tile.monster.begin(); it != tile.monster.end(); ++it) {
-        if ((*it).getClass() == MonsterClass::SeaSlug) {
+  if (!tile.monsters.topMonster().isNull()) {
+    auto top = tile.monsters.topMonster();
+    if (top.getClass() == MonsterClass::SeaSlug) {
+      for (auto monst : std::views::drop(tile.monsters,1)) {
+        if (monst.getClass() == MonsterClass::SeaSlug) {
           Symbol sym = L'≈';
-          sym.addModifier(toModifierChar(tile.monster));
-          sym.setFrontColor(toColorChar(tile.monster));
+          sym.addModifier(toModifierChar(top));
+          sym.setFrontColor(toColorChar(top));
           sym.setBackColor(Black);
           return sym;
         }
       }
     }
-    return MonsterToSymbol(tile.monster);
+    return MonsterToSymbol(top);
   }
   if (!tile.objects.empty()) {
     return ObjectToSymbol(tile.objects.back());
