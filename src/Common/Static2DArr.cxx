@@ -12,8 +12,8 @@ public:
   using constvalue_T = const value_type;
   using size_type = sizeT;
   static_assert(std::integral<size_type>);
-  using iterator = value_type*;
-  using const_iterator = constvalue_T*;
+  using iterator = value_type *;
+  using const_iterator = constvalue_T *;
 
 private:
   using arr_t = value_type[]; // NOLINT(modernize-avoid-c-arrays)
@@ -77,6 +77,9 @@ public:
   }
   constexpr auto indexIter() const noexcept {
     return std::views::transform(std::views::iota(static_cast<size_type>(0), rows_ * cols_), [cols_ = cols_](size_type i) { return std::make_pair(i / cols_, i % cols_); });
+  }
+  [[nodiscard]] constexpr size_type flatIndex(size_type row, size_type col) const noexcept {
+    return (row * cols_) + col;
   }
 
 private:

@@ -63,7 +63,7 @@ void displayEvents(BoxedWindow &window, const std::span<std::pair<GameTime, std:
   window.clear();
   const std::size_t printHeight = window.prntHeight();
   const std::size_t offSet = arr.size() < printHeight ? 0 : arr.size() - printHeight;
-  for (auto i : std::views::iota(static_cast<std::size_t>(0),std::min(arr.size(), printHeight))) {
+  for (auto i : std::views::iota(static_cast<std::size_t>(0), std::min(arr.size(), printHeight))) {
     window.moveCursor(0, i);
     window << arr[i + offSet].first.impl << ": " << arr[i + offSet].second;
   }
@@ -184,9 +184,9 @@ public:
     statusWindow_.move(0, height - 4);
     statusWindow_.setDims(mapWidth, 2);
     auto &memory = getMemoryGrid(gState_->getLocation().mapPos, mapWidth, mapHeight);
-    for (auto y : std::views::iota(0,mapHeight)) {
+    for (auto y : std::views::iota(0, mapHeight)) {
       mainWindow_.moveCursor(0, y);
-      for (auto x : std::views::iota(0,mapWidth)) {
+      for (auto x : std::views::iota(0, mapWidth)) {
         mainWindow_ << MemoryTerrainToSymbol(memory[Position{x, y}]);
       }
     }
@@ -233,7 +233,7 @@ public:
   }
   [[nodiscard]] const StaticPositionArr<TerrainTypeInterface> &getMemory(FloorSpecifier floor) {
     auto currentMap = gState_->getFloor(floor);
-    return getMemoryGrid(floor, static_cast<int>(currentMap.cols()), static_cast<int>(currentMap.rows()));
+    return getMemoryGrid(floor, currentMap.cols(), currentMap.rows());
   }
   bool showSelection(Position pos) {
     Raii_.setCursorState(1);
@@ -467,13 +467,29 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       iterface.showSelection(pos);
       continue;
     }
+    if (cmnd == '>' || cmnd == '<') {
+      auto target = (cmnd == '>') ? TerrainTypeInterface::DownStair : TerrainTypeInterface::UpStair;
+      const auto &memory = iterface.getMemory(gState.getLocation().mapPos);
+      auto indices = memory.indexIter();
+      auto start = memory.flatIndex(pos) + 1;
+      auto total = static_cast<int>(memory.size());
+      for (int i = 0; i < total; ++i) {
+        auto p = indices[(start + i) % total];
+        if (memory[p] == target) {
+          pos = p;
+          iterface.showSelection(pos);
+          break;
+        }
+      }
+      continue;
+    }
     auto dir = keyToDir(cmnd);
     int step = (cmnd >= 'A' && cmnd <= 'Z') ? 10 : 1;
     auto jump = Dir(dir.dx * step, dir.dy * step);
     auto desired = pos + jump;
     auto floor = gState.getFloor(gState.getLocation().mapPos);
-    int maxX = static_cast<int>(floor.cols()) - 1;
-    int maxY = static_cast<int>(floor.rows()) - 1;
+    int maxX = floor.cols() - 1;
+    int maxY = floor.rows() - 1;
     desired.x = std::clamp(desired.x, 0, maxX);
     desired.y = std::clamp(desired.y, 0, maxY);
     if (iterface.showSelection(desired)) {
@@ -508,7 +524,7 @@ void pathTo(GameInterface &gState, IOModule::Interface &interface, ActionMod &mo
   FloorSpecifier currentFloor = gState.getLocation().mapPos;
   const auto &mem = interface.getMemory(currentFloor);
   auto mapWrapper = TerrainWrapper{[&mem](Position p) { return mem[p]; }, mem.height(), mem.width()};
-  for (auto _ : std::views::repeat(std::monostate{},maxStepCount)) {
+  for (auto _ : std::views::repeat(std::monostate{}, maxStepCount)) {
     if (takePathStep(gState, interface, mod, mapWrapper, currentFloor, goal) == StepResult::Stop)
       break;
   }

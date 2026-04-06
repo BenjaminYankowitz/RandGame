@@ -87,7 +87,7 @@ struct PathIterSentinal {};
 
 // template <class Derived>
 struct PostIncrementMixin {
-  constexpr auto operator++(this auto&& self, int) noexcept {
+  constexpr auto operator++(this auto &&self, int) noexcept {
     auto ret = self;
     ++self;
     return ret;
@@ -219,6 +219,9 @@ public:
   }
   [[nodiscard]] constexpr auto indexIter() const noexcept {
     return std::views::transform(Static2DArr<T, int>::indexIter(), [](std::pair<int, int> p) { return Position{p.second, p.first}; });
+  }
+  [[nodiscard]] constexpr int flatIndex(Position p) const noexcept {
+    return Static2DArr<T, int>::flatIndex(p.y, p.x);
   }
 };
 
