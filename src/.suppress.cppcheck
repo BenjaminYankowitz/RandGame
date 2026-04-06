@@ -5,7 +5,5 @@ unusedStructMember
 missingIncludeSystem
 missingReturn
 noConstructor
-functionStatic
-returnStdMoveLocal
 uninitMemberVar
 *:Common/OpenSimplexImpl.cxx
