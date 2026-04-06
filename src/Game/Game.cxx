@@ -243,8 +243,6 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  ret.getTerrainTypeArr().fill(TerrainType::Empty);
-  return ret;
   DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
@@ -418,7 +416,7 @@ GameState::GameState() noexcept {
       down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
-    // addMonsters(*this, FloorSpecifier(floor), floor);
+    addMonsters(*this, FloorSpecifier(floor), floor);
     up = down;
   }
   auto tryPlaceMonster = [this](Position pos, MonsterClass mClass, bool isPlayer = false) {
@@ -440,8 +438,8 @@ GameState::GameState() noexcept {
   player_ = tryPlaceMonster({0, 0}, MonsterClass::Human, true);
   tryPlaceMonster({0, 2}, MonsterClass::SeaSlug);
   tryPlaceMonster({4, 2}, MonsterClass::SeaSlug);
-  // tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
-  // tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
+  tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
+  tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
   startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
   startingFloor.getObjects({4, 2}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});

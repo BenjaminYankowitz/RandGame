@@ -13,6 +13,31 @@
         "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -Wall -Wextra -pedantic -Wno-deprecated-declarations -g -Qunused-arguments",
         "CMAKE_EXPORT_COMPILE_COMMANDS": true
       }
+    },
+    {
+      "name": "fast",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -Wall -Wextra -pedantic -Wno-deprecated-declarations -g -Qunused-arguments -O2",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
+    },
+    {
+      "name": "nodebug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -Wall -Wextra -pedantic -Wno-deprecated-declarations -Qunused-arguments -O3 -DNDEBUG",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      }
     }
   ]
 }
