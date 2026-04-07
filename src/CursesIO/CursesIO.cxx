@@ -206,6 +206,14 @@ public:
     displayEvents(eventWindow_, eventLog_);
     eventWindow_.updateScreen();
   }
+  void showSuggestion(std::string_view suggestion) {
+    for (char c : suggestion) {
+      Symbol s(c);
+      s.setFrontColor(Grey);
+      eventWindow_.place(s);
+    }
+    eventWindow_.updateScreen();
+  }
   int eventWindowWidth() const noexcept {
     return eventWindow_.prntWidth();
   }
@@ -450,6 +458,19 @@ void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod
                [&](std::size_t i) { gState.pickUpItem(i); });
 }
 
+std::optional<Position> findTerrain(const StaticPositionArr<TerrainTypeInterface> &memory, Position pos, TerrainTypeInterface target){
+  auto indices = memory.indexIter();
+  auto cIndex = memory.flatIndex(pos);
+  auto total = memory.size();
+  for (auto i : std::views::join(std::array{std::views::iota(cIndex+1,total),std::views::iota(0,cIndex)})) {
+    auto p = indices[i];
+    if (memory[p] == target) {
+      return p;
+    }
+  }
+  return {};
+}
+
 std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface,
                                    std::span<const Position> cycleTargets = {}) noexcept {
   auto pos = gState.getLocation().pos;
@@ -470,16 +491,10 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     if (cmnd == '>' || cmnd == '<') {
       auto target = (cmnd == '>') ? TerrainTypeInterface::DownStair : TerrainTypeInterface::UpStair;
       const auto &memory = iterface.getMemory(gState.getLocation().mapPos);
-      auto indices = memory.indexIter();
-      auto start = memory.flatIndex(pos) + 1;
-      auto total = static_cast<int>(memory.size());
-      for (int i = 0; i < total; ++i) {
-        auto p = indices[(start + i) % total];
-        if (memory[p] == target) {
-          pos = p;
-          iterface.showSelection(pos);
-          break;
-        }
+      auto npos = findTerrain(memory,pos,target);
+      if(npos.has_value()){
+        pos = *npos;
+        iterface.showSelection(pos);
       }
       continue;
     }
@@ -634,22 +649,45 @@ constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"autoexplore", autoExplore},
 });
 
+std::string_view findSuggestion(std::string_view typed) {
+  std::string_view match;
+  int count = 0;
+  for (const auto &cmd : ExtendedCommands) {
+    if (cmd.text.starts_with(typed) && cmd.text != typed) {
+      match = cmd.text;
+      count++;
+    }
+  }
+  return count == 1 ? match.substr(typed.size()) : std::string_view{};
+}
+
 void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {
   std::string &name = interface.addEvent("#");
   interface.updateGameScreen();
+  auto suggest = [&] {
+    auto suggestion = findSuggestion(std::string_view(name).substr(1));
+    if (!suggestion.empty())
+      interface.showSuggestion(suggestion);
+  };
+  suggest();
   while (true) {
     auto ch = CursesRAII::getChar();
     if (ch == '\n')
       break;
     if (ch == SpecialChar::Escape)
       return;
-    if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
+    if (ch == '\t') {
+      auto suggestion = findSuggestion(std::string_view(name).substr(1));
+      if (!suggestion.empty())
+        name += suggestion;
+    } else if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
       if (!name.empty())
         name.pop_back();
     } else if (ch >= ' ' && ch <= '~') {
       name += static_cast<char>(ch);
     }
     interface.updateGameScreen();
+    suggest();
   }
   for (const auto &cmd : ExtendedCommands) {
     if (cmd.text == name.subview(1)) {
