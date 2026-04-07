@@ -250,14 +250,6 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  ret.getTerrainTypeArr().fill(TerrainType::Empty);
-  if (ret.inBounds(upStair)) {
-    ret.getTerrainType(upStair) = TerrainType::UpStair;
-  }
-  if (ret.inBounds(downStair)) {
-    ret.getTerrainType(downStair) = TerrainType::DownStair;
-  }
-  return ret;
   DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
@@ -428,7 +420,7 @@ GameState::GameState() noexcept {
       down = {-1, -1};
     }
     while (down == up) {
-      down = {floor, 0};
+      down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
     addMonsters(*this, FloorSpecifier(floor), floor);

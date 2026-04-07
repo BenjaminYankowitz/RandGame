@@ -160,12 +160,16 @@ bool isWall(TerrainTypeInterface type) noexcept {
   }
 }
 
-WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled) noexcept : gameState_(&gameState), floor_(&floor), controlled_(controlled) {}
+WorldFloorInterface::WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled, bool mapRevealed) noexcept : gameState_(&gameState), floor_(&floor), controlled_(controlled), mapRevealed_(mapRevealed) {}
 WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept {
   static constexpr ObjectContainer EmptyContainer;
-  const auto &monster = gameState_->getMonster(controlled_);
-  if (!(inBounds(pos) && monster.inLineOfSight(*gameState_, pos)))
+  if (!mapRevealed_) {
+    const auto &monster = gameState_->getMonster(controlled_);
+    if (!(inBounds(pos) && monster.inLineOfSight(*gameState_, pos)))
+      return {ObjectContainerInterface(EmptyContainer), MonsterListInterface(nullptr), TerrainTypeInterface::Unknown};
+  } else if (!inBounds(pos)) {
     return {ObjectContainerInterface(EmptyContainer), MonsterListInterface(nullptr), TerrainTypeInterface::Unknown};
+  }
   auto tile = floor_->getTile(pos);
   WorldTileInterface ret(ObjectContainerInterface(tile.objects), toMonsterList(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType));
   return ret;
@@ -174,6 +178,18 @@ int WorldFloorInterface::rows() const noexcept { return floor_->rows(); }
 int WorldFloorInterface::cols() const noexcept { return floor_->cols(); }
 bool WorldFloorInterface::inBounds(Position pos) const { return floor_->inBounds(pos); }
 std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVisibleTiles() const noexcept {
+  if (mapRevealed_) {
+    std::vector<std::pair<Position, WorldTileInterface>> ret;
+    ret.reserve(static_cast<std::size_t>(rows()) * static_cast<std::size_t>(cols()));
+    for (int r = 0; r < rows(); ++r) {
+      for (int c = 0; c < cols(); ++c) {
+        Position pos(c, r);
+        auto tile = floor_->getTile(pos);
+        ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(*gameState_, tile.monster), toInterface(*floor_, pos, tile.terrainType)));
+      }
+    }
+    return ret;
+  }
   const auto &monster = gameState_->getMonster(controlled_);
   auto positions = LineOfSight::allInLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(*floor_), monster.getLoc().pos);
   std::vector<std::pair<Position, WorldTileInterface>> ret;
@@ -262,7 +278,7 @@ void GameInterface::pickUpItem(std::size_t selected) noexcept {
 }
 
 WorldFloorInterface GameInterface::getFloor(FloorSpecifier floorId) const noexcept {
-  return {static_cast<const IGameState &>(*gs_), static_cast<const IWorldFloor &>(gs_->getFloor(floorId)), controlled_};
+  return {static_cast<const IGameState &>(*gs_), static_cast<const IWorldFloor &>(gs_->getFloor(floorId)), controlled_, mapRevealed_};
 }
 
 ObjectContainerInterface GameInterface::lookAtFloor() const noexcept {
@@ -334,6 +350,31 @@ void GameInterface::passTime(TimePeriod numTurns) noexcept {
     return;
   }
   gs_->passTime(numTurns);
+}
+
+bool GameInterface::isGodMode() const noexcept { return godMode_; }
+bool GameInterface::wasGodMode() const noexcept { return wasGodMode_; }
+void GameInterface::enableGodMode() noexcept {
+  godMode_ = true;
+  wasGodMode_ = true;
+}
+void GameInterface::disableGodMode() noexcept {
+  godMode_ = false;
+  mapRevealed_ = false;
+}
+void GameInterface::mapReveal() noexcept {
+  if (godMode_)
+    mapRevealed_ = true;
+}
+void GameInterface::mapHide() noexcept {
+  if (godMode_)
+    mapRevealed_ = false;
+}
+bool GameInterface::isMapRevealed() const noexcept { return mapRevealed_; }
+void GameInterface::teleport(Position pos) noexcept {
+  if (!godMode_)
+    return;
+  ifAlive([&](auto &self) { passTime(self.generalMove(*gs_, pos, MoveMode::Move)); });
 }
 
 GameInterface::~GameInterface() {}

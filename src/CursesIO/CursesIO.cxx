@@ -458,11 +458,11 @@ void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod
                [&](std::size_t i) { gState.pickUpItem(i); });
 }
 
-std::optional<Position> findTerrain(const StaticPositionArr<TerrainTypeInterface> &memory, Position pos, TerrainTypeInterface target){
+std::optional<Position> findTerrain(const StaticPositionArr<TerrainTypeInterface> &memory, Position pos, TerrainTypeInterface target) {
   auto indices = memory.indexIter();
   auto cIndex = memory.flatIndex(pos);
   auto total = memory.size();
-  for (auto i : std::views::join(std::array{std::views::iota(cIndex+1,total),std::views::iota(0,cIndex)})) {
+  for (auto i : std::views::join(std::array{std::views::iota(cIndex + 1, total), std::views::iota(0, cIndex)})) {
     auto p = indices[i];
     if (memory[p] == target) {
       return p;
@@ -472,7 +472,12 @@ std::optional<Position> findTerrain(const StaticPositionArr<TerrainTypeInterface
 }
 
 std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface,
-                                   std::span<const Position> cycleTargets = {}) noexcept {
+                                   bool calcFrontier = false) noexcept {
+  std::vector<Position> cycleTargets;
+  if (calcFrontier) {
+    const FloorSpecifier currentFloor = gState.getLocation().mapPos;
+    cycleTargets = findUnexploredFrontier(iterface.getMemory(currentFloor), gState.getLocation().pos);
+  }
   auto pos = gState.getLocation().pos;
   iterface.showSelection(pos);
   std::size_t cycleIndex = 0;
@@ -491,8 +496,8 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     if (cmnd == '>' || cmnd == '<') {
       auto target = (cmnd == '>') ? TerrainTypeInterface::DownStair : TerrainTypeInterface::UpStair;
       const auto &memory = iterface.getMemory(gState.getLocation().mapPos);
-      auto npos = findTerrain(memory,pos,target);
-      if(npos.has_value()){
+      auto npos = findTerrain(memory, pos, target);
+      if (npos.has_value()) {
         pos = *npos;
         iterface.showSelection(pos);
       }
@@ -592,9 +597,7 @@ void rest(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
 }
 
 void autoPath(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
-  const FloorSpecifier currentFloor = gState.getLocation().mapPos;
-  auto frontier = findUnexploredFrontier(interface.getMemory(currentFloor), gState.getLocation().pos);
-  auto target = chooseTile(gState, interface, frontier);
+  auto target = chooseTile(gState, interface, true);
   if (!target)
     return;
   const Position goal = *target;
@@ -627,6 +630,32 @@ void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
   mod.quitGame();
 }
 
+void godModeOn(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.enableGodMode();
+}
+
+void godModeOff(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.disableGodMode();
+}
+
+void seeAll(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  gState.mapReveal();
+  interface.updateGameScreen();
+}
+
+void seeAllOff(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  gState.mapHide();
+  interface.updateGameScreen();
+}
+
+void teleport(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  auto target = chooseTile(gState, interface, true);
+  if (!target)
+    return;
+  gState.teleport(*target);
+  interface.updateGameScreen();
+}
+
 void autoExplore(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   const FloorSpecifier currentFloor = gState.getLocation().mapPos;
   const auto &mem = interface.getMemory(currentFloor);
@@ -641,18 +670,26 @@ void autoExplore(GameInterface &gState, IOModule::Interface &interface, ActionMo
 struct ExtendedCommand {
   std::string_view text;
   ActionType comand;
+  bool godModeOnly = false;
+  bool autoComplete = true;
 };
 
 constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"quit", quit},
     {"wait", passTime},
     {"autoexplore", autoExplore},
+    {"god mode", godModeOn, false, false},
+    {"remove god mode", godModeOff, true},
+    {"see all", seeAll, true},
+    {"remove see all", seeAllOff, true},
+    {"teleport", teleport, true},
 });
 
-std::string_view findSuggestion(std::string_view typed) {
+std::string_view findSuggestion(std::string_view typed, bool godMode) {
   std::string_view match;
   int count = 0;
-  for (const auto &cmd : ExtendedCommands) {
+  auto filter = std::views::filter([godMode](ExtendedCommand cmd) { return cmd.autoComplete && (!cmd.godModeOnly || godMode); });
+  for (const auto &cmd : ExtendedCommands | filter) {
     if (cmd.text.starts_with(typed) && cmd.text != typed) {
       match = cmd.text;
       count++;
@@ -664,8 +701,9 @@ std::string_view findSuggestion(std::string_view typed) {
 void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {
   std::string &name = interface.addEvent("#");
   interface.updateGameScreen();
+  const bool godMode = gState.isGodMode();
   auto suggest = [&] {
-    auto suggestion = findSuggestion(std::string_view(name).substr(1));
+    auto suggestion = findSuggestion(std::string_view(name).substr(1), godMode);
     if (!suggestion.empty())
       interface.showSuggestion(suggestion);
   };
@@ -677,11 +715,11 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     if (ch == SpecialChar::Escape)
       return;
     if (ch == '\t') {
-      auto suggestion = findSuggestion(std::string_view(name).substr(1));
+      auto suggestion = findSuggestion(std::string_view(name).substr(1), godMode);
       if (!suggestion.empty())
         name += suggestion;
     } else if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
-      if (!name.empty())
+      if (name.size() > 1)
         name.pop_back();
     } else if (ch >= ' ' && ch <= '~') {
       name += static_cast<char>(ch);
@@ -690,6 +728,8 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     suggest();
   }
   for (const auto &cmd : ExtendedCommands) {
+    if (cmd.godModeOnly && !godMode)
+      continue;
     if (cmd.text == name.subview(1)) {
       cmd.comand(gState, interface, mod);
       return;
