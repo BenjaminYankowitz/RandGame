@@ -176,10 +176,10 @@ public:
   [[nodiscard]] bool canEat(ObjectInterface obj) const noexcept;
   void throwItem(std::size_t i, Dir dir, int count) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
-  [[nodiscard]] bool isGodMode() const noexcept;
-  [[nodiscard]] bool wasGodMode() const noexcept;
-  void enableGodMode() noexcept;
-  void disableGodMode() noexcept;
+  [[nodiscard]] bool isDebugMode() const noexcept;
+  [[nodiscard]] bool wasDebugMode() const noexcept;
+  void enableDebugMode() noexcept;
+  void disableDebugMode() noexcept;
   void mapReveal() noexcept;
   void mapHide() noexcept;
   [[nodiscard]] bool isMapRevealed() const noexcept;
@@ -191,7 +191,7 @@ private:
   void ifAlive(F &&f) noexcept;
   IGameState *gs_;
   MonsterID controlled_;
-  bool godMode_ = false;
-  bool wasGodMode_ = false;
+  bool debugMode_ = false;
+  bool wasDebugMode_ = false;
   bool mapRevealed_ = false;
 };

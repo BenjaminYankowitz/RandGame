@@ -352,27 +352,27 @@ void GameInterface::passTime(TimePeriod numTurns) noexcept {
   gs_->passTime(numTurns);
 }
 
-bool GameInterface::isGodMode() const noexcept { return godMode_; }
-bool GameInterface::wasGodMode() const noexcept { return wasGodMode_; }
-void GameInterface::enableGodMode() noexcept {
-  godMode_ = true;
-  wasGodMode_ = true;
+bool GameInterface::isDebugMode() const noexcept { return debugMode_; }
+bool GameInterface::wasDebugMode() const noexcept { return wasDebugMode_; }
+void GameInterface::enableDebugMode() noexcept {
+  debugMode_ = true;
+  wasDebugMode_ = true;
 }
-void GameInterface::disableGodMode() noexcept {
-  godMode_ = false;
+void GameInterface::disableDebugMode() noexcept {
+  debugMode_ = false;
   mapRevealed_ = false;
 }
 void GameInterface::mapReveal() noexcept {
-  if (godMode_)
+  if (debugMode_)
     mapRevealed_ = true;
 }
 void GameInterface::mapHide() noexcept {
-  if (godMode_)
+  if (debugMode_)
     mapRevealed_ = false;
 }
 bool GameInterface::isMapRevealed() const noexcept { return mapRevealed_; }
 void GameInterface::teleport(Position pos) noexcept {
-  if (!godMode_)
+  if (!debugMode_)
     return;
   ifAlive([&](auto &self) { passTime(self.generalMove(*gs_, pos, MoveMode::Move)); });
 }

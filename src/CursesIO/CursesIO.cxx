@@ -630,12 +630,12 @@ void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mo
   mod.quitGame();
 }
 
-void godModeOn(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
-  gState.enableGodMode();
+void debugModeOn(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.enableDebugMode();
 }
 
-void godModeOff(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
-  gState.disableGodMode();
+void debugModeOff(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.disableDebugMode();
 }
 
 void seeAll(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
@@ -670,7 +670,7 @@ void autoExplore(GameInterface &gState, IOModule::Interface &interface, ActionMo
 struct ExtendedCommand {
   std::string_view text;
   ActionType command;
-  bool godModeOnly = false;
+  bool debugModeOnly = false;
   bool autoComplete = true;
   [[nodiscard]] constexpr bool operator==(std::string_view other) const noexcept {
     return text == other;
@@ -680,8 +680,8 @@ struct ExtendedCommand {
       return false;
     }
     if constexpr (InDebug) {
-      if (command != other.command || godModeOnly != other.godModeOnly || autoComplete != other.autoComplete) {
-        Logging::log << "Command: " << text << " does not match: " << (command == other.command) << ',' << (godModeOnly == other.godModeOnly) << ',' << (autoComplete == other.autoComplete) << '\n';
+      if (command != other.command || debugModeOnly != other.debugModeOnly || autoComplete != other.autoComplete) {
+        Logging::log << "Command: " << text << " does not match: " << (command == other.command) << ',' << (debugModeOnly == other.debugModeOnly) << ',' << (autoComplete == other.autoComplete) << '\n';
       }
     }
     return true;
@@ -692,16 +692,16 @@ constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"quit", quit},
     {"wait", passTime},
     {"autoexplore", autoExplore},
-    {"god mode", godModeOn, false, false},
-    {"remove god mode", godModeOff, true},
+    {"debug mode", debugModeOn, false, false},
+    {"remove debug mode", debugModeOff, true},
     {"see all", seeAll, true},
     {"remove see all", seeAllOff, true},
     {"teleport", teleport, true},
 });
 
-auto validCommands(bool godMode, bool inSuggestion) {
-  return std::views::filter(ExtendedCommands, [godMode, inSuggestion](const ExtendedCommand& cmd) {
-    if (cmd.godModeOnly && !godMode)
+auto validCommands(bool debugMode, bool inSuggestion) {
+  return std::views::filter(ExtendedCommands, [debugMode, inSuggestion](const ExtendedCommand& cmd) {
+    if (cmd.debugModeOnly && !debugMode)
       return false;
     if (inSuggestion && !cmd.autoComplete)
       return false;
@@ -709,8 +709,8 @@ auto validCommands(bool godMode, bool inSuggestion) {
   });
 }
 
-std::string_view findSuggestion(std::string_view typed, bool godMode) {
-  auto possibleExtensions = std::views::filter(validCommands(godMode, true),[typed](const ExtendedCommand& cmd){
+std::string_view findSuggestion(std::string_view typed, bool debugMode) {
+  auto possibleExtensions = std::views::filter(validCommands(debugMode, true),[typed](const ExtendedCommand& cmd){
     return cmd.text.starts_with(typed) && cmd.text != typed;
   });
   return std::ranges::distance(possibleExtensions)==1 ? possibleExtensions.front().text.substr(typed.size()) : std::string_view{};
@@ -719,9 +719,9 @@ std::string_view findSuggestion(std::string_view typed, bool godMode) {
 void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {
   std::string &name = interface.addEvent("#");
   interface.updateGameScreen();
-  const bool godMode = gState.isGodMode();
+  const bool debugMode = gState.isDebugMode();
   auto suggest = [&] {
-    auto suggestion = findSuggestion(std::string_view(name).substr(1), godMode);
+    auto suggestion = findSuggestion(std::string_view(name).substr(1), debugMode);
     if (!suggestion.empty())
       interface.showSuggestion(suggestion);
   };
@@ -733,7 +733,7 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     if (ch == SpecialChar::Escape)
       return;
     if (ch == '\t') {
-      auto suggestion = findSuggestion(std::string_view(name).substr(1), godMode);
+      auto suggestion = findSuggestion(std::string_view(name).substr(1), debugMode);
       if (!suggestion.empty())
         name += suggestion;
     } else if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
@@ -745,7 +745,7 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     interface.updateGameScreen();
     suggest();
   }
-  auto choices = validCommands(godMode,false);
+  auto choices = validCommands(debugMode,false);
   auto cmd = std::ranges::find_if(choices, [name = name.subview(1)](const ExtendedCommand& cmd){return cmd==name;});
   if(cmd!=choices.end())
     cmd->command(gState,interface,mod);
