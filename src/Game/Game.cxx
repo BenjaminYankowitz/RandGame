@@ -49,12 +49,8 @@ public:
   [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return speed_; };
   [[nodiscard]] constexpr Health getHealth() const noexcept { return health_; }
   [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return maxHealth_; }
-  [[nodiscard]] constexpr bool removeHealth(GameState &state, Health amount) noexcept {
-    if (0 < (health_ -= amount)) {
-      return false;
-    }
-    kill(state);
-    return true;
+  [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
+    return 0 >= (health_ -= amount);
   }
   [[nodiscard]] constexpr Location getLoc() const noexcept { return loc_; }
   [[nodiscard]] constexpr ID getId() const noexcept { return id_; }
@@ -72,7 +68,8 @@ public:
   constexpr void informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
   constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept;
   constexpr void informMonsterAte(GameState &state, const Monster &eater, const Object &eaten) noexcept;
-  [[nodiscard]] HitReturn hitBy(GameState &state, AttackInfo info) noexcept;
+  friend void monsterHitMonster(GameState& state, Monster& attacker, Monster& attacked, AttackInfo info) noexcept;
+  [[nodiscard]] HitReturn hitBy(AttackInfo info) noexcept;
   constexpr void gainExp(int n) noexcept { exp_ += n; }
   constexpr void kill(GameState &state) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i, int count = std::numeric_limits<int>::max()) noexcept {
@@ -780,10 +777,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
-        Monster::AttackInfo info{4};
-        auto hitReturn = target.hitBy(state, info);
-        source.gainExp(hitReturn.exp);
-        state.broadcastMonsterHitMonster(hitReturn, source, target);
+        monsterHitMonster(state,source,target,{4});
       }
       break;
     }
@@ -823,9 +817,7 @@ TimePeriod Monster::rest() noexcept {
 }
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
-  const auto ret = target.hitBy(state, {damage_()});
-  gainExp(ret.exp);
-  state.broadcastMonsterHitMonster(ret, *this, target);
+  monsterHitMonster(state,*this,target,{damage_()});
   return getSpeed();
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {
@@ -848,7 +840,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   return id;
 }
 constexpr void Monster::kill(GameState &state) noexcept {
-  if (caresEvent()) {
+  if (caresEvent() && !isPlayer()) {
     state.getFloor(getLoc().mapPos).removeEventListener(getId());
   }
   setDead();
@@ -864,7 +856,14 @@ constexpr void Monster::kill(GameState &state) noexcept {
   prev_.clear();
   deathDrop(state);
 }
-Monster::HitReturn Monster::hitBy(GameState &state, AttackInfo info) noexcept {
-  const bool killed = removeHealth(state, info.damage);
+void monsterHitMonster(GameState& state, Monster& attacker, Monster& attacked, Monster::AttackInfo info) noexcept{
+  auto hitReturn = attacked.hitBy(info);
+  attacker.gainExp(hitReturn.exp);
+  state.broadcastMonsterHitMonster(hitReturn, attacker, attacked);
+  if(hitReturn.killed)
+    attacked.kill(state);
+}
+Monster::HitReturn Monster::hitBy(AttackInfo info) noexcept {
+  const bool killed = removeHealth(info.damage);
   return {info.damage, killed ? exp_ / 2 : 0, killed};
 }

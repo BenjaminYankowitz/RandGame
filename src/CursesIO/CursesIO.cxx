@@ -1,3 +1,5 @@
+module;
+#include <cassert>
 export module CursesIO;
 import CursesLowLevel;
 import Common;
@@ -649,6 +651,8 @@ void seeAllOff(GameInterface &gState, IOModule::Interface &interface, ActionMod 
 }
 
 void teleport(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  if(!gState.isDebugMode())
+    return;
   auto target = chooseTile(gState, interface, true);
   if (!target)
     return;
@@ -751,6 +755,11 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     cmd->command(gState,interface,mod);
 }
 
+[[nodiscard]] consteval std::uint16_t cntrl(char c) {
+  assert(c>='@' && c <= '_');
+  return c-64;
+}
+
 constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, ActionType>({
     {SpecialChar::Left, movePlayer<-1, 0>},
     {'h', movePlayer<-1, 0>},
@@ -777,6 +786,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'U', runInDir<1, -1>},
     {'B', runInDir<-1, 1>},
     {'N', runInDir<1, 1>},
+    {cntrl('T'),teleport},
 
     {'<', goUpStair},
     {'>', goDownStair},
