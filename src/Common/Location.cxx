@@ -48,6 +48,12 @@ public:
   [[nodiscard]] static constexpr int chessboard(Dir d) noexcept {
     return std::max(abs(d.dx), abs(d.dy));
   }
+  [[nodiscard]] static constexpr Dir getInvalid() noexcept {
+    return {std::numeric_limits<int>::min(), std::numeric_limits<int>::min()};
+  }
+  [[nodiscard]] constexpr bool invalid() const noexcept {
+    return dx == std::numeric_limits<int>::min() && dy == std::numeric_limits<int>::min();
+  }
   int dx;
   int dy;
 };

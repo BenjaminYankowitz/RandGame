@@ -185,6 +185,13 @@ public:
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
   }
+  [[nodiscard]] constexpr Position findTerrain(TerrainType type) const noexcept {
+    for (Position p : getTerrainTypeArr().indexIter()) {
+      if (getTerrainType(p) == type)
+        return p;
+    }
+    return Position{-1, -1};
+  }
   constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x, y), MonsterArr_(x, y), TerrainTypeArr_(x, y) {}
   [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
   [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
@@ -243,6 +250,14 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
+  ret.getTerrainTypeArr().fill(TerrainType::Empty);
+  if (ret.inBounds(upStair)) {
+    ret.getTerrainType(upStair) = TerrainType::UpStair;
+  }
+  if (ret.inBounds(downStair)) {
+    ret.getTerrainType(downStair) = TerrainType::DownStair;
+  }
+  return ret;
   DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
   if (ret.inBounds(upStair)) {
     ret.getTerrainType(upStair) = TerrainType::Empty;
@@ -413,7 +428,7 @@ GameState::GameState() noexcept {
       down = {-1, -1};
     }
     while (down == up) {
-      down = {Rnd::rnd(DungeonWidth), Rnd::rnd(DungeonHeight)};
+      down = {floor, 0};
     }
     floorData_.push_back(createFloor(DungeonWidth, DungeonHeight, up, down));
     addMonsters(*this, FloorSpecifier(floor), floor);
@@ -504,8 +519,19 @@ constexpr void GameState::broadcastMonsterAte(const Monster &eater, const Object
 
 Dir monsterPath(const GameState &state, const Monster &start, Location end) {
   auto [cPos, floor] = start.getLoc();
-  if (end.mapPos != floor) { // at some point add ability to travel to different floor
-    return Dir{0, 0};
+  if (end.mapPos != floor) {
+    TerrainType targetStair = (end.mapPos.floor < floor.floor) ? TerrainType::UpStair : TerrainType::DownStair;
+    if (state.getFloor(floor).getTerrainType(cPos) == targetStair) {
+      return Dir::getInvalid();
+    }
+    Position stairPos = state.getFloor(floor).findTerrain(targetStair);
+    if (stairPos == Position{-1, -1}) {
+      return Dir{0, 0};
+    }
+    if (Position::chessboard(cPos, stairPos) <= 1) {
+      return stairPos - cPos;
+    }
+    return FindPath::findPath(WorldFloorWrapper<&WorldFloor::isOpenTile>(state.getFloor(floor)), cPos, stairPos, 30);
   }
   if (Position::chessboard(cPos, end.pos) <= 1) {
     return end.pos - cPos;
@@ -580,11 +606,17 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   if (movePlan == Dir{0, 0}) {
     return reThink(ReThinkReason::CanNotPathToTarget);
   }
+  Location moveTo = loc_;
+  if (movePlan.invalid()) {
+    moveTo = (state.getTerrainType(loc_) == TerrainType::UpStair) ? moveTo.up() : moveTo.down();
+  } else {
+    moveTo.pos+=movePlan;
+  }
   const Position tPos = target.pos;
   const Position cPos = getLoc().pos;
   const Position gPos = cPos + movePlan;
   if (gPos != tPos) {
-    const TimePeriod tTaken = generalMove(state, movePlan, MoveMode::Move);
+    const TimePeriod tTaken = generalMove(state, moveTo, MoveMode::Move);
     if (tTaken.future()) {
       return tTaken;
     }
@@ -593,7 +625,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   if (onceReached == MoveMode::None) {
     return reThink(ReThinkReason::ReachedDestination);
   }
-  const TimePeriod tTaken = generalMove(state, movePlan, onceReached);
+  const TimePeriod tTaken = generalMove(state, moveTo, onceReached);
   if (tTaken.future()) {
     return tTaken;
   }
@@ -648,11 +680,12 @@ constexpr TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveM
   }
   auto &destMonster = state.getMonster(nLoc);
   if (hasOverlap(mode, destMonster.isNull() ? MoveMode::Move : MoveMode::GetWith)) {
-    ID &currentSpot = prev_.isNull() ? state.getMonster(getLoc()) : state.getMonster(prev_).next_;
-    currentSpot = next_;
     if (!next_.isNull()) {
       state.getMonster(next_).prev_ = prev_;
     }
+    ID &currentSpot = prev_.isNull() ? state.getMonster(getLoc()) : state.getMonster(prev_).next_;
+    prev_.clear();
+    currentSpot = next_;
     next_ = destMonster;
     destMonster = id_;
     if (!next_.isNull()) {
