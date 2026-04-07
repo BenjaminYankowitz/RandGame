@@ -97,6 +97,7 @@ public:
     ReachedDestination,
     Unknown,
     FoodGone,
+    DoneWithSnuggles,
   };
   [[nodiscard]] TimePeriod reThink(ReThinkReason reason) noexcept {
     switch (reason) {
@@ -110,6 +111,7 @@ public:
     case ReachedDestination:
     case FailedGetWith:
     case FoodGone:
+    case DoneWithSnuggles:
       target_ = NoTarget{};
       return TimePeriod(1);
     }
@@ -131,6 +133,7 @@ private:
   Health maxHealth_;
   Health health_;
   int exp_ = 2;
+  int snuggleDesire_ = 0;
   ID id_;
   ID next_;
   ID prev_;
@@ -565,6 +568,10 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
 TimePeriod Monster::goToTarget(GameState &state, HangTarget target) noexcept {
   return state.tryGetMonster(target.target).doIf([&](const Monster &target) { 
     if(getLoc()==target.getLoc()){
+      if(snuggleDesire_<=0){
+        return reThink(ReThinkReason::DoneWithSnuggles);
+      }
+      snuggleDesire_-=10;
       return speed_;
     }
     return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
@@ -647,7 +654,7 @@ void Monster::findTask(GameState &state) noexcept {
         target_ = cMonst;
         return;
       }
-      if (mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug) {
+      if (snuggleDesire_ > 100 && mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug) {
         target_ = HangTarget{cMonst};
         return;
       }
@@ -755,6 +762,8 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
+  if(mClass_==MonsterClass::SeaSlug)
+    snuggleDesire_++;
   if (std::holds_alternative<NoTarget>(target_)) {
     findTask(state);
   }
