@@ -4,7 +4,7 @@ target_sources(DungeonMaker
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
         DungeonMaker.cxx)
-target_link_libraries(DungeonMaker PUBLIC Common PerlinNoise OpenSimplex)
+target_link_libraries(DungeonMaker PUBLIC Common PerlinNoise OpenSimplex GameTypes)
 
 add_library(MonsterClassConfig STATIC)  
 target_sources(MonsterClassConfig

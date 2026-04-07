@@ -253,20 +253,7 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::openSimplex<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr(), 32, 8, -0.2);
-  if (ret.inBounds(upStair)) {
-    ret.getTerrainType(upStair) = TerrainType::Empty;
-  }
-  if (ret.inBounds(downStair)) {
-    ret.getTerrainType(downStair) = TerrainType::Empty;
-  }
-  DungeonMaker::connectRegions<TerrainType::Wall, TerrainType::Empty>(ret.getTerrainTypeArr());
-  if (ret.inBounds(upStair)) {
-    ret.getTerrainType(upStair) = TerrainType::UpStair;
-  }
-  if (ret.inBounds(downStair)) {
-    ret.getTerrainType(downStair) = TerrainType::DownStair;
-  }
+  DungeonMaker::openSimplex(ret.getTerrainTypeArr(),upStair,downStair, 32, 8, -0.2);
   return ret;
 }
 
@@ -609,7 +596,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   if (movePlan.invalid()) {
     moveTo = (state.getTerrainType(loc_) == TerrainType::UpStair) ? moveTo.up() : moveTo.down();
   } else {
-    moveTo.pos+=movePlan;
+    moveTo.pos += movePlan;
   }
   const Position tPos = target.pos;
   const Position cPos = getLoc().pos;
@@ -762,7 +749,7 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
-  if(mClass_==MonsterClass::SeaSlug)
+  if (mClass_ == MonsterClass::SeaSlug)
     snuggleDesire_++;
   if (std::holds_alternative<NoTarget>(target_)) {
     findTask(state);

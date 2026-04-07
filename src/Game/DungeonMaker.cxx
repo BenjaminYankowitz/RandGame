@@ -2,94 +2,9 @@ export module DungeonMaker;
 import Common;
 import PerlinNoise;
 import OpenSimplex;
-
-template <class T>
-class RoomSplitHelper {
-public:
-  RoomSplitHelper(StaticPositionArr<T> &floor, int rowB, int colB, int rowE, int colE, std::normal_distribution<> areaDist, bool dir) noexcept : floor_(floor), rowB_(rowB), colB_(colB), rowE_(rowE), colE_(colE), areaDist_(areaDist), dir_(dir) {}
-  [[nodiscard]] bool doSmallStop() const noexcept {
-    const int width = colE_ - colB_;
-    const int height = rowE_ - rowB_;
-    const int area = width * height;
-    return Rnd::get(areaDist_) >= area;
-  }
-  [[nodiscard]] constexpr bool doThinSkip() const noexcept {
-    return xE() - xB() <= 2;
-  }
-  [[nodiscard]] constexpr auto &&xB(this auto &&self) noexcept {
-    return self.dir_ ? self.rowB_ : self.colB_;
-  }
-  [[nodiscard]] constexpr auto &&xE(this auto &&self) noexcept {
-    return self.dir_ ? self.rowE_ : self.colE_;
-  }
-  [[nodiscard]] constexpr auto &&yB(this auto &&self) noexcept {
-    return self.dir_ ? self.colB_ : self.rowB_;
-  }
-  [[nodiscard]] constexpr auto &&yE(this auto &&self) noexcept {
-    return self.dir_ ? self.colE_ : self.rowE_;
-  }
-  [[nodiscard]] constexpr T &operator[](Position p) noexcept {
-    if (dir_) {
-      return floor_[p];
-    }
-    return floor_[p];
-  }
-  [[nodiscard]] constexpr RoomSplitHelper child(int wallX, bool right) noexcept {
-    RoomSplitHelper ret = *this;
-    if (right) {
-      ret.xB() = wallX + 1;
-    } else {
-      ret.xE() = wallX;
-    }
-    ret.dir_ = !ret.dir_;
-    return ret;
-  }
-  [[nodiscard]] constexpr RoomSplitHelper bigChild() noexcept {
-    RoomSplitHelper ret = *this;
-    ret.dir_ = !ret.dir_;
-    return ret;
-  }
-
-private:
-  StaticPositionArr<T> &floor_;
-  int rowB_;
-  int colB_;
-  int rowE_;
-  int colE_;
-  mutable std::normal_distribution<> areaDist_;
-  bool dir_;
-};
-
-template <auto Wall, decltype(Wall) Empty>
-void fillArea(RoomSplitHelper<decltype(Wall)> rsh) noexcept {
-  if (rsh.doSmallStop()) {
-    return;
-  }
-  if (rsh.doThinSkip()) {
-    fillArea<Wall, Empty>(rsh.bigChild());
-    return;
-  }
-  const int wallX = Rnd::uniform_int(rsh.xB() + 1, rsh.xE() - 2);
-  for (int y = rsh.yB(); y < rsh.yE(); y++) {
-    rsh[wallX, y] = Wall;
-  }
-  fillArea<Wall, Empty>(rsh.child(wallX, false));
-  fillArea<Wall, Empty>(rsh.child(wallX, true));
-}
-
-constexpr double DefaultRoomArea = 100;
-constexpr double DefaultRoomStandardDeviation = 0.1;
-
+import GameTypes;
 export namespace DungeonMaker {
-template <auto Wall, decltype(Wall) Empty>
-void rooms(StaticPositionArr<decltype(Wall)> &floor, double roomArea = DefaultRoomArea, double areaStddev = DefaultRoomStandardDeviation) noexcept {
-  floor.fill(Empty);
-  std::bernoulli_distribution dist(0.5);
-  fillArea<Wall, Empty>(RoomSplitHelper(floor, 0, 0, floor.rows(), floor.cols(), std::normal_distribution<>(roomArea, areaStddev), Rnd::get(dist)));
-}
-
-template <auto Wall, decltype(Wall) Empty>
-void perlin(StaticPositionArr<decltype(Wall)> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+void perlin(StaticPositionArr<TerrainType> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
   const double xoffset = Rnd::uniform_01();
   const double yoffset = Rnd::uniform_01();
   const double rotation = Rnd::uniform_real(0.0, 0.25 * std::numbers::pi_v<double>);
@@ -111,37 +26,53 @@ void perlin(StaticPositionArr<decltype(Wall)> &floor, double xscale, double ysca
     const double eX = (x * cos) - (y * sin) - minX + xoffset;
     const double eY = (y * cos) + (x * sin) - minY + yoffset;
     if (gen.getHeight(eX, eY) >= threshold) {
-      floor[p] = Wall;
+      floor[p] = TerrainType::Wall;
     } else {
-      floor[p] = Empty;
+      floor[p] = TerrainType::Empty;
     }
   }
 }
 
-template <auto Wall, decltype(Wall) Empty>
-void openSimplex(StaticPositionArr<decltype(Wall)> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
   OpenSimplex2S gen(Rnd::uniform_int<std::uint64_t>(0, std::numeric_limits<std::uint64_t>::max()));
   for (auto p : floor.indexIter()) {
     auto [xI, yI] = p;
     const double x = xI / xscale;
     const double y = yI / yscale;
     if (gen.noise2(x, y) >= threshold) {
-      floor[p] = Wall;
+      floor[p] = TerrainType::Wall;
     } else {
-      floor[p] = Empty;
+      floor[p] = TerrainType::Empty;
     }
   }
 }
+void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept;
 
-template <auto Wall, decltype(Wall) Empty>
-void maze(StaticPositionArr<decltype(Wall)> &floor, int extraConnections = 0) {
+void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) {
+  openSimplexRaw(floor, xscale, yscale, threshold);
+  if (floor.inBounds(upStair)) {
+    floor[upStair] = TerrainType::Empty;
+  }
+  if (floor.inBounds(downStair)) {
+    floor[downStair] = TerrainType::Empty;
+  }
+  connectRegions(floor);
+  if (floor.inBounds(upStair)) {
+    floor[upStair] = TerrainType::UpStair;
+  }
+  if (floor.inBounds(downStair)) {
+    floor[downStair] = TerrainType::DownStair;
+  }
+}
+
+void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
   if (floor.size() == 0) {
     return;
   }
-  floor.fill(Wall);
+  floor.fill(TerrainType::Wall);
   for (int row = 0; row < floor.rows(); row += 2) {
     for (int col = 0; col < floor.cols(); col += 2) {
-      floor[row, col] = Empty;
+      floor[Position{row, col}] = TerrainType::Empty;
     }
   }
   const int hcols = (floor.cols() - 1) / 2;
@@ -154,13 +85,11 @@ void maze(StaticPositionArr<decltype(Wall)> &floor, int extraConnections = 0) {
   const int ocols = vcols;
   const int osize = orows * ocols;
   std::vector<int> ordering(hsize + vsize);
-  std::iota(ordering.begin(), ordering.end(), 0);
+  std::ranges::iota(ordering, 0);
   Rnd::shuffle(ordering);
   DisjointSet<std::int64_t> connected(osize);
   std::int64_t extraLeft = extraConnections;
-  while (!ordering.empty()) {
-    const int toOpen = ordering.back();
-    ordering.pop_back();
+  for (auto toOpen : ordering) {
     auto [arow, acol, horizontal] = [&]() {
       if (toOpen >= hsize) {
         const int row = (toOpen - hsize) % vrows;
@@ -171,12 +100,12 @@ void maze(StaticPositionArr<decltype(Wall)> &floor, int extraConnections = 0) {
       const int col = toOpen / hrows;
       return std::tuple{row, col, true};
     }();
-    auto &tile = floor[arow * 2 + !horizontal, acol * 2 + horizontal];
-    if (connected.union_set(acol * orows + arow, acol * orows + arow + (horizontal ? orows : 1))) {
-      tile = Empty;
+    auto &tile = floor[Position{arow * 2, acol * 2} + (horizontal ? Dir{0, 1} : Dir{1, 0})];
+    if (connected.union_set((acol * orows) + arow, (acol * orows) + arow + (horizontal ? orows : 1))) {
+      tile = TerrainType::Empty;
     } else if (extraLeft > 0) {
       extraLeft--;
-      tile = Empty;
+      tile = TerrainType::Empty;
     }
   }
 }
@@ -188,13 +117,12 @@ struct RegionInfo {
   }
 };
 
-template <auto Wall, decltype(Wall) Empty>
-constexpr RegionInfo labelRegions(const StaticPositionArr<decltype(Wall)> &floor) noexcept {
+constexpr RegionInfo labelRegions(const StaticPositionArr<TerrainType> &floor) noexcept {
   StaticPositionArr<int> regionOf(floor.width(), floor.height());
   regionOf.fill(-1);
   int numRegions = 0;
   for (auto p : floor.indexIter()) {
-    if (floor[p] != Empty || regionOf[p] != -1)
+    if (floor[p] != TerrainType::Empty || regionOf[p] != -1)
       continue;
     const int regionId = numRegions++;
     std::vector<Position> dfs;
@@ -205,7 +133,7 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<decltype(Wall)> &floor
       dfs.pop_back();
       for (auto d : Dir::boxDirs()) {
         auto nPos = cPos + d;
-        if (floor.inBounds(nPos) && floor[nPos] == Empty && regionOf[nPos] == -1) {
+        if (floor.inBounds(nPos) && floor[nPos] == TerrainType::Empty && regionOf[nPos] == -1) {
           regionOf[nPos] = regionId;
           dfs.push_back(nPos);
         }
@@ -215,34 +143,31 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<decltype(Wall)> &floor
   return {std::move(regionOf), numRegions};
 }
 
-template <auto Empty>
-constexpr void carveCorridor(StaticPositionArr<decltype(Empty)> &floor, Position from, Position to) noexcept {
+constexpr void carveCorridor(StaticPositionArr<TerrainType> &floor, Position from, Position to) noexcept {
   for (auto d : PathIterableShort(to - from)) {
-    floor[from + d] = Empty;
+    floor[from + d] = TerrainType::Empty;
   }
 }
 
-template <auto Wall, decltype(Wall) Empty>
-[[nodiscard]] constexpr std::vector<Position> findEdges(const StaticPositionArr<decltype(Wall)> &floor) noexcept {
+[[nodiscard]] constexpr std::vector<Position> findEdges(const StaticPositionArr<TerrainType> &floor) noexcept {
   std::vector<Position> ret;
   for (auto pos : floor.indexIter()) {
-    if (std::ranges::any_of(Dir::boxDirs(), [pos, &floor](Dir d) { return floor[pos] == Empty && floor.inBounds(pos + d) && floor[pos + d] == Wall; })) {
+    if (std::ranges::any_of(Dir::boxDirs(), [pos, &floor](Dir d) { return floor[pos] == TerrainType::Empty && floor.inBounds(pos + d) && floor[pos + d] == TerrainType::Wall; })) {
       ret.push_back(pos);
     }
   }
   return ret;
 }
 
-template <auto Wall, decltype(Wall) Empty>
-void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
+void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
   if (floor.isNull())
     return;
 
-  const auto info = labelRegions<Wall, Empty>(floor);
+  const auto info = labelRegions(floor);
   if (info.numRegions() <= 1)
     return;
 
-  std::vector<Position> toCheck = findEdges<Wall, Empty>(floor);
+  std::vector<Position> toCheck = findEdges(floor);
   StaticPositionArr<Position> parent(floor.width(), floor.height());
   parent.fill({-1, -1});
   for (auto pos : toCheck) {
@@ -253,7 +178,7 @@ void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
   int regions = info.numRegions();
   auto handleCheck = [&](Position spot, Dir d) {
     auto nSpot = spot + d;
-    if (!parent.inBounds(nSpot) || floor[nSpot] != Wall)
+    if (!parent.inBounds(nSpot) || floor[nSpot] != TerrainType::Wall)
       return false;
     if (parent[nSpot] == Position{-1, -1}) {
       parent[nSpot] = parent[spot];
@@ -263,7 +188,7 @@ void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
     int cRegion = info.regionOf[parent[spot]];
     int oRegion = info.regionOf[parent[nSpot]];
     if (ds.union_set(cRegion, oRegion)) {
-      carveCorridor<Empty>(floor, parent[spot], parent[nSpot]);
+      carveCorridor(floor, parent[spot], parent[nSpot]);
       if (--regions == 1) {
         return true;
       }
@@ -287,6 +212,76 @@ void connectRegions(StaticPositionArr<decltype(Wall)> &floor) noexcept {
       }
     }
     checking.clear();
+  }
+}
+void carveHVCorridor(StaticPositionArr<TerrainType> &floor, Position from, Position to) noexcept {
+  const int xStep = (to.x >= from.x) ? 1 : -1;
+  for (int x = from.x; x != to.x + xStep; x += xStep) {
+    floor[Position{x, from.y}] = TerrainType::Empty;
+  }
+  const int yStep = (to.y >= from.y) ? 1 : -1;
+  for (int y = from.y; y != to.y + yStep; y += yStep) {
+    floor[Position{to.x, y}] = TerrainType::Empty;
+  }
+}
+
+void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair) noexcept {
+  floor.fill(TerrainType::Wall);
+
+  struct Room {
+    int x, y, w, h;
+    [[nodiscard]] Position center() const noexcept { return {x + w / 2, y + h / 2}; }
+    [[nodiscard]] bool contains(Position p) const noexcept { return p.x >= x && p.x < x + w && p.y >= y && p.y < y + h; }
+  };
+
+  constexpr int MinRoomSize = 4;
+  constexpr int MaxRoomSize = 10;
+
+  auto makeRoomAt = [&](Position p) -> Room {
+    const int w = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
+    const int h = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
+    const int x = std::clamp(p.x - w / 2, 0, std::max(0, floor.width() - w));
+    const int y = std::clamp(p.y - h / 2, 0, std::max(0, floor.height() - h));
+    return {x, y, std::min(w, floor.width() - x), std::min(h, floor.height() - y)};
+  };
+
+  auto makeRandomRoom = [&]() -> Room {
+    const int w = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
+    const int h = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
+    const int x = Rnd::uniform_int(0, std::max(0, floor.width() - w));
+    const int y = Rnd::uniform_int(0, std::max(0, floor.height() - h));
+    return {x, y, std::min(w, floor.width() - x), std::min(h, floor.height() - y)};
+  };
+
+  std::vector<Room> rooms;
+  if (floor.inBounds(upStair))
+    rooms.push_back(makeRoomAt(upStair));
+  if (floor.inBounds(downStair))
+    rooms.push_back(makeRoomAt(downStair));
+
+  const int numExtra = Rnd::uniform_int(5, 12);
+  for (int i = 0; i < numExtra; i++) {
+    rooms.push_back(makeRandomRoom());
+  }
+
+  for (const auto &room : rooms) {
+    for (int rx = room.x; rx < room.x + room.w; rx++) {
+      for (int ry = room.y; ry < room.y + room.h; ry++) {
+        floor[Position{rx, ry}] = TerrainType::Empty;
+      }
+    }
+  }
+
+  Rnd::shuffle(rooms);
+  for (std::size_t i = 1; i < rooms.size(); i++) {
+    carveHVCorridor(floor, rooms[i - 1].center(), rooms[i].center());
+  }
+
+  if (floor.inBounds(upStair)) {
+    floor[upStair] = TerrainType::UpStair;
+  }
+  if (floor.inBounds(downStair)) {
+    floor[downStair] = TerrainType::DownStair;
   }
 }
 } // namespace DungeonMaker
