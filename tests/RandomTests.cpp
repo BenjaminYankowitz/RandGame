@@ -46,3 +46,22 @@ TEST(RandomTests, Uniform01InRange) {
     EXPECT_LE(val, 1.0);
   }
 }
+
+TEST(RandomTests, UniformIntMinEqualsMax) {
+  for (int i = 0; i < 100; ++i) {
+    EXPECT_EQ(Rnd::uniform_int(7, 7), 7);
+  }
+}
+
+TEST(RandomTests, ShuffleEmptyVector) {
+  std::vector<int> v;
+  Rnd::shuffle(v);
+  EXPECT_TRUE(v.empty());
+}
+
+TEST(RandomTests, ShuffleSingleElement) {
+  std::vector<int> v = {42};
+  Rnd::shuffle(v);
+  EXPECT_EQ(v.size(), 1u);
+  EXPECT_EQ(v[0], 42);
+}

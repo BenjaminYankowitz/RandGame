@@ -70,7 +70,7 @@ e  \
                       3, 3, 4));
 namespace {
 // Unreachable goal returns Dir{0,0}
-constexpr bool testUnreachable(std::string_view map, int height, int width) {
+constexpr bool testAtClosest(std::string_view map, int height, int width) {
   Position start{-1, -1};
   Position end{-1, -1};
   for (int row = 0; row < height; row++) {
@@ -88,20 +88,56 @@ constexpr bool testUnreachable(std::string_view map, int height, int width) {
 }
 } // namespace
 
-static_assert(testUnreachable(
+static_assert(testAtClosest(
     "s x"
     "xxx"
     "x e",
     3, 3));
 
+// --- 5x5 corridor ---
 static_assert(testMap(
-    "s  "
-    "xx "
-    "e  ",
-    3, 3, 4));
+    "s    "
+    "xxx  "
+    "  x  "
+    "  x  "
+    "  e  ",
+    5, 5, 6));
 
-static_assert(testUnreachable(
-    "s x"
-    "xxx"
-    "x e",
+// --- Adjacent goal: one step ---
+static_assert(testMap(
+    "se",
+    1, 2, 1));
+
+// --- Start == end: zero steps ---
+static_assert([] {
+  constexpr std::string_view Map = "b  "
+                                   "   "
+                                   "   ";
+  // 'b' is both start and end in testMap, but let's test directly
+  spanT mapView(Map.data(), 3, 3);
+  Position start{0, 0};
+  auto dir = FindPath::findPath(mapView, start, start);
+  return dir == Dir{0, 0};
+}(),
+              "PathFind StartEqualsEnd");
+
+// --- Large open field ---
+static_assert(testMap(
+    "s         "
+    "          "
+    "          "
+    "          "
+    "          "
+    "          "
+    "          "
+    "          "
+    "          "
+    "         e",
+    10, 10, 9));
+
+// --- Unreachable: full wall column separates start and end ---
+static_assert(testAtClosest(
+    "sxe"
+    " x "
+    " x ",
     3, 3));

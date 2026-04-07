@@ -42,7 +42,7 @@ static_assert(Dir(1, 2) != Dir(3, 4));
 constexpr static auto AnswerKeyBoxDir = std::to_array<Dir>(
     {{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}});
 constexpr static auto AnswerKeyDirectDir = std::to_array<Dir>(
-    {{0,-1},{-1,0},{1,0},{0,1}});
+    {{0, -1}, {-1, 0}, {1, 0}, {0, 1}});
 
 static_assert(std::ranges::all_of(std::views::iota(0, 8), [](std::int8_t dirN) {
   return AnswerKeyBoxDir[dirN] == Dir::getBoxDir(dirN);
@@ -194,4 +194,72 @@ TEST(StreamOutput, PositionNegative) {
   std::ostringstream oss;
   oss << Position(-5, -3);
   EXPECT_EQ(oss.str(), "(-5,-3)");
+}
+
+// -- FloorSpecifier --
+static_assert(FloorSpecifier(0) == FloorSpecifier(0));
+static_assert(!(FloorSpecifier(0) == FloorSpecifier(1)));
+static_assert(FloorSpecifier(5).floor == 5);
+static_assert(FloorSpecifier(3).up() == FloorSpecifier(2));
+static_assert(FloorSpecifier(3).down() == FloorSpecifier(4));
+static_assert(FloorSpecifier(3).up(2) == FloorSpecifier(1));
+static_assert(FloorSpecifier(3).down(3) == FloorSpecifier(6));
+static_assert(FloorSpecifier(5).up().down() == FloorSpecifier(5));
+static_assert(FloorSpecifier(0).down().up() == FloorSpecifier(0));
+
+// -- Location --
+static_assert(Location(3, 4, 5).pos == Position(3, 4));
+static_assert(Location(3, 4, 5).mapPos == FloorSpecifier(5));
+static_assert(Location(3, 4, 5) == Location(3, 4, 5));
+static_assert(!(Location(3, 4, 5) == Location(3, 4, 6)));
+static_assert(!(Location(3, 4, 5) == Location(3, 5, 5)));
+static_assert(!(Location(3, 4, 5) == Location(4, 4, 5)));
+static_assert(Location(Position(1, 2), FloorSpecifier(3)) == Location(1, 2, 3));
+static_assert(Location(5, 5, 3).up() == Location(5, 5, 2));
+static_assert(Location(5, 5, 3).down() == Location(5, 5, 4));
+static_assert(Location(5, 5, 3).up().down() == Location(5, 5, 3));
+
+// -- PosPathIterableShort --
+
+TEST(PosPathIterableShortTests, SamePoint) {
+  std::vector<Position> path;
+  for (auto p : PosPathIterableShort(Position{3, 3}, Position{3, 3})) {
+    path.push_back(p);
+  }
+  ASSERT_EQ(path.size(), 1u);
+  EXPECT_EQ(path[0], Position(3, 3));
+}
+
+TEST(PosPathIterableShortTests, Horizontal) {
+  std::vector<Position> path;
+  for (auto p : PosPathIterableShort(Position{1, 0}, Position{4, 0})) {
+    path.push_back(p);
+  }
+  ASSERT_EQ(path.size(), 4u);
+  EXPECT_EQ(path[0], Position(1, 0));
+  EXPECT_EQ(path[3], Position(4, 0));
+  for (auto &pos : path)
+    EXPECT_EQ(pos.y, 0);
+}
+
+TEST(PosPathIterableShortTests, Vertical) {
+  std::vector<Position> path;
+  for (auto p : PosPathIterableShort(Position{0, 1}, Position{0, 4})) {
+    path.push_back(p);
+  }
+  ASSERT_EQ(path.size(), 4u);
+  EXPECT_EQ(path[0], Position(0, 1));
+  EXPECT_EQ(path[3], Position(0, 4));
+  for (auto &pos : path)
+    EXPECT_EQ(pos.x, 0);
+}
+
+TEST(PosPathIterableShortTests, Diagonal) {
+  std::vector<Position> path;
+  for (auto p : PosPathIterableShort(Position{0, 0}, Position{3, 3})) {
+    path.push_back(p);
+  }
+  ASSERT_EQ(path.size(), 4u);
+  EXPECT_EQ(path[0], Position(0, 0));
+  EXPECT_EQ(path[3], Position(3, 3));
 }

@@ -48,7 +48,7 @@ void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double
 }
 void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept;
 
-void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) {
+void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) { //32, 8, -0.2 seems like good values
   openSimplexRaw(floor, xscale, yscale, threshold);
   if (floor.inBounds(upStair)) {
     floor[upStair] = TerrainType::Empty;
@@ -143,12 +143,6 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<TerrainType> &floor) n
   return {std::move(regionOf), numRegions};
 }
 
-constexpr void carveCorridor(StaticPositionArr<TerrainType> &floor, Position from, Position to) noexcept {
-  for (auto d : PathIterableShort(to - from)) {
-    floor[from + d] = TerrainType::Empty;
-  }
-}
-
 [[nodiscard]] constexpr std::vector<Position> findEdges(const StaticPositionArr<TerrainType> &floor) noexcept {
   std::vector<Position> ret;
   for (auto pos : floor.indexIter()) {
@@ -160,23 +154,17 @@ constexpr void carveCorridor(StaticPositionArr<TerrainType> &floor, Position fro
 }
 
 void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
-  if (floor.isNull())
-    return;
-
-  const auto info = labelRegions(floor);
+  auto info = labelRegions(floor);
   if (info.numRegions() <= 1)
     return;
-
   std::vector<Position> toCheck = findEdges(floor);
   StaticPositionArr<Position> parent(floor.width(), floor.height());
   parent.fill({-1, -1});
-  for (auto pos : toCheck) {
-    parent[pos] = pos;
-  }
+  std::ranges::for_each(toCheck,[&parent](Position pos){parent[pos]=pos;});
   std::vector<Position> checking;
   DisjointSet<int> ds(info.numRegions());
   int regions = info.numRegions();
-  auto handleCheck = [&](Position spot, Dir d) {
+  auto handleCheck = [&parent,&floor,&toCheck,&info,&ds,&regions](Position spot, Dir d) {
     auto nSpot = spot + d;
     if (!parent.inBounds(nSpot) || floor[nSpot] != TerrainType::Wall)
       return false;
@@ -187,13 +175,14 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
     }
     int cRegion = info.regionOf[parent[spot]];
     int oRegion = info.regionOf[parent[nSpot]];
-    if (ds.union_set(cRegion, oRegion)) {
-      carveCorridor(floor, parent[spot], parent[nSpot]);
-      if (--regions == 1) {
-        return true;
-      }
+    if (!ds.union_set(cRegion, oRegion))
+      return false;
+    for (auto p : PosPathIterableShort(parent[spot], parent[nSpot])) {
+      floor[p] = TerrainType::Empty;
+      parent[p] = p;
+      info.regionOf[p] = cRegion;
     }
-    return false;
+    return --regions == 1;
   };
   while (true) {
     if constexpr (InDebug) {
@@ -204,13 +193,10 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
     }
     std::swap(checking, toCheck);
     Rnd::shuffle(checking);
-    for (auto spot : checking) {
-      for (auto d : Dir::boxDirs()) {
-        if (handleCheck(spot, d)) {
+    for (auto spot : checking)
+      for (auto d : Dir::boxDirs())
+        if (handleCheck(spot, d))
           return;
-        }
-      }
-    }
     checking.clear();
   }
 }
@@ -230,7 +216,7 @@ void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Positi
 
   struct Room {
     int x, y, w, h;
-    [[nodiscard]] Position center() const noexcept { return {x + w / 2, y + h / 2}; }
+    [[nodiscard]] Position center() const noexcept { return {x + (w / 2), y + (h / 2)}; }
     [[nodiscard]] bool contains(Position p) const noexcept { return p.x >= x && p.x < x + w && p.y >= y && p.y < y + h; }
   };
 
@@ -240,8 +226,8 @@ void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Positi
   auto makeRoomAt = [&](Position p) -> Room {
     const int w = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
     const int h = Rnd::uniform_int(MinRoomSize, MaxRoomSize);
-    const int x = std::clamp(p.x - w / 2, 0, std::max(0, floor.width() - w));
-    const int y = std::clamp(p.y - h / 2, 0, std::max(0, floor.height() - h));
+    const int x = std::clamp(p.x - (w / 2), 0, std::max(0, floor.width() - w));
+    const int y = std::clamp(p.y - (h / 2), 0, std::max(0, floor.height() - h));
     return {x, y, std::min(w, floor.width() - x), std::min(h, floor.height() - y)};
   };
 

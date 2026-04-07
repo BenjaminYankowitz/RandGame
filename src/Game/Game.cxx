@@ -253,7 +253,7 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::openSimplex(ret.getTerrainTypeArr(),upStair,downStair, 32, 8, -0.2);
+  DungeonMaker::randomRooms(ret.getTerrainTypeArr(),upStair,downStair);
   return ret;
 }
 
