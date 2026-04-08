@@ -5,8 +5,8 @@ export class TimePeriod {
 public:
   friend class GameTime;
   constexpr explicit TimePeriod(std::size_t time) noexcept : impl(time) {}
-  [[nodiscard]] constexpr bool operator==(const TimePeriod &other) const noexcept { return impl == other.impl; }
-  [[nodiscard]] constexpr auto operator<=>(const TimePeriod &other) const noexcept { return impl <=> other.impl; }
+  [[nodiscard]] constexpr bool operator==(const TimePeriod &other) const noexcept = default;
+  [[nodiscard]] constexpr auto operator<=>(const TimePeriod &other) const noexcept = default;
   [[nodiscard]] constexpr TimePeriod operator+(TimePeriod other) const noexcept {
     auto cp = *this;
     cp += other;

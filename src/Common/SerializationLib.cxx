@@ -4,9 +4,10 @@ import std;
 template <class T>
 concept TriviallyCopyable = std::is_trivially_copyable_v<T>;
 export namespace SerializationLib {
-
-
-std::size_t toStream(std::ostream& out, TriviallyCopyable auto input){
+template<class T>
+class Tag{};
+template<TriviallyCopyable T>
+std::size_t toStream(std::ostream& out, T input){
   static constexpr std::size_t InputSize = sizeof(input);
   auto buffer = std::bit_cast<std::array<char,InputSize>>(input);
   out.write(buffer.data(), InputSize);
@@ -14,7 +15,7 @@ std::size_t toStream(std::ostream& out, TriviallyCopyable auto input){
 }
 
 template<TriviallyCopyable T>
-T fromStream(std::istream& in,std::size_t& numRead){
+T fromStream(std::istream& in,std::size_t& numRead, Tag<T> /**/){
   static constexpr std::size_t OutPutSize = sizeof(T);
   numRead = OutPutSize;
   std::array<char,OutPutSize> buffer;
@@ -23,16 +24,16 @@ T fromStream(std::istream& in,std::size_t& numRead){
 }
 
 template<class T>
-T fromStream(std::istream& in){
+T fromStream(std::istream& in, Tag<T> tag){
   std::size_t _;
-  return fromStream<T>(in,_);
+  return fromStream(in,_,tag);
 }
 
 
 template<class T>
 concept Serializeable = requires(std::ostream & out, std::istream& in, std::size_t nRead, const T& input){
   {toStream(out, input)} -> std::same_as<std::size_t>;
-  {fromStream<T>(in,nRead)} -> std::same_as<T>;
+  {fromStream(in,nRead,Tag<T>{})} -> std::same_as<T>;
 };
 
 std::size_t serialize(std::ostream & out, const Serializeable auto&... inputs) {
@@ -42,7 +43,7 @@ std::size_t serialize(std::ostream & out, const Serializeable auto&... inputs) {
 std::size_t deserialize(std::istream & in, Serializeable auto&... inputs) {
   auto readAndGetSize = [&in](auto &toFill){
     std::size_t sz;
-    toFill = fromStream<std::remove_reference_t<decltype(toFill)>>(in,sz);
+    toFill = fromStream(in,sz,Tag<std::remove_reference_t<decltype(toFill)>>{});
     return sz;
   };
   return (readAndGetSize(inputs)+...);

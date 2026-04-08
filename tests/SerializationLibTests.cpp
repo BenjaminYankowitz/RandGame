@@ -1,6 +1,7 @@
 #include "TestHeader.h"
 import SerializationLib;
 import std;
+using SerializationLib::Tag;
 
 TEST(SerializationLibTests, SerializeAndDeserializeSingleInt) {
   std::stringstream ss;
@@ -8,7 +9,7 @@ TEST(SerializationLibTests, SerializeAndDeserializeSingleInt) {
   SerializationLib::toStream(ss, original);
 
   ss.seekg(0);
-  int restored = SerializationLib::fromStream<int>(ss);
+  int restored = SerializationLib::fromStream(ss, Tag<int>{});
   EXPECT_EQ(restored, original);
 }
 
@@ -19,8 +20,8 @@ TEST(SerializationLibTests, SerializeAndDeserializeMultiple) {
   SerializationLib::serialize(ss, a, b);
 
   ss.seekg(0);
-  int ra = SerializationLib::fromStream<int>(ss);
-  auto rb = SerializationLib::fromStream<double>(ss);
+  int ra = SerializationLib::fromStream(ss, Tag<int>{});
+  auto rb = SerializationLib::fromStream(ss, Tag<double>{});
   EXPECT_EQ(ra, a);
   EXPECT_DOUBLE_EQ(rb, b);
 }
@@ -88,7 +89,7 @@ TEST(SerializationLibTests, CharRoundTrip) {
   char c = 'Z';
   SerializationLib::toStream(ss, c);
   ss.seekg(0);
-  char rc = SerializationLib::fromStream<char>(ss);
+  char rc = SerializationLib::fromStream(ss, Tag<char>{});
   EXPECT_EQ(rc, 'Z');
 }
 
@@ -98,7 +99,7 @@ TEST(SerializationLibTests, SequentialWriteRead) {
     SerializationLib::toStream(ss, i);
   ss.seekg(0);
   for (int i = 0; i < 10; ++i) {
-    int val = SerializationLib::fromStream<int>(ss);
+    int val = SerializationLib::fromStream(ss, Tag<int>{});
     EXPECT_EQ(val, i);
   }
 }

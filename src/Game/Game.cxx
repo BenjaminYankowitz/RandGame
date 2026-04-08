@@ -5,10 +5,8 @@ export import GameTypes;
 import MonsterClassConfig;
 
 export class GameState;
-
 export class Monster {
 private:
-  struct CreateKey {};
 
   struct MonsterBody {
     TimePeriod speed;
@@ -68,10 +66,10 @@ public:
   constexpr void informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
   constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept;
   constexpr void informMonsterAte(GameState &state, const Monster &eater, const Object &eaten) noexcept;
-  friend void monsterHitMonster(GameState& state, Monster& attacker, Monster& attacked, AttackInfo info) noexcept;
+  friend void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, AttackInfo info) noexcept;
   [[nodiscard]] HitReturn hitBy(AttackInfo info) noexcept;
   constexpr void gainExp(int n) noexcept { exp_ += n; }
-  constexpr void kill(GameState &state, ObjectContainer& itemsTo) noexcept;
+  constexpr void kill(GameState &state, ObjectContainer &itemsTo) noexcept;
   [[nodiscard]] constexpr std::unique_ptr<Object> removeFromInvent(std::size_t i, int count = std::numeric_limits<int>::max()) noexcept {
     if (count >= inventory_[i].count()) {
       return inventory_.remove(i);
@@ -119,7 +117,9 @@ public:
   [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
-  Monster(CreateKey /*unused*/, MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), maxHealth_(body.health), health_(body.health), id_(id), damage_(body.damage), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
+  Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), maxHealth_(body.health), health_(body.health), id_(id), damage_(body.damage), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
+  std::size_t serializeTo(std::ostream &out) const noexcept;
+  static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
 
 private:
   constexpr void setDead(bool dead = true) noexcept { alive_ = !dead; }
@@ -192,6 +192,8 @@ public:
     return Position{-1, -1};
   }
   constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x, y), MonsterArr_(x, y), TerrainTypeArr_(x, y) {}
+  constexpr WorldFloor(WorldFloor &&) noexcept = default;
+  constexpr WorldFloor &operator=(WorldFloor &&) noexcept = default;
   [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
   [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
   [[nodiscard]] constexpr bool inBounds(Position pos) const noexcept {
@@ -213,6 +215,12 @@ public:
   }
   [[nodiscard]] constexpr auto getEventListeners(GameState &state) noexcept {
     return EventListenerArr_ | std::views::transform(IDToMonster{&state});
+  }
+  [[nodiscard]] constexpr auto& getEventListenersArr() noexcept {
+    return EventListenerArr_;
+  }
+  [[nodiscard]] constexpr const auto& getEventListenersArr() const noexcept {
+    return EventListenerArr_;
   }
 
 private:
@@ -249,7 +257,7 @@ struct WorldFloorWrapper {
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::randomRooms(ret.getTerrainTypeArr(),upStair,downStair);
+  DungeonMaker::randomRooms(ret.getTerrainTypeArr(), upStair, downStair);
   return ret;
 }
 
@@ -773,7 +781,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
-        monsterHitMonster(state,source,target,{4});
+        monsterHitMonster(state, source, target, {4});
       }
       break;
     }
@@ -806,7 +814,7 @@ TimePeriod Monster::rest() noexcept {
 }
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
-  monsterHitMonster(state,*this,target,{damage_()});
+  monsterHitMonster(state, *this, target, {damage_()});
   return getSpeed();
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {
@@ -818,7 +826,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   ID id = game.nextMonsterId();
   MonsterBody body{mInfo.speed, mInfo.baseHealth, mInfo.damage, mClass};
   MonsterBrain brain = isPlayer ? PlayerBrain : mInfo.brain;
-  Monster &mstr = game.insertMonster(std::make_unique<Monster>(CreateKey{}, body, loc, id, brain));
+  Monster &mstr = game.insertMonster(std::make_unique<Monster>(body, loc, id, brain));
   if (mstr.caresEvent()) {
     game.getFloor(loc.mapPos).addEventListener(id);
   }
@@ -828,7 +836,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   }
   return id;
 }
-constexpr void Monster::kill(GameState &state, ObjectContainer& itemsTo) noexcept {
+constexpr void Monster::kill(GameState &state, ObjectContainer &itemsTo) noexcept {
   if (caresEvent()) {
     state.getFloor(getLoc().mapPos).removeEventListener(getId());
   }
@@ -847,16 +855,16 @@ constexpr void Monster::kill(GameState &state, ObjectContainer& itemsTo) noexcep
   itemsTo.addObject(ObjectBluePrint{corpseOf(mClass_)});
 }
 
-void monsterHitMonster(GameState& state, Monster& attacker, Monster& attacked, Monster::AttackInfo info) noexcept{
+void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, Monster::AttackInfo info) noexcept {
   auto hitReturn = attacked.hitBy(info);
   attacker.gainExp(hitReturn.exp);
   state.broadcastMonsterHitMonster(hitReturn, attacker, attacked);
-  if(!hitReturn.killed)
+  if (!hitReturn.killed)
     return;
-  attacked.kill(state,state.getObjects(attacked.getLoc()));
-  if(attacked.isPlayer())
+  attacked.kill(state, state.getObjects(attacked.getLoc()));
+  if (attacked.isPlayer())
     return;
-  (void) state.removeMonster(attacked.getId());
+  (void)state.removeMonster(attacked.getId());
 }
 Monster::HitReturn Monster::hitBy(AttackInfo info) noexcept {
   const bool killed = removeHealth(info.damage);

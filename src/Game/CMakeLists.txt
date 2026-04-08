@@ -17,10 +17,12 @@ target_link_libraries(MonsterClassConfig PUBLIC Common GameTypes)
 add_library(Game STATIC)  
 target_sources(Game
 	PUBLIC
-		FILE_SET CXX_MODULES FILES 
-      	Game.cxx)
+		FILE_SET CXX_MODULES FILES
+      	Game.cxx
+	PRIVATE
+		GameSerialization.cxx)
             
-target_link_libraries(Game PUBLIC DungeonMaker Common MonsterClassConfig GameTypes)
+target_link_libraries(Game PUBLIC DungeonMaker Common MonsterClassConfig GameTypes PRIVATE SerializationLib)
 
 add_library(GameInterface STATIC)
 target_sources(GameInterface

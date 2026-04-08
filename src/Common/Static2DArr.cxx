@@ -53,6 +53,7 @@ public:
   }
   constexpr Static2DArr(const Static2DArr &other) = delete;
   constexpr Static2DArr(Static2DArr &&other) noexcept = default;
+  constexpr Static2DArr &operator=(Static2DArr &&other) noexcept = default;
   [[nodiscard]] constexpr bool isNull() const noexcept { return data_ == nullptr; }
   [[nodiscard]] constexpr auto &operator[](this auto &&self, size_type row, size_type col) noexcept {
     if constexpr (InDebug) {

@@ -50,8 +50,8 @@ public:
   ObjectContainer(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;
   ObjectContainer &operator=(ObjectContainer &&) = default;
-  constexpr void takeAllFrom(ObjectContainer& container) noexcept{
-    for(std::unique_ptr<Object>& obj : container.impl_){
+  constexpr void takeAllFrom(ObjectContainer &container) noexcept {
+    for (std::unique_ptr<Object> &obj : container.impl_) {
       addObject(std::move(obj));
     }
     container.impl_.clear();
@@ -112,11 +112,8 @@ public:
     return operator[](size() - 1);
   }
 
+  [[nodiscard]] constexpr auto &rawImpl(this auto &&self) noexcept { return std::forward_like<decltype(self)>(self.impl_); }
+
 private:
   std::vector<std::unique_ptr<Object>> impl_;
 };
-
-static_assert([]() {
-  // ObjectContainer q;
-  return true;
-}());
