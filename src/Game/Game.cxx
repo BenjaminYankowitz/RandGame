@@ -567,7 +567,7 @@ TimePeriod Monster::goToTarget(GameState &state, Location target) noexcept {
 
 TimePeriod Monster::goToTarget(GameState &state, Monster::EatTarget target) noexcept {
   if (target.loc == getLoc()) {
-    for (auto [i, obj] : enumerate(state.getObjects(getLoc()))) {
+    for (auto [i, obj] : Views::enumerate(state.getObjects(getLoc()))) {
       if (wantsToEat(obj)) {
         return eatItem(state, i, true);
       }
