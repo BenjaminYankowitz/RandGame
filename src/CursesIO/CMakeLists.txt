@@ -17,11 +17,24 @@ target_sources(Printing
 			Printing.cxx)
 target_link_libraries(Printing PUBLIC CursesLowLevel Common GameInterface)
 
+add_library(CursesIOHelper STATIC)
+
+target_sources(CursesIOHelper
+	PUBLIC
+		FILE_SET CXX_MODULES FILES
+			CursesIOHelper.cxx)
+
+target_link_libraries(CursesIOHelper PUBLIC GameInterface CursesLowLevel Common Printing)
+
 add_library(CursesIO STATIC)
-  
+
 target_sources(CursesIO
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
-			CursesIO.cxx)
+			CursesIO.cxx
+	PRIVATE
+		CursesIOViewer.cxx
+		CursesIOInterface.cxx
+		CursesIOActions.cxx)
 
-target_link_libraries(CursesIO PUBLIC GameInterface CursesLowLevel Common Printing)
+target_link_libraries(CursesIO PUBLIC GameInterface CursesLowLevel Common Printing CursesIOHelper)
