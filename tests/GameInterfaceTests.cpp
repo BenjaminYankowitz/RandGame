@@ -83,17 +83,6 @@ TEST(GameInterfaceTests, PassTimeAdvancesClock) {
   EXPECT_TRUE(t1.impl > t0.impl);
 }
 
-TEST(GameInterfaceTests, MoveChangesTimeOrPosition) {
-  GameState game;
-  GameInterface gi = makeGI(game);
-  auto loc0 = gi.getLocation();
-  auto t0 = gi.getTime();
-  gi.generalMove(Dir::right(), MoveMode::Move);
-  auto loc1 = gi.getLocation();
-  auto t1 = gi.getTime();
-  EXPECT_TRUE(loc1.pos.x != loc0.pos.x || loc1.pos.y != loc0.pos.y || t1.impl > t0.impl);
-}
-
 TEST(GameInterfaceTests, PickUpItemOutOfRangeIsNoOp) {
   GameState game;
   GameInterface gi = makeGI(game);

@@ -50,6 +50,12 @@ public:
   ObjectContainer(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;
   ObjectContainer &operator=(ObjectContainer &&) = default;
+  constexpr void takeAllFrom(ObjectContainer& container) noexcept{
+    for(std::unique_ptr<Object>& obj : container.impl_){
+      addObject(std::move(obj));
+    }
+    container.impl_.clear();
+  }
   constexpr void addObject(std::unique_ptr<Object> obj) noexcept {
     auto v = std::ranges::find_if(*this, [&obj = *obj](const Object &oObj) { return obj.canCombine(oObj); });
     if (v != end()) {
