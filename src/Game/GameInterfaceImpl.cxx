@@ -237,6 +237,7 @@ private:
     } catch (const std::exception &e) {
       impl_->exception(e);
     } catch (...) {
+      impl_->debug("unknown exception");
     }
   }
   IGameState gameState_;

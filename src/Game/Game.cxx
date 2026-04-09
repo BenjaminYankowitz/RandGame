@@ -802,7 +802,8 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
-        monsterHitMonster(state, source, target, {4});
+        Health damage = obj->type() == ObjectType::Knife ? 5 : 1;
+        monsterHitMonster(state, source, target, {damage});
       }
       break;
     }
