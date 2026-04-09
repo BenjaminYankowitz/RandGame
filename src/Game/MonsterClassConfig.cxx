@@ -11,8 +11,8 @@ export struct MonsterBrainInit {
   bool hatesItemPickups = false;
 };
 
-export struct MonsterBrain {
-  constexpr MonsterBrain(MonsterBrainInit init) noexcept : isPlayer_(init.isPlayer), hatesItemPickups_(init.hatesItemPickups) {} // NOLINT(google-explicit-constructor)
+export struct MonsterBrainConfig {
+  constexpr MonsterBrainConfig(MonsterBrainInit init) noexcept : isPlayer_(init.isPlayer), hatesItemPickups_(init.hatesItemPickups) {} // NOLINT(google-explicit-constructor)
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return isPlayer_; }
   [[nodiscard]] constexpr bool hatesItemPickup() const noexcept { return hatesItemPickups_; }
   [[nodiscard]] constexpr bool caresEvent() const noexcept { return isPlayer() || hatesItemPickup(); }
@@ -24,7 +24,7 @@ private:
   bool hatesItemPickups_;
 };
 
-export constexpr MonsterBrain PlayerBrain(MonsterBrainInit{.isPlayer = true});
+export constexpr MonsterBrainConfig PlayerBrain(MonsterBrainInit{.isPlayer = true});
 
 enum class MonsterCategories : std::uint8_t {
   Nothing = 0,
@@ -42,7 +42,7 @@ public:
   TimePeriod speed = BaseSpeed;
   Health baseHealth = 10;
   Dice::Group damage;
-  MonsterBrain brain = MonsterBrainInit{};
+  MonsterBrainConfig brain = MonsterBrainInit{};
   MonsterCategories catagories;
   MonsterCategories prey = MonsterCategories::Nothing;
   MonsterClass mClass;

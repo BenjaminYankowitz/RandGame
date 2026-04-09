@@ -50,13 +50,7 @@ WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /*
 
 // --- Monster member implementations ---
 std::size_t Monster::serializeTo(std::ostream &out) const noexcept {
-  std::size_t written = 0;
-  written += toStream(out, inventory_);
-  written += serialize(out, body_);
-  written += serialize(out, loc_, exp_, snuggleDesire_, id_, next_, prev_);
-  written += toStream(out, target_);
-  written += serialize(out, brain_);
-  return written;
+  return serialize(out, inventory_,body_,brain_,loc_,exp_,id_,next_,prev_);
 }
 
 Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
@@ -68,43 +62,28 @@ Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
 
   auto body = fromStream(in, localRead, Tag<Monster::MonsterBody>{});
   totalRead += localRead;
-
-  Location loc(0, 0, 0);
-  int exp{};
-  int snuggleDesire{};
-  ID id;
-  ID next;
-  ID prev;
-  totalRead += deserialize(in, loc, exp, snuggleDesire, id, next, prev);
-
-  auto target = fromStream(in, localRead, Tag<std::variant<NoTarget, ID, Location, EatTarget, HangTarget>>{});
-  totalRead += localRead;
-
-  MonsterBrain brain(MonsterBrainInit{});
-  totalRead += deserialize(in, brain);
-
-  MonsterBodyInit init{body.speed_, MustInit<Health>(body.maxHealth_), body.damage_, MustInit<MonsterClass>(body.mClass_), body.alive_};
-  Monster m(init, loc, id, brain);
-  m.body_ = body;
-  m.exp_ = exp;
-  m.snuggleDesire_ = snuggleDesire;
+  
+  auto brain = fromStream(in,localRead,Tag<Monster::MonsterBrain>{});
+  totalRead +=localRead;
+  Location loc = fromStream(in,localRead,Tag<Location>{});
+  totalRead +=localRead;
+  int exp;
+  Monster::ID id;
+  Monster::ID next;
+  Monster::ID prev;
+  totalRead+= deserialize(in, exp,id,next,prev);
+  Monster m(body,loc,id,brain);
+  m.inventory_ = std::move(inventory);
   m.next_ = next;
   m.prev_ = prev;
-  m.target_ = target;
-  m.inventory_ = std::move(inventory);
-
+  m.exp_ = exp;
   numRead = totalRead;
   return m;
 }
 
 // --- GameState ---
 std::size_t toStream(std::ostream &out, const GameState &input) {
-  std::size_t written = 0;
-  written += toStream(out, input.monsterMap_);
-  written += toStream(out, input.monsterEvents_);
-  written += toStream(out, input.floorData_);
-  written += serialize(out, input.currentTime_, input.mIdGenerator_, input.player_);
-  return written;
+  return serialize(out, input.monsterMap_,input.monsterEvents_,input.floorData_,input.currentTime_,input.mIdGenerator_,input.player_);
 }
 
 GameState fromStream(std::istream &in, std::size_t &numRead, Tag<GameState> /**/) {

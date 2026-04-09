@@ -12,13 +12,13 @@ static_assert(PlayerBrain.caresEvent());
 
 // MonsterBrain - Setters mutate correctly
 static_assert([] {
-  MonsterBrain b = MonsterClassInfoArr[MonsterClass::Human].brain;
+  MonsterBrainConfig b = MonsterClassInfoArr[MonsterClass::Human].brain;
   b.setIsPlayer(true);
   return b.isPlayer();
 }());
 
 static_assert([] {
-  MonsterBrain b = MonsterClassInfoArr[MonsterClass::Human].brain;
+  MonsterBrainConfig b = MonsterClassInfoArr[MonsterClass::Human].brain;
   b.setHatesItemPickups(true);
   return b.hatesItemPickup();
 }());
