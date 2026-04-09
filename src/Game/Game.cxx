@@ -8,15 +8,25 @@ import SerializationLib;
 export class GameState;
 export class Monster {
 private:
-  struct MonsterBody {
+  struct MonsterBodyInit {
     TimePeriod speed;
-    MustInit<Health> health;
+    MustInit<Health> maxHealth;
+    Health currentHealth = maxHealth;
     Dice::Group damage;
     MustInit<MonsterClass> mClass;
     bool alive = true;
   };
 
 public:
+  struct MonsterBody {
+    explicit MonsterBody(MonsterBodyInit body) noexcept : speed_(body.speed), maxHealth_(body.maxHealth), health_(body.currentHealth), damage_(body.damage), mClass_(body.mClass), alive_(body.alive) {}
+    TimePeriod speed_;
+    Health maxHealth_;
+    Health health_;
+    Dice::Group damage_;
+    MonsterClass mClass_;
+    bool alive_;
+  };
   using ID = MonsterID;
   struct HitReturn {
     MustInit<Health> damageDone;
@@ -43,19 +53,19 @@ public:
   [[nodiscard]] constexpr TimePeriod goUpStair(GameState &state, MoveMode m) noexcept;
   [[nodiscard]] constexpr TimePeriod goDownStair(GameState &state, MoveMode m) noexcept;
   [[nodiscard]] TimePeriod runAI(GameState &state) noexcept;
-  [[nodiscard]] constexpr MonsterClass getClass() const noexcept { return mClass_; };
-  [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return speed_; };
-  [[nodiscard]] constexpr Health getHealth() const noexcept { return health_; }
-  [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return maxHealth_; }
+  [[nodiscard]] constexpr MonsterClass getClass() const noexcept { return body_.mClass_; };
+  [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return body_.speed_; };
+  [[nodiscard]] constexpr Health getHealth() const noexcept { return body_.health_; }
+  [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return body_.maxHealth_; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
-    return 0 >= (health_ -= amount);
+    return 0 >= (body_.health_ -= amount);
   }
   [[nodiscard]] constexpr Location getLoc() const noexcept { return loc_; }
   [[nodiscard]] constexpr ID getId() const noexcept { return id_; }
   [[nodiscard]] constexpr ID getNext() const noexcept { return next_; }
   [[nodiscard]] constexpr const ObjectContainer &viewInventory() const noexcept { return inventory_; }
   [[nodiscard]] constexpr bool isPlayer() const noexcept { return brain_.isPlayer(); }
-  [[nodiscard]] constexpr bool isAlive() const noexcept { return alive_; }
+  [[nodiscard]] constexpr bool isAlive() const noexcept { return body_.alive_; }
   [[nodiscard]] constexpr bool canEat(const Object &obj) const noexcept { return getClass() != MonsterClass::Bryozoan && obj.mat() == Material::Flesh; }
   [[nodiscard]] constexpr bool wantsToEat(const Object &obj) const noexcept { return canEat(obj); }
   [[nodiscard]] constexpr bool wantsToKill(const Monster &monst) const noexcept { return MonsterClassHunts(getClass(), monst.getClass()); }
@@ -117,27 +127,22 @@ public:
   [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
-  Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : speed_(body.speed), loc_(loc), maxHealth_(body.health), health_(body.health), id_(id), damage_(body.damage), brain_(brain), mClass_(body.mClass), alive_(body.alive) {};
+  Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), loc_(loc), id_(id), brain_(brain) {};
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
 
 private:
-  constexpr void setDead(bool dead = true) noexcept { alive_ = !dead; }
+  constexpr void setDead(bool dead = true) noexcept { body_.alive_ = !dead; }
   ObjectContainer inventory_;
-  TimePeriod speed_;
+  MonsterBody body_;
   Location loc_;
-  Health maxHealth_;
-  Health health_;
   int exp_ = 2;
   int snuggleDesire_ = 0;
   ID id_;
   ID next_;
   ID prev_;
   std::variant<NoTarget, ID, Location, EatTarget, HangTarget> target_;
-  Dice::Group damage_;
   MonsterBrain brain_;
-  MonsterClass mClass_;
-  bool alive_;
 };
 
 [[nodiscard]] constexpr bool operator==(const Monster &lhs, const Monster &rhs) noexcept {
@@ -554,8 +559,8 @@ constexpr bool Monster::inLineOfSight(const GameState &state, Position pos) cons
   return LineOfSight::inLineOfSight(WorldFloorWrapper<&WorldFloor::seeThrough>(state.getFloor(loc_.mapPos)), loc_.pos, pos);
 }
 
-[[nodiscard]] TimePeriod Monster::goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
-  if (health_ < maxHealth_) {
+TimePeriod Monster::goToTarget(GameState &state, NoTarget /*unused*/) noexcept {
+  if (body_.health_ < body_.maxHealth_) {
     return rest();
   }
   std::array IntToDir = Dir::boxDirsArr();
@@ -581,7 +586,7 @@ TimePeriod Monster::goToTarget(GameState &state, HangTarget target) noexcept {
         return reThink(ReThinkReason::DoneWithSnuggles);
       }
       snuggleDesire_-=10;
-      return speed_;
+      return body_.speed_;
     }
     return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
 }
@@ -663,7 +668,7 @@ void Monster::findTask(GameState &state) noexcept {
         target_ = cMonst;
         return;
       }
-      if (snuggleDesire_ > 100 && mClass_ == MonsterClass::SeaSlug && monstRef.mClass_ == MonsterClass::SeaSlug) {
+      if (snuggleDesire_ > 100 && body_.mClass_ == MonsterClass::SeaSlug && monstRef.body_.mClass_ == MonsterClass::SeaSlug) {
         target_ = HangTarget{cMonst};
         return;
       }
@@ -771,7 +776,7 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (!isAlive()) {
     return TimePeriod(0);
   }
-  if (mClass_ == MonsterClass::SeaSlug)
+  if (body_.mClass_ == MonsterClass::SeaSlug)
     snuggleDesire_++;
   if (std::holds_alternative<NoTarget>(target_)) {
     findTask(state);
@@ -831,12 +836,12 @@ constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool from
 TimePeriod Monster::rest() noexcept {
   using namespace Dice::Literals;
   static constexpr auto HealDice = "1d2-1"_dice;
-  health_ = std::min<Health>(health_ + HealDice(), maxHealth_);
+  body_.health_ = std::min<Health>(body_.health_ + HealDice(), body_.maxHealth_);
   return getSpeed();
 }
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
-  monsterHitMonster(state, *this, target, {damage_()});
+  monsterHitMonster(state, *this, target, {body_.damage_()});
   return getSpeed();
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {
@@ -846,7 +851,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   }
   const auto &mInfo = MonsterClassInfoArr[mClass];
   ID id = game.nextMonsterId();
-  MonsterBody body{mInfo.speed, mInfo.baseHealth, mInfo.damage, mClass};
+  MonsterBodyInit body{.speed=mInfo.speed,.maxHealth= mInfo.baseHealth, .damage=mInfo.damage,.mClass=mClass};
   MonsterBrain brain = isPlayer ? PlayerBrain : mInfo.brain;
   Monster &mstr = game.insertMonster(std::make_unique<Monster>(body, loc, id, brain));
   if (mstr.caresEvent()) {
@@ -874,7 +879,7 @@ constexpr void Monster::kill(GameState &state, ObjectContainer &itemsTo) noexcep
   next_.clear();
   prev_.clear();
   itemsTo.takeAllFrom(inventory_);
-  itemsTo.addObject(ObjectBluePrint{corpseOf(mClass_)});
+  itemsTo.addObject(ObjectBluePrint{corpseOf(body_.mClass_)});
 }
 
 void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, Monster::AttackInfo info) noexcept {

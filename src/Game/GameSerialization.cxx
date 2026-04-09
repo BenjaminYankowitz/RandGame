@@ -52,9 +52,10 @@ WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /*
 std::size_t Monster::serializeTo(std::ostream &out) const noexcept {
   std::size_t written = 0;
   written += toStream(out, inventory_);
-  written += serialize(out, speed_, loc_, maxHealth_, health_, exp_, snuggleDesire_, id_, next_, prev_);
+  written += serialize(out, body_);
+  written += serialize(out, loc_, exp_, snuggleDesire_, id_, next_, prev_);
   written += toStream(out, target_);
-  written += serialize(out, damage_, brain_, mClass_, alive_);
+  written += serialize(out, brain_);
   return written;
 }
 
@@ -65,29 +66,26 @@ Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
   auto inventory = fromStream(in, localRead, Tag<ObjectContainer>{});
   totalRead += localRead;
 
-  TimePeriod speed(0);
+  auto body = fromStream(in, localRead, Tag<Monster::MonsterBody>{});
+  totalRead += localRead;
+
   Location loc(0, 0, 0);
-  Health maxHealth{};
-  Health health{};
   int exp{};
   int snuggleDesire{};
   ID id;
   ID next;
   ID prev;
-  totalRead += deserialize(in, speed, loc, maxHealth, health, exp, snuggleDesire, id, next, prev);
+  totalRead += deserialize(in, loc, exp, snuggleDesire, id, next, prev);
 
   auto target = fromStream(in, localRead, Tag<std::variant<NoTarget, ID, Location, EatTarget, HangTarget>>{});
   totalRead += localRead;
 
-  Dice::Group damage(0);
   MonsterBrain brain(MonsterBrainInit{});
-  MonsterClass mClass{};
-  bool alive{};
-  totalRead += deserialize(in, damage, brain, mClass, alive);
+  totalRead += deserialize(in, brain);
 
-  MonsterBody body{speed, MustInit<Health>(maxHealth), damage, MustInit<MonsterClass>(mClass), alive};
-  Monster m(body, loc, id, brain);
-  m.health_ = health;
+  MonsterBodyInit init{body.speed_, MustInit<Health>(body.maxHealth_), body.damage_, MustInit<MonsterClass>(body.mClass_), body.alive_};
+  Monster m(init, loc, id, brain);
+  m.body_ = body;
   m.exp_ = exp;
   m.snuggleDesire_ = snuggleDesire;
   m.next_ = next;
