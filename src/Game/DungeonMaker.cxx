@@ -48,7 +48,7 @@ void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double
 }
 void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept;
 
-void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) { //32, 8, -0.2 seems like good values
+void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) { // 32, 8, -0.2 seems like good values
   openSimplexRaw(floor, xscale, yscale, threshold);
   if (floor.inBounds(upStair)) {
     floor[upStair] = TerrainType::Empty;
@@ -72,7 +72,7 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
   floor.fill(TerrainType::Wall);
   for (int row = 0; row < floor.rows(); row += 2) {
     for (int col = 0; col < floor.cols(); col += 2) {
-      floor[Position{row, col}] = TerrainType::Empty;
+      floor[Position{col,row}] = TerrainType::Empty;
     }
   }
   const int hcols = (floor.cols() - 1) / 2;
@@ -100,7 +100,7 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
       const int col = toOpen / hrows;
       return std::tuple{row, col, true};
     }();
-    auto &tile = floor[Position{arow * 2, acol * 2} + (horizontal ? Dir{0, 1} : Dir{1, 0})];
+    auto &tile = floor[Position{acol * 2,arow * 2} + (horizontal ? Dir{1, 0} : Dir{0, 1})];
     if (connected.union_set((acol * orows) + arow, (acol * orows) + arow + (horizontal ? orows : 1))) {
       tile = TerrainType::Empty;
     } else if (extraLeft > 0) {
@@ -160,11 +160,11 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
   std::vector<Position> toCheck = findEdges(floor);
   StaticPositionArr<Position> parent(floor.width(), floor.height());
   parent.fill({-1, -1});
-  std::ranges::for_each(toCheck,[&parent](Position pos){parent[pos]=pos;});
+  std::ranges::for_each(toCheck, [&parent](Position pos) { parent[pos] = pos; });
   std::vector<Position> checking;
   DisjointSet<int> ds(info.numRegions());
   int regions = info.numRegions();
-  auto handleCheck = [&parent,&floor,&toCheck,&info,&ds,&regions](Position spot, Dir d) {
+  auto handleCheck = [&parent, &floor, &toCheck, &info, &ds, &regions](Position spot, Dir d) {
     auto nSpot = spot + d;
     if (!parent.inBounds(nSpot) || floor[nSpot] != TerrainType::Wall)
       return false;

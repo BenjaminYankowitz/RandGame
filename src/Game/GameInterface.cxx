@@ -38,9 +38,19 @@ private:
   const ObjectContainer *container_;
 };
 
-class IMonster;
-export class IGameState;
-class IWorldFloor;
+class IMonster{
+  public:
+  const void* monster;
+  [[nodiscard]] constexpr bool operator==(const IMonster&) const noexcept = default;
+};
+export class IGameState{
+  public:
+  void* gameState;
+};
+class IWorldFloor {
+  public:
+  void* worldFloor;
+};
 export enum class TerrainTypeInterface : std::uint8_t {
   Unknown,
   Empty,
@@ -65,8 +75,7 @@ export [[nodiscard]] bool isWall(TerrainTypeInterface) noexcept;
 
 export class MonsterInterface {
 public:
-  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster &monster) noexcept;
-  [[nodiscard]] explicit MonsterInterface(const IGameState *gameState, const IMonster *monster) noexcept;
+  [[nodiscard]] MonsterInterface(IGameState gameState, IMonster monster) noexcept;
   [[nodiscard]] explicit MonsterInterface(std::nullptr_t) noexcept;
   [[nodiscard]] MonsterClass getClass() const noexcept;
   [[nodiscard]] bool isPlayer() const noexcept;
@@ -78,8 +87,8 @@ public:
   [[nodiscard]] bool isNull() const noexcept;
 
 private:
-  const IMonster *monster_;
-  const IGameState *gameState_ = nullptr;
+  IMonster monster_;
+  IGameState gameState_;
 };
 
 export class MonsterListInterface {
@@ -89,7 +98,7 @@ public:
     using value_type = MonsterInterface;
     using difference_type = std::ptrdiff_t;
     constexpr Iterator() noexcept = default;
-    Iterator(const IGameState *gameState, const IMonster *monster) noexcept : gameState_(gameState), monster_(monster) {}
+    Iterator(IGameState gameState, IMonster monster) noexcept : gameState_(gameState), monster_(monster) {}
     [[nodiscard]] MonsterInterface operator*() const noexcept;
     Iterator &operator++() noexcept;
     Iterator operator++(int) noexcept {
@@ -100,19 +109,19 @@ public:
     [[nodiscard]] bool operator==(const Iterator &other) const noexcept { return monster_ == other.monster_; }
 
   private:
-    const IGameState *gameState_ = nullptr;
-    const IMonster *monster_ = nullptr;
+    IGameState gameState_ = {nullptr};
+    IMonster monster_ = {nullptr};
   };
 
-  MonsterListInterface(const IGameState *gameState, const IMonster *monster) noexcept;
+  MonsterListInterface(IGameState gameState, IMonster monster) noexcept;
   explicit MonsterListInterface(std::nullptr_t) noexcept;
   [[nodiscard]] Iterator begin() const noexcept;
   [[nodiscard]] static Iterator end() noexcept;
   [[nodiscard]] MonsterInterface topMonster() const noexcept;
 
 private:
-  const IGameState *gameState_ = nullptr;
-  const IMonster *monster_ = nullptr;
+  IGameState gameState_ = {nullptr};
+  IMonster monster_ = {nullptr};
 };
 
 export class WorldTileInterface {
@@ -124,7 +133,7 @@ public:
 
 export class WorldFloorInterface {
 public:
-  WorldFloorInterface(const IGameState &gameState, const IWorldFloor &floor, MonsterID controlled, bool mapRevealed = false) noexcept;
+  WorldFloorInterface(IGameState gameState, IWorldFloor floor, MonsterID controlled, bool mapRevealed = false) noexcept;
   [[nodiscard]] WorldTileInterface getTile(Position pos) const noexcept;
   [[nodiscard]] int rows() const noexcept;
   [[nodiscard]] int cols() const noexcept;
@@ -132,8 +141,8 @@ public:
   [[nodiscard]] std::vector<std::pair<Position, WorldTileInterface>> getVisibleTiles() const noexcept;
 
 private:
-  const IGameState *gameState_;
-  const IWorldFloor *floor_;
+  IGameState gameState_;
+  IWorldFloor floor_;
   MonsterID controlled_;
   bool mapRevealed_;
 };
@@ -155,7 +164,8 @@ public:
 
 export class GameInterface {
 public:
-  explicit GameInterface(IGameState &gs, MonsterID controlled) noexcept;
+  explicit GameInterface(IGameState gs) noexcept;
+  void setControlled(MonsterID mId) noexcept {controlled_=mId;}
   void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
@@ -207,7 +217,7 @@ private:
   static constexpr std::uint64_t MagicNumber = 8360033890706637073;
   template <typename F>
   void ifAlive(F &&f) noexcept;
-  IGameState *gs_;
+  IGameState gs_;
   MonsterID controlled_;
   bool debugMode_ = false;
   bool wasDebugMode_ = false;

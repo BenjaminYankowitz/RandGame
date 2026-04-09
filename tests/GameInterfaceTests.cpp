@@ -20,7 +20,8 @@ std::unique_ptr<EventViewerInterface> makeNullViewer() {
 }
 
 GameInterface makeGI(GameState &game) {
-  GameInterface gi(reinterpret_cast<IGameState &>(game), game.getPlayer().getId());
+  GameInterface gi((IGameState (&game)));
+  gi.setControlled(game.getPlayer().getId());
   gi.setEventViewer(makeNullViewer());
   return gi;
 }

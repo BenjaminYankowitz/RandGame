@@ -263,7 +263,13 @@ export WorldFloor fromStream(std::istream &in, std::size_t &numRead, Serializati
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::randomRooms(ret.getTerrainTypeArr(), upStair, downStair);
+  DungeonMaker::maze(ret.getTerrainTypeArr(), 20);
+  if (ret.inBounds(upStair)) {
+    ret.getTerrainType(upStair) = TerrainType::UpStair;
+  }
+  if (ret.inBounds(downStair)) {
+    ret.getTerrainType(downStair) = TerrainType::DownStair;
+  }
   return ret;
 }
 
@@ -279,7 +285,8 @@ public:
 
 export class GameState {
 public:
-  GameState() noexcept;
+  GameState() noexcept = default;
+  void generateGame() noexcept;
   void playerDied() {
     monsterEvents_.emplace(currentTime_, player_);
   }
@@ -416,7 +423,7 @@ export GameState fromStream(std::istream &in, std::size_t &numRead, Serializatio
 
 export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept;
 
-GameState::GameState() noexcept {
+void GameState::generateGame() noexcept {
   constexpr int DungeonWidth = 90;
   constexpr int DungeonHeight = 30;
   Position up = {-1, -1};
@@ -446,6 +453,8 @@ GameState::GameState() noexcept {
         break;
       }
     }
+    if (pos == Position(0, DungeonHeight + 1))
+      return Monster::ID::null();
     return Monster::createMonster(*this, {pos, cFloor}, mClass, isPlayer);
   };
   player_ = tryPlaceMonster({0, 0}, MonsterClass::Human, true);
@@ -880,5 +889,5 @@ void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, M
 }
 Monster::HitReturn Monster::hitBy(AttackInfo info) noexcept {
   const bool killed = removeHealth(info.damage);
-  return {info.damage, killed ? exp_ / 2 : 0, removeHealth(info.damage)};
+  return {info.damage, killed ? exp_ / 2 : 0, killed};
 }
