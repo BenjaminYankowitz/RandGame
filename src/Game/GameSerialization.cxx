@@ -7,7 +7,7 @@ using SerializationLib::deserialize;
 using SerializationLib::fromStream;
 using SerializationLib::serialize;
 using SerializationLib::Tag;
-using SerializationLib::toStream;
+using SerializationLib::toStream; //NOLINT(misc-unused-using-decls) //This is nessesary for serialize to work.
 
 // --- Monster ---
 std::size_t toStream(std::ostream &out, const Monster &input) {
@@ -20,12 +20,7 @@ Monster fromStream(std::istream &in, std::size_t &numRead, Tag<Monster> /**/) {
 
 // --- WorldFloor ---
 std::size_t toStream(std::ostream &out, const WorldFloor &input) {
-  std::size_t written = 0;
-  written += toStream(out, input.getObjectsArr());
-  written += toStream(out, input.getMonsterArr());
-  written += toStream(out, input.getTerrainTypeArr());
-  written += toStream(out, input.getEventListenersArr());
-  return written;
+  return serialize(out,input.getObjectsArr(),input.getMonsterArr(),input.getTerrainTypeArr(),input.getEventListenersArr());
 }
 
 WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /**/) {
