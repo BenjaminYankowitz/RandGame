@@ -20,6 +20,7 @@ class NullEventViewer final : public EventViewer {
 
 TEST(GameSerializationTests, MonsterRoundTrip) {
   GameState game;
+  game.generateGame();
   const Monster &player = game.getPlayer();
 
   std::stringstream ss;
@@ -38,6 +39,7 @@ TEST(GameSerializationTests, MonsterRoundTrip) {
 
 TEST(GameSerializationTests, MonsterWithInventory) {
   GameState game;
+  game.generateGame();
   game.setEventViewer(std::make_unique<NullEventViewer>());
   Monster &player = game.getPlayer();
   auto &objects = game.getObjects(player.getLoc());
@@ -56,6 +58,7 @@ TEST(GameSerializationTests, MonsterWithInventory) {
 
 TEST(GameSerializationTests, MonsterBytesWritten) {
   GameState game;
+  game.generateGame();
   const Monster &player = game.getPlayer();
 
   std::stringstream ss;
@@ -68,6 +71,7 @@ TEST(GameSerializationTests, MonsterBytesWritten) {
 
 TEST(GameSerializationTests, WorldFloorRoundTrip) {
   GameState game;
+  game.generateGame();
   const auto &floor = game.getFloor(FloorSpecifier(0));
 
   std::stringstream ss;
@@ -85,6 +89,7 @@ TEST(GameSerializationTests, WorldFloorRoundTrip) {
 
 TEST(GameSerializationTests, WorldFloorPreservesMonsterIds) {
   GameState game;
+  game.generateGame();
   const auto &floor = game.getFloor(game.getPlayer().getLoc().mapPos);
   auto playerPos = game.getPlayer().getLoc().pos;
 
@@ -98,6 +103,7 @@ TEST(GameSerializationTests, WorldFloorPreservesMonsterIds) {
 
 TEST(GameSerializationTests, WorldFloorPreservesObjects) {
   GameState game;
+  game.generateGame();
   auto loc = game.getPlayer().getLoc();
   game.getObjects(loc).addObject(ObjectBluePrint{ObjectType(ObjectTypeImpl::Knife), Material::Iron});
   const auto &floor = game.getFloor(loc.mapPos);
@@ -115,6 +121,7 @@ TEST(GameSerializationTests, WorldFloorPreservesObjects) {
 
 TEST(GameSerializationTests, GameStateRoundTrip) {
   GameState game;
+  game.generateGame();
   auto playerLoc = game.getPlayer().getLoc();
   auto playerId = game.getPlayer().getId();
   auto playerHealth = game.getPlayer().getHealth();
@@ -135,6 +142,7 @@ TEST(GameSerializationTests, GameStateRoundTrip) {
 
 TEST(GameSerializationTests, GameStatePreservesFloors) {
   GameState game;
+  game.generateGame();
   auto playerFloor = game.getPlayer().getLoc().mapPos;
   const auto &origFloor = game.getFloor(playerFloor);
 
@@ -153,6 +161,7 @@ TEST(GameSerializationTests, GameStatePreservesFloors) {
 
 TEST(GameSerializationTests, GameStatePreservesAllMonsters) {
   GameState game;
+  game.generateGame();
 
   std::stringstream ss;
   toStream(ss, game);
@@ -173,6 +182,7 @@ TEST(GameSerializationTests, GameStatePreservesAllMonsters) {
 
 TEST(GameSerializationTests, GameStatePreservesObjects) {
   GameState game;
+  game.generateGame();
   auto loc = game.getPlayer().getLoc();
   game.getObjects(loc).addObject(ObjectBluePrint{ObjectType(ObjectTypeImpl::KingsCoin), Material::Gold});
 

@@ -20,7 +20,7 @@ std::unique_ptr<EventViewerInterface> makeNullViewer() {
 }
 
 GameInterface makeGI(GameState &game) {
-  GameInterface gi((IGameState (&game)));
+  GameInterface gi((IGameState(&game)));
   gi.setControlled(game.getPlayer().getId());
   gi.setEventViewer(makeNullViewer());
   return gi;
@@ -28,30 +28,35 @@ GameInterface makeGI(GameState &game) {
 } // namespace
 TEST(GameInterfaceTests, ConstructionSucceeds) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   (void)gi;
 }
 
 TEST(GameInterfaceTests, PlayerStartsAlive) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   EXPECT_TRUE(gi.getHealth() > 0);
 }
 
 TEST(GameInterfaceTests, InitialTimeIsZero) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   EXPECT_EQ(gi.getTime().impl, 0);
 }
 
 TEST(GameInterfaceTests, SpeedIsPositive) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   EXPECT_TRUE(gi.getSpeed().impl > 0);
 }
 
 TEST(GameInterfaceTests, FloorHasDimensions) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto floor = gi.getFloor(FloorSpecifier(0));
   EXPECT_TRUE(floor.rows() > 0);
@@ -60,6 +65,7 @@ TEST(GameInterfaceTests, FloorHasDimensions) {
 
 TEST(GameInterfaceTests, PlayerLocationInBounds) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
@@ -68,6 +74,7 @@ TEST(GameInterfaceTests, PlayerLocationInBounds) {
 
 TEST(GameInterfaceTests, InventoryAccessible) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto inv = gi.lookAtInventory();
   // Player may start with items; just verify access works
@@ -77,6 +84,7 @@ TEST(GameInterfaceTests, InventoryAccessible) {
 
 TEST(GameInterfaceTests, PassTimeAdvancesClock) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.passTime(TimePeriod(1));
@@ -86,6 +94,7 @@ TEST(GameInterfaceTests, PassTimeAdvancesClock) {
 
 TEST(GameInterfaceTests, PickUpItemOutOfRangeIsNoOp) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.pickUpItem(999);
@@ -95,6 +104,7 @@ TEST(GameInterfaceTests, PickUpItemOutOfRangeIsNoOp) {
 
 TEST(GameInterfaceTests, DropItemOutOfRangeIsNoOp) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.dropItem(999);
@@ -104,6 +114,7 @@ TEST(GameInterfaceTests, DropItemOutOfRangeIsNoOp) {
 
 TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.throwItem(999, Dir::up(), 1);
@@ -113,6 +124,7 @@ TEST(GameInterfaceTests, ThrowItemOutOfRangeIsNoOp) {
 
 TEST(GameInterfaceTests, PlayerTileIsNotWall) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
@@ -122,6 +134,7 @@ TEST(GameInterfaceTests, PlayerTileIsNotWall) {
 
 TEST(GameInterfaceTests, PlayerTileHasPlayer) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto loc = gi.getLocation();
   auto floor = gi.getFloor(loc.mapPos);
@@ -133,6 +146,7 @@ TEST(GameInterfaceTests, PlayerTileHasPlayer) {
 
 TEST(GameInterfaceTests, SetEventViewerWorks) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   gi.setEventViewer(makeNullViewer());
   EXPECT_TRUE(gi.getHealth() > 0);
@@ -140,6 +154,7 @@ TEST(GameInterfaceTests, SetEventViewerWorks) {
 
 TEST(GameInterfaceTests, FloorObjectsAccessible) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto floorItems = gi.lookAtFloor();
   (void)floorItems.size();
@@ -166,6 +181,7 @@ TEST(GameInterfaceTests, LenOne) {
 
 TEST(GameInterfaceTests, MultiplePassTimeAdvancesCorrectly) {
   GameState game;
+  game.generateGame();
   GameInterface gi = makeGI(game);
   auto t0 = gi.getTime();
   gi.passTime(TimePeriod(1));
