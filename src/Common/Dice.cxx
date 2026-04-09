@@ -9,7 +9,7 @@ struct MonoState {};
 constexpr std::int64_t stringViewToNumber(std::string_view str) {
   std::int64_t out;
   bool negative = str[0] == '-';
-  std::from_chars_result result = std::from_chars(str.begin() + ((str[0]=='+'||str[0]=='-') ? 1 : 0), str.end(), out);
+  std::from_chars_result result = std::from_chars(str.begin() + ((str[0] == '+' || str[0] == '-') ? 1 : 0), str.end(), out);
   if (result.ec != std::errc()) {
     throw ERRCException(result.ec);
   }
@@ -17,9 +17,9 @@ constexpr std::int64_t stringViewToNumber(std::string_view str) {
 }
 
 [[nodiscard]] constexpr std::int64_t sign(int n) noexcept {
-  if(n<0)
+  if (n < 0)
     return -1;
-  if(n>0)
+  if (n > 0)
     return 1;
   return 0;
 }
@@ -51,8 +51,9 @@ public:
     std::uniform_int_distribution<std::int64_t> dist(1, faces_);
     auto view = std::views::repeat(MonoState{}, std::abs(number_));
     return std::transform_reduce(view.begin(), view.end(), 0ul, std::plus<>(), [&dist](MonoState) {
-      return Rnd::get(dist);
-    }) * sign(number_);
+             return Rnd::get(dist);
+           }) *
+           sign(number_);
   }
   [[nodiscard]] constexpr std::int64_t min() const noexcept { return number_; }
   [[nodiscard]] constexpr std::int64_t max() const noexcept { return static_cast<std::int64_t>(number_) * faces_; }
@@ -104,7 +105,7 @@ public:
     });
   }
 
-// private:
+  // private:
   std::int16_t constant_;
   std::array<SingleTypeGroup, MaxTypes> dice_;
 };
@@ -116,8 +117,7 @@ consteval Group operator""_dice(const char *str, std::size_t len) noexcept {
 consteval SingleTypeGroup operator""_diceST(const char *str, std::size_t len) noexcept {
   return SingleTypeGroup(std::string_view(str, len));
 }
-static_assert("1d3+1"_dice.constant_==1);
+static_assert("1d3+1"_dice.constant_ == 1);
 } // namespace Literals
 
 }; // namespace Dice
-

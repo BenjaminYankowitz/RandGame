@@ -45,6 +45,7 @@ public:
   MonsterBrainConfig brain = MonsterBrainInit{};
   MonsterCategories catagories;
   MonsterCategories prey = MonsterCategories::Nothing;
+  int maxThrowingDistance = 10;
   MonsterClass mClass;
 };
 
@@ -72,5 +73,5 @@ export [[nodiscard]] constexpr TimePeriod MonsterClassBaseSpeed(MonsterClass mCl
 }
 
 export [[nodiscard]] constexpr bool MonsterClassHunts(MonsterClass hunter, MonsterClass prey) noexcept {
-  return hasOverlap(MonsterClassInfoArr[hunter].prey, MonsterClassInfoArr[prey].catagories) ;
+  return hasOverlap(MonsterClassInfoArr[hunter].prey, MonsterClassInfoArr[prey].catagories);
 }

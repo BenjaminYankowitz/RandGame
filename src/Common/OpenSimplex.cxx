@@ -1,65 +1,58 @@
-export module OpenSimplex; 
-//Taken from https://github.com/KdotJPG/OpenSimplex2/blob/master/_old/cpp/OpenSimplex2S.cpp 
-// with modification to make it a module and to make seed unsigned.
-//NOLINTBEGIN
-export class OpenSimplex2S
-{
-  struct Grad2
-  {
-    double dx {};
-    double dy {};
+export module OpenSimplex;
+// Taken from https://github.com/KdotJPG/OpenSimplex2/blob/master/_old/cpp/OpenSimplex2S.cpp
+//  with modification to make it a module and to make seed unsigned.
+// NOLINTBEGIN
+export class OpenSimplex2S {
+  struct Grad2 {
+    double dx{};
+    double dy{};
   };
 
-  struct Grad3
-  {
-    double dx {};
-    double dy {};
-    double dz {};
+  struct Grad3 {
+    double dx{};
+    double dy{};
+    double dz{};
   };
 
-  struct Grad4
-  {
-    double dx {};
-    double dy {};
-    double dz {};
-    double dw {};
+  struct Grad4 {
+    double dx{};
+    double dy{};
+    double dz{};
+    double dw{};
   };
 
-  struct LatticePoint2D
-  {
-    int xsv {};
-    int ysv {};
-    double dx {};
-    double dy {};
+  struct LatticePoint2D {
+    int xsv{};
+    int ysv{};
+    double dx{};
+    double dy{};
 
     LatticePoint2D();
     LatticePoint2D(int xsv, int ysv);
   };
 
-  struct LatticePoint3D
-  {
-    double dxr {};
-    double dyr {};
-    double dzr {};
-    int xrv {};
-    int yrv {};
-    int zrv {};
-    LatticePoint3D* nextOnFailure {};
-    LatticePoint3D* nextOnSuccess {};
+  struct LatticePoint3D {
+    double dxr{};
+    double dyr{};
+    double dzr{};
+    int xrv{};
+    int yrv{};
+    int zrv{};
+    LatticePoint3D *nextOnFailure{};
+    LatticePoint3D *nextOnSuccess{};
     LatticePoint3D();
     LatticePoint3D(int xrv, int yrv, int zrv, int lattice);
   };
 
-  struct LatticePoint4D
-  {
-    int xsv {};
-    int ysv {};
-    int zsv {};
-    int wsv {};
-    double dx {};
-    double dy {};
-    double dz {};
-    double dw {};
+  struct LatticePoint4D {
+    int xsv{};
+    int ysv{};
+    int zsv{};
+    int wsv{};
+    double dx{};
+    double dy{};
+    double dz{};
+    double dw{};
 
     LatticePoint4D();
     LatticePoint4D(int xsv, int ysv, int zsv, int wsv);
@@ -113,8 +106,7 @@ export class OpenSimplex2S
   static void initLatticePoints();
   static void initGradients();
 
-  struct Initializer
-  {
+  struct Initializer {
     Initializer();
   };
   static Initializer initializer;

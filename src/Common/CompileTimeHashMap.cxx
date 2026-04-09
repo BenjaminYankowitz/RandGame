@@ -31,7 +31,7 @@ template <Pairing paring, Hasher hasher, decltype(paring)::KeyType nullKV>
 consteval std::size_t getHashMapLen() {
   using PairingT = decltype(paring);
   using KeyType = PairingT::KeyType;
-  static_assert(std::ranges::none_of(paring.data,[](PairingT::Pair x){return x.key==nullKV;}), "Used Null value as a Key");
+  static_assert(std::ranges::none_of(paring.data, [](PairingT::Pair x) { return x.key == nullKV; }), "Used Null value as a Key");
   bool done = false;
   std::size_t len = paring.size();
   std::vector<KeyType> used;
@@ -58,10 +58,10 @@ consteval std::size_t getHashMapLen() {
 template <Pairing paring, Hasher hasher, decltype(paring)::KeyType nullKV, decltype(paring)::ValueType nullVV>
 consteval auto makeMap() {
   constexpr std::size_t MapSize = getHashMapLen<paring, hasher, nullKV>();
-  static_assert(MapSize!=Npos, "Used Duplicate Keys");
+  static_assert(MapSize != Npos, "Used Duplicate Keys");
   std::array<typename decltype(paring)::Pair, MapSize> ret;
   ret.fill({nullKV, nullVV});
-  std::ranges::for_each(paring.data,[&ret](auto i){
+  std::ranges::for_each(paring.data, [&ret](auto i) {
     const std::size_t index = hasher::operator()(i.key) % MapSize;
     ret[index] = i;
   });
@@ -74,7 +74,7 @@ class DefaultHasher {
 public:
   constexpr static std::size_t operator()(T t) { return t; }
 };
-}
+} // namespace
 
 export namespace CompileTimeHashMap {
 template <Pairing paring, Hasher hasher, decltype(paring)::KeyType nullKV, decltype(paring)::ValueType nullVV>

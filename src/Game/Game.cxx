@@ -15,17 +15,19 @@ private:
     Dice::Group damage;
     MustInit<MonsterClass> mClass;
     bool alive = true;
+    int maxThrowingDistance = 10;
   };
 
 public:
   struct MonsterBody {
-    explicit MonsterBody(MonsterBodyInit body) noexcept : speed_(body.speed), maxHealth_(body.maxHealth), health_(body.currentHealth), damage_(body.damage), mClass_(body.mClass), alive_(body.alive) {}
+    explicit MonsterBody(MonsterBodyInit body) noexcept : speed_(body.speed), maxHealth_(body.maxHealth), health_(body.currentHealth), damage_(body.damage), mClass_(body.mClass), alive_(body.alive), maxThrowingDistance_(body.maxThrowingDistance) {}
     TimePeriod speed_;
     Health maxHealth_;
     Health health_;
     Dice::Group damage_;
     MonsterClass mClass_;
     bool alive_;
+    int maxThrowingDistance_;
   };
   using ID = MonsterID;
   struct HitReturn {
@@ -132,7 +134,7 @@ public:
   [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
-  Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body),loc,id,MonsterBrain(brain)) {}
+  Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain(brain)) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);

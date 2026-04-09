@@ -3,10 +3,10 @@ import :Location;
 import :Static2DArr;
 import std;
 
-template<class T>
-concept Bool2dArr = requires(const T& map, int a, int b) {
- {map.extent(a)} -> std::convertible_to<int>;
- {map[a,b]} -> std::same_as<bool>;
+template <class T>
+concept Bool2dArr = requires(const T &map, int a, int b) {
+  { map.extent(a) } -> std::convertible_to<int>;
+  { map[a, b] } -> std::same_as<bool>;
 };
 using Dy2D = std::extents<int, std::dynamic_extent, std::dynamic_extent>;
 export namespace FindPath {
@@ -15,13 +15,13 @@ template <Bool2dArr MapType>
   const int height = map.extent(0);
   const int width = map.extent(1);
   auto mapP = [&map, width, height](Position p) -> bool {
-    return p.within({width-1,height-1}) && map[p.y, p.x];
+    return p.within({width - 1, height - 1}) && map[p.y, p.x];
   };
   const int initDist = Position::chessboard(goal, start);
   if (initDist <= 1) {
     return mapP(goal) ? goal - start : Dir{0, 0};
   }
-  Static2DArr<std::int8_t,int> origin(height, width);
+  Static2DArr<std::int8_t, int> origin(height, width);
   auto originP = [&origin](Position p) -> std::int8_t & {
     return origin[p.y, p.x];
   };
@@ -44,11 +44,11 @@ template <Bool2dArr MapType>
       bestDir = dir;
     }
   };
-  for(auto [dirN, dir]  : std::views::zip(std::views::iota(0),Dir::boxDirs())){
+  for (auto [dirN, dir] : std::views::zip(std::views::iota(0), Dir::boxDirs())) {
     Position cPos = start + dir;
     checkSpot(cPos, dirN);
   }
-  for (int _ : std::views::iota(0,maxDist)) {
+  for (int _ : std::views::iota(0, maxDist)) {
     swap(toCheck, checking);
     toCheck.clear();
     for (auto i : checking) {
@@ -56,7 +56,7 @@ template <Bool2dArr MapType>
       if (Position::chessboard(i, goal) == 1) {
         return Dir::getBoxDir(oDir);
       }
-      for(Dir dir : Dir::boxDirs()){
+      for (Dir dir : Dir::boxDirs()) {
         checkSpot(i + dir, oDir);
       }
     }
@@ -64,6 +64,6 @@ template <Bool2dArr MapType>
       break;
     }
   }
-  return bestDir == -1 ? Dir{0,0} : Dir::getBoxDir(bestDir);
+  return bestDir == -1 ? Dir{0, 0} : Dir::getBoxDir(bestDir);
 }
 } // namespace FindPath

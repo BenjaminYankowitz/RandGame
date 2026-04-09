@@ -72,7 +72,7 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
   floor.fill(TerrainType::Wall);
   for (int row = 0; row < floor.rows(); row += 2) {
     for (int col = 0; col < floor.cols(); col += 2) {
-      floor[Position{col,row}] = TerrainType::Empty;
+      floor[Position{col, row}] = TerrainType::Empty;
     }
   }
   const int hcols = (floor.cols() - 1) / 2;
@@ -100,7 +100,7 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
       const int col = toOpen / hrows;
       return std::tuple{row, col, true};
     }();
-    auto &tile = floor[Position{acol * 2,arow * 2} + (horizontal ? Dir{1, 0} : Dir{0, 1})];
+    auto &tile = floor[Position{acol * 2, arow * 2} + (horizontal ? Dir{1, 0} : Dir{0, 1})];
     if (connected.union_set((acol * orows) + arow, (acol * orows) + arow + (horizontal ? orows : 1))) {
       tile = TerrainType::Empty;
     } else if (extraLeft > 0) {

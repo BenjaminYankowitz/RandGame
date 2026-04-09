@@ -7,7 +7,7 @@ using SerializationLib::deserialize;
 using SerializationLib::fromStream;
 using SerializationLib::serialize;
 using SerializationLib::Tag;
-using SerializationLib::toStream; //NOLINT(misc-unused-using-decls) //This is nessesary for serialize to work.
+using SerializationLib::toStream; // NOLINT(misc-unused-using-decls) //This is nessesary for serialize to work.
 
 // --- Monster ---
 std::size_t toStream(std::ostream &out, const Monster &input) {
@@ -20,7 +20,7 @@ Monster fromStream(std::istream &in, std::size_t &numRead, Tag<Monster> /**/) {
 
 // --- WorldFloor ---
 std::size_t toStream(std::ostream &out, const WorldFloor &input) {
-  return serialize(out,input.getObjectsArr(),input.getMonsterArr(),input.getTerrainTypeArr(),input.getEventListenersArr());
+  return serialize(out, input.getObjectsArr(), input.getMonsterArr(), input.getTerrainTypeArr(), input.getEventListenersArr());
 }
 
 WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /**/) {
@@ -45,7 +45,7 @@ WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /*
 
 // --- Monster member implementations ---
 std::size_t Monster::serializeTo(std::ostream &out) const noexcept {
-  return serialize(out, inventory_,body_,brain_,loc_,exp_,id_,next_,prev_);
+  return serialize(out, inventory_, body_, brain_, loc_, exp_, id_, next_, prev_);
 }
 
 Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
@@ -57,17 +57,17 @@ Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
 
   auto body = fromStream(in, localRead, Tag<Monster::MonsterBody>{});
   totalRead += localRead;
-  
-  auto brain = fromStream(in,localRead,Tag<Monster::MonsterBrain>{});
-  totalRead +=localRead;
-  Location loc = fromStream(in,localRead,Tag<Location>{});
-  totalRead +=localRead;
+
+  auto brain = fromStream(in, localRead, Tag<Monster::MonsterBrain>{});
+  totalRead += localRead;
+  Location loc = fromStream(in, localRead, Tag<Location>{});
+  totalRead += localRead;
   int exp;
   Monster::ID id;
   Monster::ID next;
   Monster::ID prev;
-  totalRead+= deserialize(in, exp,id,next,prev);
-  Monster m(body,loc,id,brain);
+  totalRead += deserialize(in, exp, id, next, prev);
+  Monster m(body, loc, id, brain);
   m.inventory_ = std::move(inventory);
   m.next_ = next;
   m.prev_ = prev;
@@ -78,7 +78,7 @@ Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
 
 // --- GameState ---
 std::size_t toStream(std::ostream &out, const GameState &input) {
-  return serialize(out, input.monsterMap_,input.monsterEvents_,input.floorData_,input.currentTime_,input.mIdGenerator_,input.player_);
+  return serialize(out, input.monsterMap_, input.monsterEvents_, input.floorData_, input.currentTime_, input.mIdGenerator_, input.player_);
 }
 
 GameState fromStream(std::istream &in, std::size_t &numRead, Tag<GameState> /**/) {

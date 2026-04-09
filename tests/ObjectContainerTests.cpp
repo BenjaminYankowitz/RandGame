@@ -76,7 +76,7 @@ static_assert([] consteval {
 
 TEST(ObjectContainerTests, CombinableObjectsMerge) {
   ObjectContainer container;
-  container.addObject({.type = ObjectType::KingsCoin,.count=3});
+  container.addObject({.type = ObjectType::KingsCoin, .count = 3});
   container.addObject({.type = ObjectType::KingsCoin});
   // Same type + material + both Normal artifact status => should merge
   EXPECT_EQ(container.size(), 1u);

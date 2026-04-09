@@ -33,7 +33,7 @@ static_assert([] {
 static_assert([] {
   TimePeriod t(60);
   (t *= 2) *= 3;
-  return t.impl == 60*2*3;
+  return t.impl == 60 * 2 * 3;
 }());
 
 // operator/

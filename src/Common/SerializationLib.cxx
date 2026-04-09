@@ -9,7 +9,7 @@ concept EmptyClass = std::is_empty_v<T>;
 export namespace SerializationLib {
 template <class T>
 class Tag {};
-}
+} // namespace SerializationLib
 using SerializationLib::Tag;
 
 template <class Variant, std::size_t... Is>
@@ -31,7 +31,6 @@ const Container &pqContainer(const std::priority_queue<T, Container, Compare> &p
   };
   return Accessor::get(pq);
 }
-
 
 export namespace SerializationLib {
 template <TriviallyCopyable T>

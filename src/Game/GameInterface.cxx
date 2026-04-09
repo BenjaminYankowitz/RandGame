@@ -38,18 +38,18 @@ private:
   const ObjectContainer *container_;
 };
 
-class IMonster{
-  public:
-  const void* monster;
-  [[nodiscard]] constexpr bool operator==(const IMonster&) const noexcept = default;
+class IMonster {
+public:
+  const void *monster;
+  [[nodiscard]] constexpr bool operator==(const IMonster &) const noexcept = default;
 };
-export class IGameState{
-  public:
-  void* gameState;
+export class IGameState {
+public:
+  void *gameState;
 };
 class IWorldFloor {
-  public:
-  void* worldFloor;
+public:
+  void *worldFloor;
 };
 export enum class TerrainTypeInterface : std::uint8_t {
   Unknown,
@@ -165,7 +165,7 @@ public:
 export class GameInterface {
 public:
   explicit GameInterface(IGameState gs) noexcept;
-  void setControlled(MonsterID mId) noexcept {controlled_=mId;}
+  void setControlled(MonsterID mId) noexcept { controlled_ = mId; }
   void setEventViewer(std::unique_ptr<EventViewerInterface> viewer) noexcept;
   void exit() noexcept;
   void generalMove(Dir d, MoveMode mode) noexcept;
@@ -196,8 +196,8 @@ public:
   void teleport(Position pos) noexcept;
   struct LoadResult {
     enum class Error : std::uint8_t { None,
-                       BadMagic,
-                       VersionMismatch };
+                                      BadMagic,
+                                      VersionMismatch };
     Error error = Error::None;
     std::size_t bytesRead = 0;
     int fileVersion = 0;

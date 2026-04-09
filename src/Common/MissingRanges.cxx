@@ -3,8 +3,8 @@ import std;
 
 template <class R1, class R2>
 struct ConcatView {
-    using difference_type = std::ptrdiff_t;
-    using value_type = std::ranges::range_value_t<R1>;
+  using difference_type = std::ptrdiff_t;
+  using value_type = std::ranges::range_value_t<R1>;
   struct ConcatViewIter {
     using difference_type = std::ptrdiff_t;
     using value_type = std::ranges::range_value_t<R1>;
@@ -27,7 +27,7 @@ struct ConcatView {
     constexpr void inc(OnRange2 iter) noexcept {
       ++iter.iter;
     }
-    constexpr ConcatViewIter& operator++() noexcept {
+    constexpr ConcatViewIter &operator++() noexcept {
       data.visit([&](auto val) { inc(val); });
       return *this;
     }

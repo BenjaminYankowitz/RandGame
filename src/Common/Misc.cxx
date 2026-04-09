@@ -9,7 +9,7 @@ public:
     std::iota(parent_.begin(), parent_.end(), 0);
   }
   [[nodiscard]] constexpr INT find_set(INT v) noexcept {
-    if(v < static_cast<INT>(0) || static_cast<std::size_t>(v)>=parent_.size()){
+    if (v < static_cast<INT>(0) || static_cast<std::size_t>(v) >= parent_.size()) {
       std::cerr << "Tried to pass invalid value to DisjointSet: " << v << "\n";
       return -1;
     }
@@ -48,8 +48,8 @@ private:
   friend OptionalReference<const T>;
 
 public:
-  using iterator = IteratorWrapper<T*>;
-  using const_iterator = IteratorWrapper<const T*>;
+  using iterator = IteratorWrapper<T *>;
+  using const_iterator = IteratorWrapper<const T *>;
   constexpr explicit OptionalReference(T *ptr) noexcept : ptr_(ptr) {}
   constexpr explicit OptionalReference(T &value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;
@@ -65,7 +65,7 @@ public:
   [[nodiscard]] constexpr T *operator->() noexcept { return ptr_; }
   [[nodiscard]] constexpr const T *operator->() const noexcept { return ptr_; }
   [[nodiscard]] constexpr T value_or(T value) const noexcept { return has_value() ? *ptr_ : value; }
-  [[nodiscard]] constexpr auto transform(auto&& F) const noexcept { return has_value() ? std::optional(F(*ptr_)) : std::nullopt; }
+  [[nodiscard]] constexpr auto transform(auto &&F) const noexcept { return has_value() ? std::optional(F(*ptr_)) : std::nullopt; }
   [[nodiscard]] constexpr explicit operator bool() const noexcept { return has_value(); }
   [[nodiscard]] constexpr bool has_value() const noexcept { return ptr_; }
   constexpr void doIfValue(auto &&f) {
@@ -173,7 +173,7 @@ concept BitWiseAndAble = requires(T a, T b) {
   { a & b } -> std::same_as<T>;
 };
 
-export template<BitWiseAndAble T>
-[[nodiscard]] constexpr bool hasOverlap(T a, T b){
+export template <BitWiseAndAble T>
+[[nodiscard]] constexpr bool hasOverlap(T a, T b) {
   return (a & b) != static_cast<T>(0);
 }

@@ -4,12 +4,12 @@ import std;
 template <class Input, class Output>
 [[nodiscard]] constexpr Output defaultConvert(Input v) { return static_cast<Output>(v); }
 
-template <class Input, class Output> 
-using ConvertFType = decltype(defaultConvert<Input,Output>);
+template <class Input, class Output>
+using ConvertFType = decltype(defaultConvert<Input, Output>);
 
-export template <class ParentIterator, class RetValueT = typename std::iterator_traits<ParentIterator>::reference, ConvertFType<typename std::iterator_traits<ParentIterator>::reference,RetValueT>* F = defaultConvert<typename std::iterator_traits<ParentIterator>::reference,RetValueT>>
+export template <class ParentIterator, class RetValueT = typename std::iterator_traits<ParentIterator>::reference, ConvertFType<typename std::iterator_traits<ParentIterator>::reference, RetValueT> *F = defaultConvert<typename std::iterator_traits<ParentIterator>::reference, RetValueT>>
 class IteratorWrapper {
-  template <class ORefValueT, class OParent, class ORetValueT, ConvertFType<ORefValueT,ORetValueT> *OF>
+  template <class ORefValueT, class OParent, class ORetValueT, ConvertFType<ORefValueT, ORetValueT> *OF>
   friend class IteratorImpl;
 
 public:
@@ -61,7 +61,7 @@ private:
   ParentIterator impl_;
 };
 
-export template<auto F,class ParentIterator>
-auto mkIteratorWrapper(ParentIterator iter){
-  return IteratorWrapper<ParentIterator,decltype(F(iter)),F>(iter);
+export template <auto F, class ParentIterator>
+auto mkIteratorWrapper(ParentIterator iter) {
+  return IteratorWrapper<ParentIterator, decltype(F(iter)), F>(iter);
 }

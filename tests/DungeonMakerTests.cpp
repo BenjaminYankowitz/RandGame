@@ -61,7 +61,6 @@ static_assert([] {
 }(),
               "LabelRegions ZeroSize");
 
-
 // --- findEdges tests ---
 
 static_assert([] {

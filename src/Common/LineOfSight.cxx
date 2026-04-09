@@ -131,7 +131,7 @@ template <SeeThrough2dArr MapType>
 }
 
 template <SeeThrough2dArr MapType>
-void allInLineOfSightQuadRegion(MapWrap<MapType> map, Corner min, Corner max, int dist, int extentY, std::vector<std::pair<Corner, Corner>>& toCheck, std::vector<Position> &out) noexcept {
+void allInLineOfSightQuadRegion(MapWrap<MapType> map, Corner min, Corner max, int dist, int extentY, std::vector<std::pair<Corner, Corner>> &toCheck, std::vector<Position> &out) noexcept {
   const int minY = getYat(min, dist, false);
   const int maxY = getYat(max, dist + 1, true);
   Corner pSlope = min;
@@ -146,11 +146,11 @@ void allInLineOfSightQuadRegion(MapWrap<MapType> map, Corner min, Corner max, in
     const Corner tCorner = {dist, cY + 1};
     if (pSlope <= bCorner)
       toCheck.emplace_back(pSlope, bCorner);
-    if (max < tCorner) 
+    if (max < tCorner)
       return;
     pSlope = tCorner;
   }
-  if (pSlope <= max) 
+  if (pSlope <= max)
     toCheck.emplace_back(pSlope, max);
 }
 
@@ -168,10 +168,10 @@ void allInLineOfSightQuad(MapWrap<MapType> map, std::vector<Position> &out) noex
   std::vector<std::pair<Corner, Corner>> toCheck;
   std::vector<std::pair<Corner, Corner>> checking = {{{extentX, 1}, {1, mY}}};
   for (int dist : std::views::iota(1, extentX)) {
-    if(checking.empty())
+    if (checking.empty())
       break;
     for (auto [min, max] : checking) {
-      allInLineOfSightQuadRegion(map,min,max,dist,extentY,toCheck,out);
+      allInLineOfSightQuadRegion(map, min, max, dist, extentY, toCheck, out);
     }
     std::swap(toCheck, checking);
     toCheck.clear();
