@@ -1,6 +1,7 @@
 export module GameTypes:Object;
 import :Misc;
 import Common;
+import SerializationLib;
 
 export struct ObjectBluePrint {
   ObjectType type;
@@ -117,3 +118,17 @@ public:
 private:
   std::vector<std::unique_ptr<Object>> impl_;
 };
+
+using SerializationLib::fromStream;
+using SerializationLib::Tag;
+using SerializationLib::toStream;
+
+export std::size_t toStream(std::ostream &out, const ObjectContainer &input) {
+  return toStream(out, input.rawImpl());
+}
+
+export ObjectContainer fromStream(std::istream &in, std::size_t &numRead, Tag<ObjectContainer> /**/) {
+  ObjectContainer oc;
+  oc.rawImpl() = fromStream(in, numRead, Tag<std::vector<std::unique_ptr<Object>>>{});
+  return oc;
+}

@@ -11,12 +11,29 @@ void runGame(IOModule::Interface &interface) {
   }
 }
 
+constexpr auto SaveFileName = "RandGameSave";
+
 void doMain() {
   GameState game;
-  IOModule::Interface IORII(std::make_unique<GameInterface>(reinterpret_cast<IGameState&>(game),game.getPlayer().getId()));
+  auto gi = std::make_unique<GameInterface>(reinterpret_cast<IGameState &>(game), game.getPlayer().getId());
+  std::string loadError;
+  std::ifstream file(SaveFileName, std::ios::binary);
+  if (file) {
+    auto result = gi->load(file);
+    if (!result.ok()) {
+      if (result.error == GameInterface::LoadResult::Error::BadMagic)
+        loadError = "Failed to load save: not a valid save file.";
+      else
+        loadError = "Failed to load save: version mismatch (file version " + std::to_string(result.fileVersion) + ", expected " + std::to_string(result.expectedVersion) + ").";
+    }
+  }
+  IOModule::Interface IORII(std::move(gi));
+  if (!loadError.empty()) {
+    IORII.addEvent(std::move(loadError));
+  }
   runGame(IORII);
 }
-}  // namespace
+} // namespace
 
 int main() {
   try {

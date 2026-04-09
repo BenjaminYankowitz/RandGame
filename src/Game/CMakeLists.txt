@@ -32,4 +32,4 @@ target_sources(GameInterface
 	PRIVATE
 				GameInterfaceImpl.cxx)
 
-target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE Game)
+target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE Game SerializationLib)

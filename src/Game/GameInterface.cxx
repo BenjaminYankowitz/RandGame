@@ -184,9 +184,27 @@ public:
   void mapHide() noexcept;
   [[nodiscard]] bool isMapRevealed() const noexcept;
   void teleport(Position pos) noexcept;
+  struct LoadResult {
+    enum class Error : std::uint8_t { None,
+                       BadMagic,
+                       VersionMismatch };
+    Error error = Error::None;
+    std::size_t bytesRead = 0;
+    int fileVersion = 0;
+    int expectedVersion = 0;
+    [[nodiscard]] bool ok() const noexcept { return error == Error::None; }
+    static LoadResult success(std::size_t bytes) noexcept { return {Error::None, bytes, SaveVersion, SaveVersion}; }
+    static LoadResult badMagic() noexcept { return {Error::BadMagic}; }
+    static LoadResult versionMismatch(int file, int expected) noexcept { return {Error::VersionMismatch, 0, file, expected}; }
+  };
+
+  std::size_t save(std::ostream &out) const noexcept;
+  LoadResult load(std::istream &in) noexcept;
   ~GameInterface();
 
 private:
+  static constexpr int SaveVersion = 0;
+  static constexpr std::uint64_t MagicNumber = 8360033890706637073;
   template <typename F>
   void ifAlive(F &&f) noexcept;
   IGameState *gs_;

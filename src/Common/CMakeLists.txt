@@ -21,6 +21,7 @@ target_sources(Common
             Common.cxx Shared.cxx Random.cxx CompileTimeHashMap.cxx Dice.cxx Misc.cxx IteratorBase.cxx Static2DArr.cxx Location.cxx PathFind.cxx LineOfSight.cxx LogStream.cxx MissingRanges.cxx Debug.cxx
 		FILE_SET HEADERS FILES
             EnumBitOps.h)
+target_link_libraries(Common PRIVATE SerializationLib)
 
 
 add_library(OpenSimplex STATIC)

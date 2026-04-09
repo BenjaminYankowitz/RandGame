@@ -275,11 +275,6 @@ void addDigit(GameInterface & /*gState*/, IOModule::Interface & /*unused*/, Acti
   mod.addDigit(n);
 }
 
-void quit(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
-  gState.exit();
-  mod.quitGame();
-}
-
 void debugModeOn(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
   gState.enableDebugMode();
 }
@@ -305,6 +300,105 @@ void teleport(GameInterface &gState, IOModule::Interface &interface, ActionMod &
   if (!target)
     return;
   gState.teleport(*target);
+  interface.updateGameScreen();
+}
+
+void saveGame(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  std::ofstream file("RandGameSave", std::ios::binary | std::ios::trunc);
+  if (!file) {
+    interface.interfacePrinter() << "Failed to open save file.\n";
+    interface.updateGameScreen();
+    return;
+  }
+  gState.save(file);
+  interface.interfacePrinter() << "Game saved.\n";
+  interface.updateGameScreen();
+}
+
+void saveAndQuit(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
+  saveGame(gState, interface, mod);
+  gState.exit();
+  mod.quitGame();
+}
+
+void giveUp(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
+  std::filesystem::remove("RandGameSave");
+  gState.exit();
+  mod.quitGame();
+}
+
+void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  if (!gState.isDebugMode())
+    return;
+  std::string &prompt = interface.addEvent("Save to: ");
+  interface.updateGameScreen();
+  while (true) {
+    auto ch = CursesRAII::getChar();
+    if (ch == '\n')
+      break;
+    if (ch == SpecialChar::Escape)
+      return;
+    if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
+      if (!prompt.empty() && prompt.back() != ' ')
+        prompt.pop_back();
+    } else if (ch >= ' ' && ch <= '~') {
+      prompt += static_cast<char>(ch);
+    }
+    interface.updateGameScreen();
+  }
+  std::string filename(std::string_view(prompt).substr(std::string_view("Save to: ").size()));
+  if (filename.empty())
+    return;
+  std::ofstream file(filename, std::ios::binary | std::ios::trunc);
+  if (!file) {
+    interface.interfacePrinter() << "Failed to open file: " << filename << "\n";
+    interface.updateGameScreen();
+    return;
+  }
+  gState.save(file);
+  interface.interfacePrinter() << "Game saved to " << filename << ".\n";
+  interface.updateGameScreen();
+}
+
+void debugLoad(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  if (!gState.isDebugMode())
+    return;
+  std::string &prompt = interface.addEvent("Load from: ");
+  interface.updateGameScreen();
+  while (true) {
+    auto ch = CursesRAII::getChar();
+    if (ch == '\n')
+      break;
+    if (ch == SpecialChar::Escape)
+      return;
+    if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
+      if (!prompt.empty() && prompt.back() != ' ')
+        prompt.pop_back();
+    } else if (ch >= ' ' && ch <= '~') {
+      prompt += static_cast<char>(ch);
+    }
+    interface.updateGameScreen();
+  }
+  std::string filename(std::string_view(prompt).substr(std::string_view("Load from: ").size()));
+  if (filename.empty())
+    return;
+  std::ifstream file(filename, std::ios::binary);
+  if (!file) {
+    interface.interfacePrinter() << "Failed to open file: " << filename << "\n";
+    interface.updateGameScreen();
+    return;
+  }
+  auto result = gState.load(file);
+  if (!result.ok()) {
+    if (result.error == GameInterface::LoadResult::Error::BadMagic) {
+      interface.interfacePrinter() << "Not a valid save file.\n";
+    } else {
+      interface.interfacePrinter() << "Version mismatch: file version " << result.fileVersion << ", expected " << result.expectedVersion << "\n";
+    }
+    interface.updateGameScreen();
+    return;
+  }
+  interface.interfacePrinter() << "Game loaded from " << filename << ".\n";
   interface.updateGameScreen();
 }
 
@@ -341,7 +435,6 @@ struct ExtendedCommand {
 };
 
 constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
-    {"quit", quit},
     {"wait", passTime},
     {"autoexplore", autoExplore},
     {"debug mode", debugModeOn, false, false},
@@ -349,6 +442,11 @@ constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"see all", seeAll, true},
     {"remove see all", seeAllOff, true},
     {"teleport", teleport, true},
+    {"save", saveGame},
+    {"save and quit", saveAndQuit},
+    {"give up", giveUp},
+    {"debug save", debugSave, true},
+    {"debug load", debugLoad, true},
 });
 
 auto validCommands(bool debugMode, bool inSuggestion) {
@@ -362,10 +460,14 @@ auto validCommands(bool debugMode, bool inSuggestion) {
 }
 
 std::string_view findSuggestion(std::string_view typed, bool debugMode) {
-  auto possibleExtensions = std::views::filter(validCommands(debugMode, true), [typed](const ExtendedCommand &cmd) {
-    return cmd.text.starts_with(typed) && cmd.text != typed;
-  });
-  return std::ranges::distance(possibleExtensions) == 1 ? possibleExtensions.front().text.substr(typed.size()) : std::string_view{};
+  auto possibleExtensions = validCommands(debugMode, true) | std::views::transform([](const ExtendedCommand &cmd) { return cmd.text; }) | std::views::filter([typed](std::string_view cmd) { return cmd.starts_with(typed); });
+  if (possibleExtensions.empty()) {
+    return {};
+  }
+  std::string_view prefix = possibleExtensions.front();
+  for (auto possibleExtension : possibleExtensions | std::views::drop(1))
+    prefix = prefix.substr(0, std::ranges::mismatch(prefix, possibleExtension).in1 - prefix.begin());
+  return prefix.substr(typed.size());
 }
 
 void extendedCommand(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) {

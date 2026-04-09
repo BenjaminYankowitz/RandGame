@@ -3,6 +3,7 @@ import :IteratorBase;
 import :LogStream;
 import :Debug;
 import std;
+import SerializationLib;
 
 export template <class T, class sizeT = std::size_t>
 class Static2DArr {
@@ -94,3 +95,35 @@ private:
   size_type cols_;
   std::unique_ptr<arr_t> data_;
 };
+
+using SerializationLib::fromStream;
+using SerializationLib::Tag;
+using SerializationLib::toStream;
+
+export template <class T, class sizeT>
+std::size_t toStream(std::ostream &out, const Static2DArr<T, sizeT> &input) {
+  std::size_t written = 0;
+  written += toStream(out, input.rows());
+  written += toStream(out, input.cols());
+  for (const auto &elem : input) {
+    written += toStream(out, elem);
+  }
+  return written;
+}
+
+export template <class T, class sizeT>
+Static2DArr<T, sizeT> fromStream(std::istream &in, std::size_t &numRead, Tag<Static2DArr<T, sizeT>> /**/) {
+  std::size_t totalRead = 0;
+  std::size_t localRead;
+  auto rows = fromStream(in, localRead, Tag<sizeT>{});
+  totalRead += localRead;
+  auto cols = fromStream(in, localRead, Tag<sizeT>{});
+  totalRead += localRead;
+  Static2DArr<T, sizeT> arr(rows, cols);
+  for (auto &elem : arr) {
+    elem = fromStream(in, localRead, Tag<T>{});
+    totalRead += localRead;
+  }
+  numRead = totalRead;
+  return arr;
+}

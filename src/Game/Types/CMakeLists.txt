@@ -3,4 +3,4 @@ target_sources(GameTypes
 	PUBLIC
 		FILE_SET CXX_MODULES FILES 
 		GameTypes.cxx GameTime.cxx Misc.cxx Object.cxx)
-target_link_libraries(GameTypes PUBLIC Common)
+target_link_libraries(GameTypes PUBLIC Common PRIVATE SerializationLib)

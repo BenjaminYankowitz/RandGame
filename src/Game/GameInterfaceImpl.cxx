@@ -3,6 +3,7 @@ module;
 module GameInterface;
 import Common;
 import Game;
+import SerializationLib;
 
 class IMonster : public Monster {};
 class IWorldFloor : public WorldFloor {};
@@ -375,6 +376,35 @@ void GameInterface::teleport(Position pos) noexcept {
   if (!debugMode_)
     return;
   ifAlive([&](auto &self) { passTime(self.generalMove(*gs_, pos, MoveMode::Move)); });
+}
+
+std::size_t GameInterface::save(std::ostream &out) const noexcept {
+  std::size_t written = 0;
+  written += SerializationLib::serialize(out, MagicNumber);
+  written += SerializationLib::serialize(out, SaveVersion);
+  written += SerializationLib::serialize(out, wasDebugMode_);
+  written += toStream(out, static_cast<const GameState &>(*gs_));
+  return written;
+}
+
+GameInterface::LoadResult GameInterface::load(std::istream &in) noexcept {
+  std::size_t numRead = 0;
+  std::uint64_t magic{};
+  numRead += SerializationLib::deserialize(in, magic);
+  if (magic != MagicNumber) {
+    return LoadResult::badMagic();
+  }
+  int version{};
+  numRead += SerializationLib::deserialize(in, version);
+  if (version != SaveVersion) {
+    return LoadResult::versionMismatch(version, SaveVersion);
+  }
+  bool loadedWasDebugMode{};
+  numRead += SerializationLib::deserialize(in, loadedWasDebugMode);
+  static_cast<GameState &>(*gs_) = fromStream(in, numRead, SerializationLib::Tag<GameState>{});
+  controlled_ = gs_->getPlayer().getId();
+  wasDebugMode_ = loadedWasDebugMode;
+  return LoadResult::success(numRead);
 }
 
 GameInterface::~GameInterface() {}

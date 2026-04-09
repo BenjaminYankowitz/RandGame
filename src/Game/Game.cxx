@@ -3,11 +3,11 @@ import Common;
 import DungeonMaker;
 export import GameTypes;
 import MonsterClassConfig;
+import SerializationLib;
 
 export class GameState;
 export class Monster {
 private:
-
   struct MonsterBody {
     TimePeriod speed;
     MustInit<Health> health;
@@ -144,6 +144,9 @@ private:
   return &lhs == &rhs;
 }
 
+export std::size_t toStream(std::ostream &out, const Monster &input);
+export Monster fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<Monster> /**/);
+
 class WorldTile {
 public:
   constexpr WorldTile(ObjectContainer &objectsI, Monster::ID &monsterI, TerrainType &terrainTypeI) noexcept : objects(objectsI), monster(monsterI), terrainType(terrainTypeI) {}
@@ -216,10 +219,10 @@ public:
   [[nodiscard]] constexpr auto getEventListeners(GameState &state) noexcept {
     return EventListenerArr_ | std::views::transform(IDToMonster{&state});
   }
-  [[nodiscard]] constexpr auto& getEventListenersArr() noexcept {
+  [[nodiscard]] constexpr auto &getEventListenersArr() noexcept {
     return EventListenerArr_;
   }
-  [[nodiscard]] constexpr const auto& getEventListenersArr() const noexcept {
+  [[nodiscard]] constexpr const auto &getEventListenersArr() const noexcept {
     return EventListenerArr_;
   }
 
@@ -254,6 +257,9 @@ struct WorldFloorWrapper {
     return std::invoke(F, floor, p);
   }
 };
+
+export std::size_t toStream(std::ostream &out, const WorldFloor &input);
+export WorldFloor fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<WorldFloor> /**/);
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
@@ -400,7 +406,13 @@ private:
   Monster::ID::Generator mIdGenerator_;
   Monster::ID player_;
   std::unique_ptr<EventViewer> eventViewer_;
+
+  friend std::size_t toStream(std::ostream &out, const GameState &input);
+  friend GameState fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<GameState> /**/);
 };
+
+export std::size_t toStream(std::ostream &out, const GameState &input);
+export GameState fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<GameState> /**/);
 
 export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept;
 

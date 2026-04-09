@@ -2,6 +2,7 @@ export module Common:Location;
 import :Random;
 import :Static2DArr;
 import std;
+import SerializationLib;
 
 [[nodiscard]] constexpr auto abs(auto n) noexcept {
   return n < 0 ? -n : n;
@@ -230,6 +231,25 @@ public:
     return Static2DArr<T, int>::flatIndex(p.y, p.x);
   }
 };
+
+using SerializationLib::fromStream;
+using SerializationLib::Tag;
+using SerializationLib::toStream;
+
+export template <class T>
+std::size_t toStream(std::ostream &out, const StaticPositionArr<T> &input) {
+  return toStream(out, static_cast<const Static2DArr<T, int> &>(input));
+}
+
+export template <class T>
+StaticPositionArr<T> fromStream(std::istream &in, std::size_t &numRead, Tag<StaticPositionArr<T>> /**/) {
+  auto base = fromStream(in, numRead, Tag<Static2DArr<T, int>>{});
+  StaticPositionArr<T> arr(base.cols(), base.rows());
+  for (auto pos : arr.indexIter()) {
+    arr[pos] = std::move(base[pos.y, pos.x]);
+  }
+  return arr;
+}
 
 export constexpr Position &operator+=(Position &pos, Dir dir) noexcept {
   pos.x += dir.dx;

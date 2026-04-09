@@ -29,8 +29,12 @@ target_link_libraries(DiceTests PRIVATE Common TestHeader)
 add_test(NAME DiceTests COMMAND DiceTests)
 
 add_executable(SerializationLibTests SerializationLibTests.cpp)
-target_link_libraries(SerializationLibTests PRIVATE SerializationLib TestHeader)
+target_link_libraries(SerializationLibTests PRIVATE Common SerializationLib TestHeader)
 add_test(NAME SerializationLibTests COMMAND SerializationLibTests)
+
+add_executable(GameSerializationTests GameSerializationTests.cpp)
+target_link_libraries(GameSerializationTests PRIVATE Game SerializationLib TestHeader)
+add_test(NAME GameSerializationTests COMMAND GameSerializationTests)
 
 add_executable(MiscTests MiscTests.cpp)
 target_link_libraries(MiscTests PRIVATE Common TestHeader)
