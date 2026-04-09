@@ -28,7 +28,7 @@ OpenSimplex2S::OpenSimplex2S(unsigned long seed)
   }
   for (int i = PSIZE - 1; i >= 0; i--) {
     seed = seed * 6364136223846793005UL + 1442695040888963407UL;
-    int r = static_cast<int>(static_cast<long>(seed + 31) % (i + 1)); // casting seed to signed is probably unnecessary, but it does mean this should output the exact same values a before
+    int r = static_cast<long>(seed + 31) % (i + 1); // casting seed to signed is probably unnecessary, but it does mean this should output the exact same values as before
     if (r < 0) {
       r += (i + 1);
     }
