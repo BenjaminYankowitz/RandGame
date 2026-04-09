@@ -125,13 +125,18 @@ void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod
 }
 
 std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &iterface,
-                                   bool calcFrontier = false) noexcept {
+                                   bool calcFrontier = false, int maxRange = 0) noexcept {
   std::vector<Position> cycleTargets;
+  const auto playerPos = gState.getLocation().pos;
+  auto inRange = [&](Position p) { return maxRange <= 0 || Position::chessboard(p, playerPos) <= maxRange; };
+  auto notInRange = [&](Position p) { return !inRange(p); };
   if (calcFrontier) {
     const FloorSpecifier currentFloor = gState.getLocation().mapPos;
-    cycleTargets = findUnexploredFrontier(iterface.getMemory(currentFloor), gState.getLocation().pos);
+    cycleTargets = findUnexploredFrontier(iterface.getMemory(currentFloor), playerPos);
+    const auto [remfirst, remlast] = std::ranges::remove_if(cycleTargets,notInRange);
+    cycleTargets.erase(remfirst,remlast);
   }
-  auto pos = gState.getLocation().pos;
+  auto pos = playerPos;
   iterface.showSelection(pos);
   std::size_t cycleIndex = 0;
   while (true) {
@@ -142,15 +147,15 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return pos;
     if (cmnd == 'x' && !cycleTargets.empty()) {
       pos = cycleTargets[cycleIndex];
-      cycleIndex = (cycleIndex + 1) % cycleTargets.size();
       iterface.showSelection(pos);
+      cycleIndex = (cycleIndex + 1) % cycleTargets.size();
       continue;
     }
     if (cmnd == '>' || cmnd == '<') {
       auto target = (cmnd == '>') ? TerrainTypeInterface::DownStair : TerrainTypeInterface::UpStair;
       const auto &memory = iterface.getMemory(gState.getLocation().mapPos);
       auto npos = findTerrain(memory, pos, target);
-      if (npos.has_value()) {
+      if (npos.has_value() && inRange(*npos)) {
         pos = *npos;
         iterface.showSelection(pos);
       }
@@ -165,7 +170,7 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     int maxY = floor.rows() - 1;
     desired.x = std::clamp(desired.x, 0, maxX);
     desired.y = std::clamp(desired.y, 0, maxY);
-    if (iterface.showSelection(desired)) {
+    if (inRange(desired) && iterface.showSelection(desired)) {
       pos = desired;
     }
   }
@@ -207,7 +212,7 @@ void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod 
   auto index = getItemFromInterface(interface, inventory, "What do you want to throw?", {.doStandAloneDisplay = false});
   if (index == NoItem)
     return;
-  auto target = chooseTile(gState, interface);
+  auto target = chooseTile(gState, interface, false, gState.getMaxThrowingDistance());
   if (!target)
     return;
   gState.throwItem(index, (*target) - gState.getLocation().pos, mod.getCount());

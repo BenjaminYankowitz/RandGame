@@ -310,6 +310,10 @@ TimePeriod GameInterface::getSpeed() const noexcept {
   return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).getSpeed();
 }
 
+int GameInterface::getMaxThrowingDistance() const noexcept {
+  return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).getMaxThrowingDistance();
+}
+
 void GameInterface::dropItem(std::size_t i) noexcept {
   ifAlive([&](auto &self) {
     const auto &invent = self.viewInventory();

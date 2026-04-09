@@ -64,6 +64,7 @@ public:
   [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return body_.speed_; };
   [[nodiscard]] constexpr Health getHealth() const noexcept { return body_.health_; }
   [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return body_.maxHealth_; }
+  [[nodiscard]] constexpr int getMaxThrowingDistance() const noexcept { return body_.maxThrowingDistance_; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
     return 0 >= (body_.health_ -= amount);
   }
@@ -808,12 +809,19 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
 constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Monster &source, Dir dir) {
   auto [startPos, floorId] = source.getLoc();
   auto &floor = state.getFloor(floorId);
+  const int maxDist = source.getMaxThrowingDistance();
   Position lastPos = startPos;
+  int dist = 0;
   for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
+    ++dist;
+    if (dist > maxDist)
+      break;
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
         Health damage = obj->type() == ObjectType::Knife ? 5 : 1;
+        if (dist > maxDist / 2)
+          damage /= 2;
         monsterHitMonster(state, source, target, {damage});
       }
       break;

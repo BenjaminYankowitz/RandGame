@@ -184,6 +184,7 @@ public:
   void dropItem(std::size_t i) noexcept;
   void eatItem(std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] bool canEat(ObjectInterface obj) const noexcept;
+  [[nodiscard]] int getMaxThrowingDistance() const noexcept;
   void throwItem(std::size_t i, Dir dir, int count) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
   [[nodiscard]] bool isDebugMode() const noexcept;
