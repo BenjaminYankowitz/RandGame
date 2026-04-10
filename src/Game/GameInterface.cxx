@@ -195,6 +195,8 @@ public:
   void mapHide() noexcept;
   [[nodiscard]] bool isMapRevealed() const noexcept;
   void teleport(Position pos) noexcept;
+  void setPlayerImmortal() noexcept;
+  void setPlayerMortal() noexcept;
   struct LoadResult {
     enum class Error : std::uint8_t { None,
                                       BadMagic,

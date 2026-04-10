@@ -382,6 +382,16 @@ void GameInterface::teleport(Position pos) noexcept {
   ifAlive([&](auto &self) { passTime(self.generalMove(*static_cast<GameState *>(gs_.gameState), pos, MoveMode::Move)); });
 }
 
+void GameInterface::setPlayerImmortal() noexcept {
+  if (!debugMode_)
+    return;
+  ifAlive([](Monster &self) { self.setImmortal(true); });
+}
+void GameInterface::setPlayerMortal() noexcept {
+  if (!debugMode_)
+    return;
+  ifAlive([](Monster &self) { self.setImmortal(false); });
+}
 std::size_t GameInterface::save(std::ostream &out) const noexcept {
   std::size_t written = 0;
   written += SerializationLib::serialize(out, MagicNumber);

@@ -16,11 +16,12 @@ private:
     MustInit<MonsterClass> mClass;
     bool alive = true;
     int maxThrowingDistance = 10;
+    bool immortal = false;
   };
 
 public:
   struct MonsterBody {
-    explicit MonsterBody(MonsterBodyInit body) noexcept : speed_(body.speed), maxHealth_(body.maxHealth), health_(body.currentHealth), damage_(body.damage), mClass_(body.mClass), alive_(body.alive), maxThrowingDistance_(body.maxThrowingDistance) {}
+    explicit MonsterBody(MonsterBodyInit body) noexcept : speed_(body.speed), maxHealth_(body.maxHealth), health_(body.currentHealth), damage_(body.damage), mClass_(body.mClass), alive_(body.alive), maxThrowingDistance_(body.maxThrowingDistance), immortal_(body.immortal) {}
     TimePeriod speed_;
     Health maxHealth_;
     Health health_;
@@ -28,6 +29,7 @@ public:
     MonsterClass mClass_;
     bool alive_;
     int maxThrowingDistance_;
+    bool immortal_;
   };
   using ID = MonsterID;
   struct HitReturn {
@@ -66,7 +68,14 @@ public:
   [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return body_.maxHealth_; }
   [[nodiscard]] constexpr int getMaxThrowingDistance() const noexcept { return body_.maxThrowingDistance_; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
-    return 0 >= (body_.health_ -= amount);
+    if (0 >= (body_.health_ -= amount)) {
+      if (body_.immortal_) {
+        body_.health_ = body_.maxHealth_;
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
   [[nodiscard]] constexpr Location getLoc() const noexcept { return loc_; }
   [[nodiscard]] constexpr ID getId() const noexcept { return id_; }
@@ -139,6 +148,8 @@ public:
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
+
+  constexpr void setImmortal(bool immortal = true) noexcept { body_.immortal_ = immortal; }
 
 private:
   constexpr void setDead(bool dead = true) noexcept { body_.alive_ = !dead; }
@@ -626,10 +637,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   } else {
     moveTo.pos += movePlan;
   }
-  const Position tPos = target.pos;
-  const Position cPos = getLoc().pos;
-  const Position gPos = cPos + movePlan;
-  if (gPos != tPos) {
+  if (target != moveTo) {
     const TimePeriod tTaken = generalMove(state, moveTo, MoveMode::Move);
     if (tTaken.future()) {
       return tTaken;
@@ -813,7 +821,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
     if (!floor.isOpenTile(cSpot)) {
       if (floor.isOpenTerrain(cSpot)) {
         Monster &target = state.getMonster(floor.getMonster(cSpot));
-        Health damage = obj->type() == ObjectType::Knife ? 5 : 1;
+        Health damage = obj->type() == ObjectType::Knife ? 5 : 2;
         if (dist > maxDist / 2)
           damage /= 2;
         monsterHitMonster(state, source, target, {damage});

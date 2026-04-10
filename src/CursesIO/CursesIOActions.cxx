@@ -124,13 +124,13 @@ void pickUpItem(GameInterface &gState, IOModule::Interface &interface, ActionMod
                [&](std::size_t i) { gState.pickUpItem(i); });
 }
 
-[[nodiscard]] constexpr std::optional<TerrainTypeInterface> TtypeSelect(chtype cmnd) noexcept{ 
-  switch(cmnd){
-    case '<':
+[[nodiscard]] constexpr std::optional<TerrainTypeInterface> TtypeSelect(chtype cmnd) noexcept {
+  switch (cmnd) {
+  case '<':
     return TerrainTypeInterface::UpStair;
-    case '>':
+  case '>':
     return TerrainTypeInterface::DownStair;
-    default:
+  default:
     return {};
   }
 }
@@ -141,35 +141,36 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   const auto playerPos = gState.getLocation().pos;
   const auto &memory = iterface.getMemory(gState.getLocation().mapPos);
   const auto floor = gState.getFloor(gState.getLocation().mapPos);
-  const int maxX = std::min(floor.cols() - 1,maxRange<=0 ? (floor.cols()-1) : playerPos.x+maxRange);
-  const int maxY = std::min(floor.rows() - 1, maxRange<=0 ? (floor.rows()-1) : playerPos.y+maxRange);
-  const int minX = std::max(0,maxRange<=0 ? 0 : playerPos.x-maxRange);
-  const int minY = std::max(0,maxRange<=0 ? 0 : playerPos.y-maxRange);;
+  const int maxX = std::min(floor.cols() - 1, maxRange <= 0 ? (floor.cols() - 1) : playerPos.x + maxRange);
+  const int maxY = std::min(floor.rows() - 1, maxRange <= 0 ? (floor.rows() - 1) : playerPos.y + maxRange);
+  const int minX = std::max(0, maxRange <= 0 ? 0 : playerPos.x - maxRange);
+  const int minY = std::max(0, maxRange <= 0 ? 0 : playerPos.y - maxRange);
+  ;
   auto inRange = [&](Position p) { return maxRange <= 0 || Position::chessboard(p, playerPos) <= maxRange; };
   auto notInRange = [&](Position p) { return !inRange(p); };
   if (calcFrontier) {
     const FloorSpecifier currentFloor = gState.getLocation().mapPos;
     cycleTargets = findUnexploredFrontier(iterface.getMemory(currentFloor), playerPos);
-    const auto [remfirst, remlast] = std::ranges::remove_if(cycleTargets,notInRange);
-    cycleTargets.erase(remfirst,remlast);
+    const auto [remfirst, remlast] = std::ranges::remove_if(cycleTargets, notInRange);
+    cycleTargets.erase(remfirst, remlast);
   }
   auto pos = playerPos;
   std::size_t cycleIndex = 0;
-  auto getTarget = [&](chtype cmnd){
+  auto getTarget = [&](chtype cmnd) {
     std::optional<Position> npos;
-    if(cmnd=='x' && !cycleTargets.empty()){
-        npos = cycleTargets[cycleIndex];     
-        cycleIndex = (cycleIndex + 1) % cycleTargets.size();
+    if (cmnd == 'x' && !cycleTargets.empty()) {
+      npos = cycleTargets[cycleIndex];
+      cycleIndex = (cycleIndex + 1) % cycleTargets.size();
     }
-    if(!npos.has_value())
-      npos = TtypeSelect(cmnd).and_then([&](TerrainTypeInterface target){return findTerrain(memory, pos, target);});
-    if(!npos.has_value()){
+    if (!npos.has_value())
+      npos = TtypeSelect(cmnd).and_then([&](TerrainTypeInterface target) { return findTerrain(memory, pos, target); });
+    if (!npos.has_value()) {
       auto dir = keyToDir(std::tolower(cmnd));
       int step = std::isupper(cmnd) ? 10 : 1;
       auto jump = Dir(dir.dx * step, dir.dy * step);
       npos = pos + jump;
     }
-    return npos.transform([&](Position pos){
+    return npos.transform([&](Position pos) {
       pos.x = std::clamp(pos.x, minX, maxX);
       pos.y = std::clamp(pos.y, minY, maxY);
       return pos;
@@ -178,11 +179,11 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   iterface.showSelection(pos);
   while (true) {
     auto cmnd = CursesRAII::getChar();
-    if(cmnd==SpecialChar::Escape)
+    if (cmnd == SpecialChar::Escape)
       return {};
-    if(cmnd== '.')
+    if (cmnd == '.')
       return pos;
-    if(auto npos = getTarget(cmnd)){
+    if (auto npos = getTarget(cmnd)) {
       pos = *npos;
       iterface.showSelection(pos);
     }
@@ -253,7 +254,7 @@ void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod
   gState.passTime(TimePeriod(mod.getCount(gState.getSpeed().impl)));
 }
 
-void rest(GameInterface &gState, IOModule::Interface & interface, ActionMod &mod) noexcept {
+void rest(GameInterface &gState, IOModule::Interface &interface, ActionMod &mod) noexcept {
   bool wasFull = gState.getHealth() == gState.getMaxHealth();
   for (auto _ : std::views::repeat(std::monostate{}, mod.getCount())) {
     gState.rest();
@@ -310,6 +311,14 @@ void seeAll(GameInterface &gState, IOModule::Interface &interface, ActionMod & /
 void seeAllOff(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   gState.mapHide();
   interface.updateGameScreen();
+}
+
+void immortal(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.setPlayerImmortal();
+}
+
+void mortal(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod & /*mod*/) noexcept {
+  gState.setPlayerMortal();
 }
 
 void teleport(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
@@ -461,6 +470,8 @@ constexpr std::array ExtendedCommands = std::to_array<ExtendedCommand>({
     {"see all", seeAll, true},
     {"remove see all", seeAllOff, true},
     {"teleport", teleport, true},
+    {"immortal", immortal, true},
+    {"mortal", mortal, true},
     {"save", saveGame},
     {"save and quit", saveAndQuit},
     {"give up", giveUp},
