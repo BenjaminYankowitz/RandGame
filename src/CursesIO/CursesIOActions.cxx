@@ -232,6 +232,13 @@ void throwItem(GameInterface &gState, IOModule::Interface &interface, ActionMod 
   gState.throwItem(index, (*target) - gState.getLocation().pos, mod.getCount());
 }
 
+void castBeam(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  auto target = chooseTile(gState, interface, false);
+  if (!target)
+    return;
+  gState.castBeam((*target) - gState.getLocation().pos);
+}
+
 void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /*mod*/) noexcept {
   bool fromFloor = false;
   ObjectContainerInterface floorItems = gState.lookAtFloor();
@@ -583,6 +590,7 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'d', dropItem},
     {'e', eatItem},
     {'t', throwItem},
+    {'Z', castBeam},
     {',', pickUpItem},
     {'.', rest},
 

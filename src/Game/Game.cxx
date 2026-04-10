@@ -144,6 +144,8 @@ public:
   [[nodiscard]] constexpr TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
+  [[nodiscard]] constexpr TimePeriod castBeam(GameState &state, Dir dir, Health damage) noexcept;
+  [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
   Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain(brain)) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
   std::size_t serializeTo(std::ostream &out) const noexcept;
@@ -833,21 +835,33 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
   floor.getObjects(lastPos).addObject(std::move(obj));
 }
 
+constexpr void createBeam(GameState &state, Monster &source, Position start, Dir dir, Health damage) {
+  auto floorId = source.getLoc().mapPos;
+  auto &floor = state.getFloor(floorId);
+  for (Position cSpot : PosPathIterable(start, start + dir) | std::views::drop(1)) {
+    if (!floor.isOpenTerrain(cSpot))
+      break;
+    auto &monsterId = floor.getMonster(cSpot);
+    if (!monsterId.isNull()) {
+      Monster &target = state.getMonster(monsterId);
+      monsterHitMonster(state, source, target, {damage});
+    }
+  }
+}
+
 constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept {
-  static constexpr std::size_t ThrowItemSpeedFraction = 1;
   sendItemFlying(state, removeFromInvent(i, count), *this, dir);
-  return getSpeed() / ThrowItemSpeedFraction;
+  return getSpeed();
 }
 
 constexpr TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept {
-  static constexpr std::size_t EatItemSpeedFraction = 1;
   ObjectContainer &container = fromFloor ? state.getObjects(loc_) : inventory_;
   Object &toEat = container[i];
   state.broadcastMonsterAte(*this, toEat);
   if (--toEat.count() == 0) {
     (void)container.remove(i);
   }
-  return getSpeed() / EatItemSpeedFraction;
+  return getSpeed();
 }
 TimePeriod Monster::rest() noexcept {
   using namespace Dice::Literals;
@@ -859,6 +873,15 @@ TimePeriod Monster::rest() noexcept {
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
   monsterHitMonster(state, *this, target, {body_.damage_()});
   return getSpeed();
+}
+
+constexpr TimePeriod Monster::castBeam(GameState &state, Dir dir, Health damage) noexcept {
+  createBeam(state, *this, loc_.pos, dir, damage);
+  return getSpeed();
+}
+
+TimePeriod Monster::castBeam(GameState &state, Dir dir) noexcept {
+  return castBeam(state, dir, body_.damage_());
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {
   auto &monsterDest = game.getMonster(loc);

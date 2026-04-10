@@ -186,6 +186,7 @@ public:
   [[nodiscard]] bool canEat(ObjectInterface obj) const noexcept;
   [[nodiscard]] int getMaxThrowingDistance() const noexcept;
   void throwItem(std::size_t i, Dir dir, int count) noexcept;
+  void castBeam(Dir dir) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
   [[nodiscard]] bool isDebugMode() const noexcept;
   [[nodiscard]] bool wasDebugMode() const noexcept;

@@ -350,6 +350,9 @@ void GameInterface::throwItem(std::size_t i, Dir dir, int count) noexcept {
     passTime(self.throwItem(*static_cast<GameState *>(gs_.gameState), i, dir, count));
   });
 }
+void GameInterface::castBeam(Dir dir) noexcept {
+  ifAlive([&](Monster &self) { passTime(self.castBeam(*static_cast<GameState *>(gs_.gameState), dir)); });
+}
 void GameInterface::passTime(TimePeriod numTurns) noexcept {
   if (!static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).isAlive()) {
     return;
