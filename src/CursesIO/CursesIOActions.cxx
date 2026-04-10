@@ -145,7 +145,6 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   const int maxY = std::min(floor.rows() - 1, maxRange <= 0 ? (floor.rows() - 1) : playerPos.y + maxRange);
   const int minX = std::max(0, maxRange <= 0 ? 0 : playerPos.x - maxRange);
   const int minY = std::max(0, maxRange <= 0 ? 0 : playerPos.y - maxRange);
-  ;
   auto inRange = [&](Position p) { return maxRange <= 0 || Position::chessboard(p, playerPos) <= maxRange; };
   auto notInRange = [&](Position p) { return !inRange(p); };
   if (calcFrontier) {
@@ -156,21 +155,26 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   }
   auto pos = playerPos;
   std::size_t cycleIndex = 0;
-  auto getTarget = [&](chtype cmnd) {
-    std::optional<Position> npos;
-    if (cmnd == 'x' && !cycleTargets.empty()) {
-      npos = cycleTargets[cycleIndex];
+  auto getTarget = [&](chtype cmnd) -> std::optional<Position> {
+    if (cmnd == 'x') {
+      if(cycleTargets.empty())
+        return {};
+      auto ret = cycleTargets[cycleIndex];
       cycleIndex = (cycleIndex + 1) % cycleTargets.size();
+      return ret;
     }
-    if (!npos.has_value())
-      npos = TtypeSelect(cmnd).and_then([&](TerrainTypeInterface target) { return findTerrain(memory, pos, target); });
-    if (!npos.has_value()) {
-      auto dir = keyToDir(std::tolower(cmnd));
-      int step = std::isupper(cmnd) ? 10 : 1;
-      auto jump = Dir(dir.dx * step, dir.dy * step);
-      npos = pos + jump;
+    if(auto target = TtypeSelect(cmnd)){
+      return findTerrain(memory, pos, *target);
     }
-    return npos.transform([&](Position pos) {
+    auto dir = keyToDir(std::tolower(cmnd));
+    if(dir.noMove())
+      return {};
+    int step = std::isupper(cmnd) ? 10 : 1;
+    auto jump = Dir(dir.dx * step, dir.dy * step);
+    return pos + jump;
+  };
+  auto getClampedTarget = [&](chtype cmnd) {
+    return getTarget(cmnd).transform([&](Position pos) {
       pos.x = std::clamp(pos.x, minX, maxX);
       pos.y = std::clamp(pos.y, minY, maxY);
       return pos;
@@ -183,7 +187,7 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return {};
     if (cmnd == '.')
       return pos;
-    if (auto npos = getTarget(cmnd)) {
+    if (auto npos = getClampedTarget(cmnd)) {
       pos = *npos;
       iterface.showSelection(pos);
     }
