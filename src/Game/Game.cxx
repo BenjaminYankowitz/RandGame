@@ -275,13 +275,7 @@ export WorldFloor fromStream(std::istream &in, std::size_t &numRead, Serializati
 
 WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair) {
   WorldFloor ret(xDim, yDim);
-  DungeonMaker::maze(ret.getTerrainTypeArr(), 20);
-  if (ret.inBounds(upStair)) {
-    ret.getTerrainType(upStair) = TerrainType::UpStair;
-  }
-  if (ret.inBounds(downStair)) {
-    ret.getTerrainType(downStair) = TerrainType::DownStair;
-  }
+  DungeonMaker::openSimplex(ret.getTerrainTypeArr(), upStair, downStair, 32, 8, -0.2);
   return ret;
 }
 
@@ -592,7 +586,7 @@ TimePeriod Monster::goToTarget(GameState &state, HangTarget target) noexcept {
       if(brain_.snuggleDesire<=0){
         return reThink(ReThinkReason::DoneWithSnuggles);
       }
-      brain_.snuggleDesire-=10;
+      brain_.snuggleDesire-=4;
       return body_.speed_;
     }
     return pathTo(state, target.getLoc(), MoveMode::GetWith); }, [&]() { return reThink(ReThinkReason::TargetDead); });
@@ -675,7 +669,7 @@ void Monster::findTask(GameState &state) noexcept {
         brain_.target = cMonst;
         return;
       }
-      if (brain_.snuggleDesire > 100 && body_.mClass_ == MonsterClass::SeaSlug && monstRef.body_.mClass_ == MonsterClass::SeaSlug) {
+      if (brain_.snuggleDesire > 30 && body_.mClass_ == MonsterClass::SeaSlug && monstRef.body_.mClass_ == MonsterClass::SeaSlug) {
         brain_.target = HangTarget{cMonst};
         return;
       }
