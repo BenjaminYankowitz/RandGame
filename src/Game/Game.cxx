@@ -816,7 +816,7 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
   const int maxDist = source.getMaxThrowingDistance();
   Position lastPos = startPos;
   for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
-    const int dist = Dir::chessboard(cSpot-startPos);
+    const int dist = Position::chessboard(cSpot,startPos);
     if (dist > maxDist)
       break;
     if (!floor.isOpenTile(cSpot)) {
@@ -837,9 +837,9 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
 constexpr void createBeam(GameState &state, Monster &source, Position start, Dir dir, int maxDist, Dice::Group damage) {
   auto floorId = source.getLoc().mapPos;
   auto &floor = state.getFloor(floorId);
-  int remDist = maxDist;
   for (Position cSpot : PosPathIterable(start, start + dir) | std::views::drop(1)) {
-    if(remDist <=0)
+    int dist = Position::chessboard(cSpot,start);
+    if(dist > maxDist)
       break;
     if (!floor.isOpenTerrain(cSpot)) // switch this to reflection.
       break;
@@ -847,9 +847,8 @@ constexpr void createBeam(GameState &state, Monster &source, Position start, Dir
     if (!monsterId.isNull()) {
       Monster &target = state.getMonster(monsterId);
       monsterHitMonster(state, source, target, {damage()});
-      remDist-=Rnd::rnd(5);
+      maxDist-=Rnd::rnd(5);
     }
-    --remDist;
   }
 }
 
