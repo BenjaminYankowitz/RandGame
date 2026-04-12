@@ -810,21 +810,38 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
   return getSpeed() / DropItemSpeedFraction;
 }
 
-constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool  /*bounceOnWall*/){
+constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool bounceOnWall){ // TODO: ben - add animation for this.
   auto [startPos, floorId] = start;
   auto &floor = state.getFloor(floorId);
   Position lastPos = startPos;
-  for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
-    const int dist = Position::chessboard(cSpot,startPos);
-    if (dist > maxDist)
+  Position basePos = startPos;
+  auto iter = ++PathIterable(dir).begin();
+  bool mirrorX = false;
+  bool mirrorY = false;
+  while(true){
+    const Dir cDir = (*iter).mirror(mirrorX,mirrorY);
+    const int dist = Dir::chessboard(cDir);
+    if(dist>maxDist)
       break;
-    if(!floor.isOpenTerrain(cSpot))
-      break; //add reflection
+    Position cSpot = basePos+cDir;
+    if(!floor.isOpenTerrain(cSpot)){
+      if(!bounceOnWall)
+        break;
+      const Dir movDir = lastPos-cSpot;
+      const bool mX = movDir.dx!=0;
+      const bool mY = movDir.dy!=0;
+      const Dir nDir = (lastPos-basePos).mirror(mX,mY);
+      mirrorX^=mX;
+      mirrorY^=mY;
+      basePos=lastPos-nDir;
+      break;
+    }
     if (auto targetID = floor.getMonster(cSpot)) {
       int nRemDist = monsterHit(state.getMonster(targetID),maxDist-dist);
       maxDist = dist+nRemDist;
     }
     lastPos = cSpot;
+    ++iter;
   }
   return {lastPos,floorId};
 }
@@ -833,7 +850,7 @@ constexpr void sendItemFlying(GameState &state, Monster& source, std::unique_ptr
   const int maxDist = source.getMaxThrowingDistance();
   auto onHit = [&state,&source,&obj=*obj , maxDist](Monster& target, int distLeft){
     Health damage = obj.type() == ObjectType::Knife ? 5 : 2;
-    if (distLeft < maxDist / 2)
+    if (distLeft < maxDist / 2) // TODO: ben - replace this with to-hit penalty once to-hit is added
       damage /= 2;
     monsterHitMonster(state, source, target, {damage});
     return 0;

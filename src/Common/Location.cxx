@@ -55,6 +55,15 @@ public:
   [[nodiscard]] constexpr bool invalid() const noexcept {
     return dx == std::numeric_limits<int>::min() && dy == std::numeric_limits<int>::min();
   }
+  [[nodiscard]] constexpr Dir mirrorX(bool doFlip = true) const noexcept {
+    return mirror(doFlip, false);
+  }
+  [[nodiscard]] constexpr Dir mirrorY(bool doFlip = true) const noexcept {
+    return mirror(false, doFlip);
+  }
+  [[nodiscard]] constexpr Dir mirror(bool mirrorX, bool mirrorY) const noexcept {
+    return {mirrorX ? -dx : dx, mirrorY ? -dy : dy};
+  }
   int dx;
   int dy;
 };
