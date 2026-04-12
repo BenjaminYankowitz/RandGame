@@ -115,6 +115,9 @@ public:
   [[nodiscard]] bool operator==(const MonsterID &o) const noexcept = default;
   [[nodiscard]] static constexpr MonsterID null() noexcept { return MonsterID{NullV}; }
   constexpr void clear() noexcept { id_ = NullV; }
+  [[nodiscard]] constexpr explicit operator bool() const noexcept {
+    return !isNull();
+  }
   [[nodiscard]] constexpr bool isNull() const noexcept { return id_ == NullV; }
 
 private:

@@ -810,50 +810,47 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
   return getSpeed() / DropItemSpeedFraction;
 }
 
-constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Monster &source, Dir dir) {
-  auto [startPos, floorId] = source.getLoc();
+constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool  /*bounceOnWall*/){
+  auto [startPos, floorId] = start;
   auto &floor = state.getFloor(floorId);
-  const int maxDist = source.getMaxThrowingDistance();
   Position lastPos = startPos;
   for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
     const int dist = Position::chessboard(cSpot,startPos);
     if (dist > maxDist)
       break;
-    if (!floor.isOpenTile(cSpot)) {
-      if (floor.isOpenTerrain(cSpot)) {
-        Monster &target = state.getMonster(floor.getMonster(cSpot));
-        Health damage = obj->type() == ObjectType::Knife ? 5 : 2;
-        if (dist > maxDist / 2)
-          damage /= 2;
-        monsterHitMonster(state, source, target, {damage});
-      }
-      break;
+    if(!floor.isOpenTerrain(cSpot))
+      break; //add reflection
+    if (auto targetID = floor.getMonster(cSpot)) {
+      int nRemDist = monsterHit(state.getMonster(targetID),maxDist-dist);
+      maxDist = dist+nRemDist;
     }
     lastPos = cSpot;
   }
-  floor.getObjects(lastPos).addObject(std::move(obj));
+  return {lastPos,floorId};
 }
 
-constexpr void createBeam(GameState &state, Monster &source, Position start, Dir dir, int maxDist, Dice::Group damage) {
-  auto floorId = source.getLoc().mapPos;
-  auto &floor = state.getFloor(floorId);
-  for (Position cSpot : PosPathIterable(start, start + dir) | std::views::drop(1)) {
-    int dist = Position::chessboard(cSpot,start);
-    if(dist > maxDist)
-      break;
-    if (!floor.isOpenTerrain(cSpot)) // switch this to reflection.
-      break;
-    auto &monsterId = floor.getMonster(cSpot);
-    if (!monsterId.isNull()) {
-      Monster &target = state.getMonster(monsterId);
-      monsterHitMonster(state, source, target, {damage()});
-      maxDist-=Rnd::rnd(5);
-    }
-  }
+constexpr void sendItemFlying(GameState &state, Monster& source, std::unique_ptr<Object> obj, Location start, Dir dir) {
+  const int maxDist = source.getMaxThrowingDistance();
+  auto onHit = [&state,&source,&obj=*obj , maxDist](Monster& target, int distLeft){
+    Health damage = obj.type() == ObjectType::Knife ? 5 : 2;
+    if (distLeft < maxDist / 2)
+      damage /= 2;
+    monsterHitMonster(state, source, target, {damage});
+    return 0;
+  };
+  state.getObjects(runPath(state,start,dir,maxDist,onHit,false)).addObject(std::move(obj));
+}
+
+constexpr void createBeam(GameState &state, Monster &source, Location start, Dir dir, int maxDist, Dice::Group damage) {
+  auto onHit = [&](Monster &target, int distLeft) {
+    monsterHitMonster(state, source, target, {damage()});
+    return distLeft-Rnd::rnd(5);
+  };
+  runPath(state,start,dir,maxDist,onHit,true);
 }
 
 constexpr TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept {
-  sendItemFlying(state, removeFromInvent(i, count), *this, dir);
+  sendItemFlying(state, *this,removeFromInvent(i, count), getLoc(), dir);
   return getSpeed();
 }
 
@@ -879,7 +876,7 @@ TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
 }
 
 TimePeriod Monster::castBeam(GameState &state, Dir dir) noexcept {
-  createBeam(state, *this, loc_.pos, dir,Rnd::uniform_int(10,20), body_.damage);
+  createBeam(state, *this, loc_, dir,Rnd::uniform_int(10,20), body_.damage);
   return getSpeed();
 }
 Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass mClass, bool isPlayer) noexcept {
