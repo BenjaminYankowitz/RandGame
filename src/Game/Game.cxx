@@ -815,9 +815,8 @@ constexpr void sendItemFlying(GameState &state, std::unique_ptr<Object> obj, Mon
   auto &floor = state.getFloor(floorId);
   const int maxDist = source.getMaxThrowingDistance();
   Position lastPos = startPos;
-  int dist = 0;
   for (Position cSpot : PosPathIterable(startPos, startPos + dir) | std::views::drop(1)) {
-    ++dist;
+    const int dist = Dir::chessboard(cSpot-startPos);
     if (dist > maxDist)
       break;
     if (!floor.isOpenTile(cSpot)) {
