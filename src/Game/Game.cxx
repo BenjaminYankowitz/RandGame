@@ -821,7 +821,6 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
   auto iter = ++PathIterable(dir).begin();
   bool mirrorX = false;
   bool mirrorY = false;
-  bool mirrorDone = false;
   while(true){
     const Dir cDir = (*iter).mirror(mirrorX,mirrorY);
     const int dist = Dir::chessboard(cDir);
@@ -840,9 +839,6 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
       const Dir nDir = (*iter).mirror(mirrorX,mirrorY);
       basePos=lastPos-nDir;
       continue;
-    }
-    if(mirrorDone){
-      floor.getTerrainType(cSpot) = TerrainType::GrassFloor;
     }
     if (auto targetID = floor.getMonster(cSpot)) {
       int nRemDist = monsterHit(state.getMonster(targetID),maxDist-dist);
