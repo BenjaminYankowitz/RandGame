@@ -810,7 +810,30 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
   return getSpeed() / DropItemSpeedFraction;
 }
 
-constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool bounceOnWall){ // TODO: ben - add animation for this.
+[[nodiscard]] constexpr std::pair<bool, bool> getNMirror(WorldFloor &floor, Position lastPos, Position cSpot) noexcept {
+  const Dir moveDir = lastPos - cSpot;
+  bool mX = moveDir.dx != 0;
+  bool mY = moveDir.dy != 0;
+  if (!mX || !mY)
+    return std::make_pair(mX, mY);
+  mX = !floor.isOpenTerrain(lastPos + Dir{moveDir.dx, 0});
+  mY = !floor.isOpenTerrain(lastPos + Dir{0, moveDir.dy});
+  if (mX || mY)
+    return std::make_pair(mX, mY);
+  mX = true;
+  mY = true;
+  int choice = 2;
+  if not consteval {
+    choice = Rnd::rnd(3);
+  }
+  if (choice == 0)
+    mX = false;
+  else if (choice == 1)
+    mY = false;
+  return std::make_pair(mX, mY);
+}
+
+constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool bounceOnWall) noexcept { // TODO: ben - add animation for this.
   if(dir.noMove()){
     return start;
   }
@@ -830,9 +853,7 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
     if(!floor.isOpenTerrain(cSpot)){
       if(!bounceOnWall)
         break;
-      const Dir movDir = lastPos-cSpot;
-      const bool mX = movDir.dx!=0;
-      const bool mY = movDir.dy!=0;
+      auto [mX,mY] = getNMirror(floor,lastPos,cSpot);
       mirrorX^=mX;
       mirrorY^=mY;
       const Dir nDir = (*iter).mirror(mirrorX,mirrorY);
