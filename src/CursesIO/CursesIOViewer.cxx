@@ -50,7 +50,12 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
   if (attacked.isPlayer()) {
     viewer_.parent_->alertBeenHit();
   }
-  printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ' << attacked;
+  printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ';
+  if(attacked.isPlayer() && attacker.isPlayer()){
+    printWith_ << "yourself";
+  } else {
+    printWith_ << attacked;
+  }
   if (info.damageDone) {
     printWith_ << ' ' << (info.killed ? "by dealing" : "for") << ' ' << *info.damageDone << " damage";
   }
