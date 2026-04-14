@@ -14,7 +14,7 @@ constexpr int countRegions(StaticPositionArr<TerrainType> &floor) {
 
 static_assert([] {
   StaticPositionArr<TerrainType> floor(3, 3);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   auto info = DungeonMaker::labelRegions(floor);
   if (info.numRegions() != 1)
     return false;
@@ -36,7 +36,7 @@ static_assert([] {
   // E W E
   // E W E
   StaticPositionArr<TerrainType> floor(3, 2);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   floor[{1, 0}] = TerrainType::Wall;
   floor[{1, 1}] = TerrainType::Wall;
   auto info = DungeonMaker::labelRegions(floor);
@@ -66,7 +66,7 @@ static_assert([] {
 static_assert([] {
   // All empty — no walls adjacent, so no edges
   StaticPositionArr<TerrainType> floor(3, 3);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   return DungeonMaker::findEdges(floor).empty();
 }(),
               "FindEdges AllEmpty");
@@ -86,7 +86,7 @@ static_assert([] {
   // W W W
   StaticPositionArr<TerrainType> floor(3, 3);
   floor.fill(TerrainType::Wall);
-  floor[{1, 1}] = TerrainType::Empty;
+  floor[{1, 1}] = TerrainType::StoneFloor;
   auto edges = DungeonMaker::findEdges(floor);
   return edges.size() == 1 && edges[0] == Position{1, 1};
 }(),
@@ -95,9 +95,9 @@ static_assert([] {
 static_assert([] {
   // E W E — two empty cells each adjacent to wall
   StaticPositionArr<TerrainType> floor(3, 1);
-  floor[{0, 0}] = TerrainType::Empty;
+  floor[{0, 0}] = TerrainType::StoneFloor;
   floor[{1, 0}] = TerrainType::Wall;
-  floor[{2, 0}] = TerrainType::Empty;
+  floor[{2, 0}] = TerrainType::StoneFloor;
   auto edges = DungeonMaker::findEdges(floor);
   return edges.size() == 2;
 }(),
@@ -114,7 +114,7 @@ static_assert([] {
 
 TEST(DungeonMakerTests, ConnectRegionsEmptyGrid) {
   StaticPositionArr<TerrainType> floor(5, 5);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   DungeonMaker::connectRegions(floor);
   EXPECT_EQ(countRegions(floor), 1);
 }
@@ -129,9 +129,9 @@ TEST(DungeonMakerTests, ConnectRegionsAllWalls) {
 
 TEST(DungeonMakerTests, ConnectRegionsSingleCell) {
   StaticPositionArr<TerrainType> floor(1, 1);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   DungeonMaker::connectRegions(floor);
-  EXPECT_EQ((floor[{0, 0}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{0, 0}]), TerrainType::StoneFloor);
 }
 
 TEST(DungeonMakerTests, ConnectRegionsZeroSizeWidth) {
@@ -148,7 +148,7 @@ TEST(DungeonMakerTests, ConnectRegionsZeroSizeHeight) {
 
 TEST(DungeonMakerTests, ConnectRegionsTwoRegionsSeparatedByWall) {
   StaticPositionArr<TerrainType> floor(5, 5);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   for (int r = 0; r < 5; r++)
     floor[{2, r}] = TerrainType::Wall;
   EXPECT_EQ(countRegions(floor), 2);
@@ -161,13 +161,13 @@ TEST(DungeonMakerTests, ConnectRegionsThreeDisconnectedRegions) {
   floor.fill(TerrainType::Wall);
   for (int r = 0; r < 3; r++)
     for (int c = 0; c < 3; c++)
-      floor[{c, r}] = TerrainType::Empty;
+      floor[{c, r}] = TerrainType::StoneFloor;
   for (int r = 0; r < 3; r++)
     for (int c = 4; c < 7; c++)
-      floor[{c, r}] = TerrainType::Empty;
+      floor[{c, r}] = TerrainType::StoneFloor;
   for (int r = 4; r < 7; r++)
     for (int c = 0; c < 7; c++)
-      floor[{c, r}] = TerrainType::Empty;
+      floor[{c, r}] = TerrainType::StoneFloor;
   EXPECT_EQ(countRegions(floor), 3);
   DungeonMaker::connectRegions(floor);
   EXPECT_EQ(countRegions(floor), 1);
@@ -175,13 +175,13 @@ TEST(DungeonMakerTests, ConnectRegionsThreeDisconnectedRegions) {
 
 TEST(DungeonMakerTests, ConnectRegionsAlreadyConnected) {
   StaticPositionArr<TerrainType> floor(5, 5);
-  floor.fill(TerrainType::Empty);
+  floor.fill(TerrainType::StoneFloor);
   floor[{0, 0}] = TerrainType::Wall;
   floor[{1, 0}] = TerrainType::Wall;
   int emptyCount = 0;
   for (int r = 0; r < 5; r++)
     for (int c = 0; c < 5; c++)
-      if (floor[{c, r}] == TerrainType::Empty)
+      if (floor[{c, r}] == TerrainType::StoneFloor)
         emptyCount++;
   EXPECT_EQ(countRegions(floor), 1);
   DungeonMaker::connectRegions(floor);
@@ -189,13 +189,13 @@ TEST(DungeonMakerTests, ConnectRegionsAlreadyConnected) {
   int emptyCountAfter = 0;
   for (int r = 0; r < 5; r++)
     for (int c = 0; c < 5; c++)
-      if (floor[{c, r}] == TerrainType::Empty)
+      if (floor[{c, r}] == TerrainType::StoneFloor)
         emptyCountAfter++;
   EXPECT_EQ(emptyCount, emptyCountAfter);
 }
 
 TEST(DungeonMakerTests, ConnectRegionsSeparatedBySingleWall) {
-  StaticPositionArr<TerrainType> floor({{TerrainType::Empty, TerrainType::Wall, TerrainType::Empty}});
+  StaticPositionArr<TerrainType> floor({{TerrainType::StoneFloor, TerrainType::Wall, TerrainType::StoneFloor}});
   EXPECT_EQ(countRegions(floor), 2);
   DungeonMaker::connectRegions(floor);
   EXPECT_EQ(countRegions(floor), 1);
@@ -204,10 +204,10 @@ TEST(DungeonMakerTests, ConnectRegionsSeparatedBySingleWall) {
 TEST(DungeonMakerTests, ConnectRegionsSeparatedByDoubleWall) {
   StaticPositionArr<TerrainType> floor(4, 3);
   for (int r = 0; r < 3; r++) {
-    floor[{0, r}] = TerrainType::Empty;
+    floor[{0, r}] = TerrainType::StoneFloor;
     floor[{1, r}] = TerrainType::Wall;
     floor[{2, r}] = TerrainType::Wall;
-    floor[{3, r}] = TerrainType::Empty;
+    floor[{3, r}] = TerrainType::StoneFloor;
   }
   EXPECT_EQ(countRegions(floor), 2);
   DungeonMaker::connectRegions(floor);
@@ -229,8 +229,8 @@ static_assert([] {
   // . . E
   StaticPositionArr<TerrainType> floor(3, 3);
   floor.fill(TerrainType::Wall);
-  floor[{0, 0}] = TerrainType::Empty;
-  floor[{1, 1}] = TerrainType::Empty;
+  floor[{0, 0}] = TerrainType::StoneFloor;
+  floor[{1, 1}] = TerrainType::StoneFloor;
   auto info = DungeonMaker::labelRegions(floor);
   return info.numRegions() == 1;
 }(),
@@ -240,8 +240,8 @@ static_assert([] {
   // Two empty cells not connected at all (too far apart)
   StaticPositionArr<TerrainType> floor(3, 3);
   floor.fill(TerrainType::Wall);
-  floor[{0, 0}] = TerrainType::Empty;
-  floor[{2, 2}] = TerrainType::Empty;
+  floor[{0, 0}] = TerrainType::StoneFloor;
+  floor[{2, 2}] = TerrainType::StoneFloor;
   auto info = DungeonMaker::labelRegions(floor);
   return info.numRegions() == 2;
 }(),
@@ -253,7 +253,7 @@ TEST(DungeonMakerTests, CarveHVCorridorSamePoint) {
   StaticPositionArr<TerrainType> floor(5, 5);
   floor.fill(TerrainType::Wall);
   DungeonMaker::carveHVCorridor(floor, Position{2, 2}, Position{2, 2});
-  EXPECT_EQ((floor[{2, 2}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{2, 2}]), TerrainType::StoneFloor);
   // Neighbors should still be walls
   EXPECT_EQ((floor[{1, 2}]), TerrainType::Wall);
   EXPECT_EQ((floor[{3, 2}]), TerrainType::Wall);
@@ -265,9 +265,9 @@ TEST(DungeonMakerTests, CarveHVCorridorHorizontal) {
   StaticPositionArr<TerrainType> floor(5, 5);
   floor.fill(TerrainType::Wall);
   DungeonMaker::carveHVCorridor(floor, Position{1, 2}, Position{3, 2});
-  EXPECT_EQ((floor[{1, 2}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{2, 2}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{3, 2}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{1, 2}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{2, 2}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{3, 2}]), TerrainType::StoneFloor);
   // Above and below should still be walls
   EXPECT_EQ((floor[{2, 1}]), TerrainType::Wall);
   EXPECT_EQ((floor[{2, 3}]), TerrainType::Wall);
@@ -277,9 +277,9 @@ TEST(DungeonMakerTests, CarveHVCorridorVertical) {
   StaticPositionArr<TerrainType> floor(5, 5);
   floor.fill(TerrainType::Wall);
   DungeonMaker::carveHVCorridor(floor, Position{2, 1}, Position{2, 3});
-  EXPECT_EQ((floor[{2, 1}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{2, 2}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{2, 3}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{2, 1}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{2, 2}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{2, 3}]), TerrainType::StoneFloor);
   EXPECT_EQ((floor[{1, 2}]), TerrainType::Wall);
   EXPECT_EQ((floor[{3, 2}]), TerrainType::Wall);
 }
@@ -289,13 +289,13 @@ TEST(DungeonMakerTests, CarveHVCorridorLShaped) {
   floor.fill(TerrainType::Wall);
   DungeonMaker::carveHVCorridor(floor, Position{0, 0}, Position{3, 2});
   // Horizontal segment: (0,0) to (3,0)
-  EXPECT_EQ((floor[{0, 0}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{1, 0}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{2, 0}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{3, 0}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{0, 0}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{1, 0}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{2, 0}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{3, 0}]), TerrainType::StoneFloor);
   // Vertical segment: (3,0) to (3,2)
-  EXPECT_EQ((floor[{3, 1}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{3, 2}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{3, 1}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{3, 2}]), TerrainType::StoneFloor);
   // Off the L should be wall
   EXPECT_EQ((floor[{0, 1}]), TerrainType::Wall);
   EXPECT_EQ((floor[{1, 1}]), TerrainType::Wall);
@@ -306,12 +306,12 @@ TEST(DungeonMakerTests, CarveHVCorridorReverse) {
   floor.fill(TerrainType::Wall);
   DungeonMaker::carveHVCorridor(floor, Position{3, 3}, Position{1, 1});
   // Horizontal segment: (3,3) to (1,3)
-  EXPECT_EQ((floor[{3, 3}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{2, 3}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{1, 3}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{3, 3}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{2, 3}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{1, 3}]), TerrainType::StoneFloor);
   // Vertical segment: (1,3) to (1,1)
-  EXPECT_EQ((floor[{1, 2}]), TerrainType::Empty);
-  EXPECT_EQ((floor[{1, 1}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{1, 2}]), TerrainType::StoneFloor);
+  EXPECT_EQ((floor[{1, 1}]), TerrainType::StoneFloor);
 }
 
 // --- randomRooms tests ---
@@ -321,8 +321,8 @@ TEST(DungeonMakerTests, RandomRoomsSmokeTest) {
   DungeonMaker::randomRooms(floor, Position{5, 5}, Position{35, 25});
   // Should produce a connected map
   // Set stairs to Empty for region counting
-  floor[{5, 5}] = TerrainType::Empty;
-  floor[{35, 25}] = TerrainType::Empty;
+  floor[{5, 5}] = TerrainType::StoneFloor;
+  floor[{35, 25}] = TerrainType::StoneFloor;
   EXPECT_EQ(countRegions(floor), 1);
 }
 
@@ -360,7 +360,7 @@ TEST(DungeonMakerTests, RandomRoomsSmallFloor) {
   // Just verify no wall-only floor (some empty cells exist)
   bool hasEmpty = false;
   for (auto &t : floor) {
-    if (t == TerrainType::Empty || t == TerrainType::UpStair || t == TerrainType::DownStair)
+    if (t == TerrainType::StoneFloor || t == TerrainType::UpStair || t == TerrainType::DownStair)
       hasEmpty = true;
   }
   EXPECT_TRUE(hasEmpty);
@@ -372,7 +372,7 @@ TEST(DungeonMakerTests, RandomRoomsStairsOutOfBounds) {
   // Should not crash, stairs out of bounds are skipped
   bool hasEmpty = false;
   for (auto &t : floor) {
-    if (t == TerrainType::Empty)
+    if (t == TerrainType::StoneFloor)
       hasEmpty = true;
   }
   EXPECT_TRUE(hasEmpty);
@@ -418,7 +418,7 @@ TEST(DungeonMakerTests, MazeNonSquareGrid) {
   bool hasEmpty = false;
   bool hasWall = false;
   for (auto &t : floor) {
-    if (t == TerrainType::Empty)
+    if (t == TerrainType::StoneFloor)
       hasEmpty = true;
     if (t == TerrainType::Wall)
       hasWall = true;
@@ -436,7 +436,7 @@ TEST(DungeonMakerTests, MazeEmptyGrid) {
 TEST(DungeonMakerTests, Maze1x1) {
   StaticPositionArr<TerrainType> floor(1, 1);
   DungeonMaker::maze(floor);
-  EXPECT_EQ((floor[{0, 0}]), TerrainType::Empty);
+  EXPECT_EQ((floor[{0, 0}]), TerrainType::StoneFloor);
 }
 
 // --- perlin / openSimplexRaw smoke tests ---
@@ -449,7 +449,7 @@ TEST(DungeonMakerTests, PerlinSmokeTest) {
   for (auto &t : floor) {
     if (t == TerrainType::Wall)
       hasWall = true;
-    if (t == TerrainType::Empty)
+    if (t == TerrainType::StoneFloor)
       hasEmpty = true;
   }
   // With threshold 0.0, should have both wall and empty
@@ -465,7 +465,7 @@ TEST(DungeonMakerTests, OpenSimplexRawSmokeTest) {
   for (auto &t : floor) {
     if (t == TerrainType::Wall)
       hasWall = true;
-    if (t == TerrainType::Empty)
+    if (t == TerrainType::StoneFloor)
       hasEmpty = true;
   }
   EXPECT_TRUE(hasWall);
@@ -477,7 +477,7 @@ TEST(DungeonMakerTests, PerlinFillsAllCells) {
   floor.fill(TerrainType::UpStair); // Fill with non-Wall/Empty to verify overwrite
   DungeonMaker::perlin(floor, 8, 8, 0.0);
   for (auto &t : floor) {
-    EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::Empty);
+    EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::StoneFloor);
   }
 }
 
@@ -486,6 +486,6 @@ TEST(DungeonMakerTests, OpenSimplexRawFillsAllCells) {
   floor.fill(TerrainType::UpStair);
   DungeonMaker::openSimplexRaw(floor, 8, 8, 0.0);
   for (auto &t : floor) {
-    EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::Empty);
+    EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::StoneFloor);
   }
 }

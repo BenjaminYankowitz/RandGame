@@ -57,7 +57,7 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
   printWith_ << '\n';
 }
 
-void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainType attacked) {
+void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) {
   printWith_ << attacker << " hit " << attacked << '\n';
 }
 

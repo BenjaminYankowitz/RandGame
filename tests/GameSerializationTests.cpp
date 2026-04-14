@@ -10,7 +10,7 @@ namespace {
 class NullEventViewer final : public EventViewer {
   void itemPickup(const Monster & /*grabber*/, const Object & /*grabbed*/) noexcept override {}
   void monsterHitMonster(const Monster::HitReturn & /*hitinfo*/, const Monster & /*attacker*/, const Monster & /*attacked*/) noexcept override {}
-  void monsterHitWall(const Monster & /*attacker*/, TerrainType /*attacked*/) noexcept override {}
+  void monsterHitWall(const Monster & /*attacker*/, Location /*loc*/) noexcept override {}
   void monsterAte(const Monster & /*eater*/, const Object & /*eaten*/) noexcept override {}
   void debug(std::string_view /*message*/) noexcept override {}
 };

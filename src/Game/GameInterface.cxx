@@ -53,7 +53,8 @@ public:
 };
 export enum class TerrainTypeInterface : std::uint8_t {
   Unknown,
-  Empty,
+  StoneFloor,
+  GrassFloor,
   UpStair,
   DownStair,
   CWall,
@@ -156,7 +157,7 @@ public:
   virtual void itemPickup(MonsterInterface grabber, ObjectInterface grabbed) = 0;
   virtual void debug(std::string_view message) = 0;
   virtual void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
-  virtual void monsterHitWall(MonsterInterface attacker, TerrainType attacked) = 0;
+  virtual void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) = 0;
   virtual void monsterAte(MonsterInterface eater, ObjectInterface eaten) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
   virtual ~EventViewerInterface() = default;

@@ -7,7 +7,8 @@ import std;
 export using Health = int;
 
 export enum class TerrainType : std::uint8_t {
-  Empty,
+  StoneFloor,
+  GrassFloor,
   Wall,
   UpStair,
   DownStair,

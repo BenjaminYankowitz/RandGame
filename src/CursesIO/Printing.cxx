@@ -44,28 +44,45 @@ getMatAdj(ObjectInterface obj) noexcept {
   }
 }
 
-[[nodiscard]] constexpr std::size_t getCount(TerrainType /*terrain*/) noexcept {
+[[nodiscard]] constexpr std::size_t getCount(TerrainTypeInterface /*terrain*/) noexcept {
   return 1;
 }
 
-[[nodiscard]] constexpr Noun getNoun(TerrainType terrain) noexcept {
+[[nodiscard]] constexpr Noun getNoun(TerrainTypeInterface terrain) noexcept {
   switch (terrain) {
-  case TerrainType::Empty:
+    using enum TerrainTypeInterface;
+  case Unknown:
+    return {{"unknown"}};
+  case StoneFloor:
     return {{"empty spot"}};
-  case TerrainType::Wall:
-    return {{"wall"}};
-  case TerrainType::UpStair:
+  case GrassFloor:
+    return {{"grassy spot"}};
+  case UpStair:
     return {{"staircase up"}};
-  case TerrainType::DownStair:
+  case DownStair:
     return {{"staircase down"}};
+  case CWall:
+  case HWall:
+  case VWall:
+  case UTWall:
+  case DTWall:
+  case LTWall:
+  case RTWall:
+  case TWall:
+  case ULCornerWall:
+  case URCornerWall:
+  case DLCornerWall:
+  case DRCornerWall:
+  case SWall:
+    return {{"wall"}};
   }
 }
 
-[[nodiscard]] constexpr auto getAdjectives(TerrainType /*terrain*/) noexcept {
+[[nodiscard]] constexpr auto getAdjectives(TerrainTypeInterface /*terrain*/) noexcept {
   return std::views::empty<Adjective>;
 }
 
-[[nodiscard]] constexpr std::string_view specialArticle(TerrainType /*monster*/) noexcept {
+[[nodiscard]] constexpr std::string_view specialArticle(TerrainTypeInterface /*monster*/) noexcept {
   return {};
 }
 
@@ -182,7 +199,7 @@ void printThing(std::ostream &out, T thing) {
   }
 }
 
-export std::ostream &operator<<(std::ostream &out, const TerrainType type) noexcept {
+export std::ostream &operator<<(std::ostream &out, const TerrainTypeInterface type) noexcept {
   printThing(out, type);
   return out;
 }
@@ -302,8 +319,13 @@ export Symbol TerrainTypeInterfaceToSymbol(TerrainTypeInterface c) noexcept {
     using enum TerrainTypeInterface;
   case Unknown:
     return ' ';
-  case Empty:
+  case StoneFloor:
     return '.';
+  case GrassFloor: {
+    Symbol ret = '.';
+    ret.setFrontColor(Yellow);
+    return ret;
+  }
   case UpStair:
     return '<';
   case DownStair:

@@ -29,7 +29,7 @@ public:
   explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
   void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
   void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
-  void monsterHitWall(MonsterInterface attacker, TerrainType attacked) final;
+  void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) final;
   void monsterAte(MonsterInterface eater, ObjectInterface eaten) final;
   void debug(std::string_view message) final;
   void exception(const std::exception &exception) noexcept final;

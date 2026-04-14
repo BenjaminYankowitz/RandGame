@@ -28,7 +28,7 @@ void perlin(StaticPositionArr<TerrainType> &floor, double xscale, double yscale,
     if (gen.getHeight(eX, eY) >= threshold) {
       floor[p] = TerrainType::Wall;
     } else {
-      floor[p] = TerrainType::Empty;
+      floor[p] = TerrainType::StoneFloor;
     }
   }
 }
@@ -42,7 +42,7 @@ void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double
     if (gen.noise2(x, y) >= threshold) {
       floor[p] = TerrainType::Wall;
     } else {
-      floor[p] = TerrainType::Empty;
+      floor[p] = TerrainType::StoneFloor;
     }
   }
 }
@@ -51,10 +51,10 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept;
 void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) { // 32, 8, -0.2 seems like good values
   openSimplexRaw(floor, xscale, yscale, threshold);
   if (floor.inBounds(upStair)) {
-    floor[upStair] = TerrainType::Empty;
+    floor[upStair] = TerrainType::StoneFloor;
   }
   if (floor.inBounds(downStair)) {
-    floor[downStair] = TerrainType::Empty;
+    floor[downStair] = TerrainType::StoneFloor;
   }
   connectRegions(floor);
   if (floor.inBounds(upStair)) {
@@ -72,7 +72,7 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
   floor.fill(TerrainType::Wall);
   for (int row = 0; row < floor.rows(); row += 2) {
     for (int col = 0; col < floor.cols(); col += 2) {
-      floor[Position{col, row}] = TerrainType::Empty;
+      floor[Position{col, row}] = TerrainType::StoneFloor;
     }
   }
   const int hcols = (floor.cols() - 1) / 2;
@@ -102,10 +102,10 @@ void maze(StaticPositionArr<TerrainType> &floor, int extraConnections = 0) {
     }();
     auto &tile = floor[Position{acol * 2, arow * 2} + (horizontal ? Dir{1, 0} : Dir{0, 1})];
     if (connected.union_set((acol * orows) + arow, (acol * orows) + arow + (horizontal ? orows : 1))) {
-      tile = TerrainType::Empty;
+      tile = TerrainType::StoneFloor;
     } else if (extraLeft > 0) {
       extraLeft--;
-      tile = TerrainType::Empty;
+      tile = TerrainType::StoneFloor;
     }
   }
 }
@@ -122,7 +122,7 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<TerrainType> &floor) n
   regionOf.fill(-1);
   int numRegions = 0;
   for (auto p : floor.indexIter()) {
-    if (floor[p] != TerrainType::Empty || regionOf[p] != -1)
+    if (floor[p] != TerrainType::StoneFloor || regionOf[p] != -1)
       continue;
     const int regionId = numRegions++;
     std::vector<Position> dfs;
@@ -133,7 +133,7 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<TerrainType> &floor) n
       dfs.pop_back();
       for (auto d : Dir::boxDirs()) {
         auto nPos = cPos + d;
-        if (floor.inBounds(nPos) && floor[nPos] == TerrainType::Empty && regionOf[nPos] == -1) {
+        if (floor.inBounds(nPos) && floor[nPos] == TerrainType::StoneFloor && regionOf[nPos] == -1) {
           regionOf[nPos] = regionId;
           dfs.push_back(nPos);
         }
@@ -146,7 +146,7 @@ constexpr RegionInfo labelRegions(const StaticPositionArr<TerrainType> &floor) n
 [[nodiscard]] constexpr std::vector<Position> findEdges(const StaticPositionArr<TerrainType> &floor) noexcept {
   std::vector<Position> ret;
   for (auto pos : floor.indexIter()) {
-    if (std::ranges::any_of(Dir::boxDirs(), [pos, &floor](Dir d) { return floor[pos] == TerrainType::Empty && floor.inBounds(pos + d) && floor[pos + d] == TerrainType::Wall; })) {
+    if (std::ranges::any_of(Dir::boxDirs(), [pos, &floor](Dir d) { return floor[pos] == TerrainType::StoneFloor && floor.inBounds(pos + d) && floor[pos + d] == TerrainType::Wall; })) {
       ret.push_back(pos);
     }
   }
@@ -178,7 +178,7 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
     if (!ds.union_set(cRegion, oRegion))
       return false;
     for (auto p : PosPathIterableShort(parent[spot], parent[nSpot])) {
-      floor[p] = TerrainType::Empty;
+      floor[p] = TerrainType::StoneFloor;
       parent[p] = p;
       info.regionOf[p] = cRegion;
     }
@@ -203,11 +203,11 @@ void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept {
 void carveHVCorridor(StaticPositionArr<TerrainType> &floor, Position from, Position to) noexcept {
   const int xStep = (to.x >= from.x) ? 1 : -1;
   for (int x = from.x; x != to.x + xStep; x += xStep) {
-    floor[Position{x, from.y}] = TerrainType::Empty;
+    floor[Position{x, from.y}] = TerrainType::StoneFloor;
   }
   const int yStep = (to.y >= from.y) ? 1 : -1;
   for (int y = from.y; y != to.y + yStep; y += yStep) {
-    floor[Position{to.x, y}] = TerrainType::Empty;
+    floor[Position{to.x, y}] = TerrainType::StoneFloor;
   }
 }
 
@@ -253,7 +253,7 @@ void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Positi
   for (const auto &room : rooms) {
     for (int rx = room.x; rx < room.x + room.w; rx++) {
       for (int ry = room.y; ry < room.y + room.h; ry++) {
-        floor[Position{rx, ry}] = TerrainType::Empty;
+        floor[Position{rx, ry}] = TerrainType::StoneFloor;
       }
     }
   }

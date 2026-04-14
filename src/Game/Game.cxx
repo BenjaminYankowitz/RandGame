@@ -91,7 +91,7 @@ public:
   [[nodiscard]] constexpr bool isOpenMove(GameState &state, Dir d) const noexcept;
   constexpr void informItemPickup(GameState &state, const Monster &grabber, const Object &grabbed) noexcept;
   constexpr void informMonsterHitMonster(GameState &state, const HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept;
-  constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept;
+  constexpr void informMonsterHitWall(GameState &state, const Monster &attacker, Location loc) noexcept;
   constexpr void informMonsterAte(GameState &state, const Monster &eater, const Object &eaten) noexcept;
   friend void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, AttackInfo info) noexcept;
   [[nodiscard]] HitReturn hitBy(AttackInfo info) noexcept;
@@ -296,7 +296,7 @@ export class EventViewer {
 public:
   virtual void itemPickup(const Monster &grabber, const Object &grabbed) noexcept = 0;
   virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
-  virtual void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept = 0;
+  virtual void monsterHitWall(const Monster &attacker, Location loc) noexcept = 0;
   virtual void monsterAte(const Monster &eater, const Object &eaten) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
   virtual ~EventViewer() = default;
@@ -386,7 +386,7 @@ public:
   constexpr void broadcastEvent(Location eventLoc, auto &&func) noexcept;
   constexpr void broadcastItemPickup(const Monster &monster, const Object &object) noexcept;
   constexpr void broadcastMonsterHitMonster(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept;
-  constexpr void broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept;
+  constexpr void broadcastMonsterHitWall(const Monster &attacker, Location loc) noexcept;
   constexpr void broadcastMonsterAte(const Monster &eater, const Object &eaten) noexcept;
   void printDebug(std::string_view v) noexcept {
     eventViewer_->debug(v);
@@ -397,8 +397,8 @@ public:
   void printMonsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
     eventViewer_->monsterHitMonster(hitinfo, attacker, attacked);
   }
-  void printMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
-    eventViewer_->monsterHitWall(attacker, attacked);
+  void printMonsterHitWall(const Monster &attacker, Location loc) noexcept {
+    eventViewer_->monsterHitWall(attacker, loc);
   }
   void printMonsterAte(const Monster &eater, const Object &eaten) noexcept {
     eventViewer_->monsterAte(eater, eaten);
@@ -527,9 +527,9 @@ constexpr void GameState::broadcastMonsterHitMonster(const Monster::HitReturn &h
   broadcastEvent(attacker.getLoc(), inform);
 }
 
-constexpr void GameState::broadcastMonsterHitWall(const Monster &attacker, TerrainType attacked) noexcept {
-  auto inform = [this, &attacker, &attacked](Monster &viewer) {
-    viewer.informMonsterHitWall(*this, attacker, attacked);
+constexpr void GameState::broadcastMonsterHitWall(const Monster &attacker, Location loc) noexcept {
+  auto inform = [this, &attacker, &loc](Monster &viewer) {
+    viewer.informMonsterHitWall(*this, attacker, loc);
   };
   broadcastEvent(attacker.getLoc(), inform);
 }
@@ -769,9 +769,9 @@ constexpr void Monster::informMonsterHitMonster(GameState &state, const HitRetur
   }
 }
 
-constexpr void Monster::informMonsterHitWall(GameState &state, const Monster &attacker, TerrainType attacked) noexcept { // NOLINT(readability-make-member-function-const)
+constexpr void Monster::informMonsterHitWall(GameState &state, const Monster &attacker, Location loc) noexcept { // NOLINT(readability-make-member-function-const)
   if (isPlayer()) {
-    state.printMonsterHitWall(attacker, attacked);
+    state.printMonsterHitWall(attacker, loc);
     return;
   }
 }
@@ -811,6 +811,9 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
 }
 
 constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool bounceOnWall){ // TODO: ben - add animation for this.
+  if(dir.noMove()){
+    return start;
+  }
   auto [startPos, floorId] = start;
   auto &floor = state.getFloor(floorId);
   Position lastPos = startPos;
@@ -818,6 +821,7 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
   auto iter = ++PathIterable(dir).begin();
   bool mirrorX = false;
   bool mirrorY = false;
+  bool mirrorDone = false;
   while(true){
     const Dir cDir = (*iter).mirror(mirrorX,mirrorY);
     const int dist = Dir::chessboard(cDir);
@@ -830,11 +834,15 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
       const Dir movDir = lastPos-cSpot;
       const bool mX = movDir.dx!=0;
       const bool mY = movDir.dy!=0;
-      const Dir nDir = (lastPos-basePos).mirror(mX,mY);
+      mirrorDone = true;
       mirrorX^=mX;
       mirrorY^=mY;
+      const Dir nDir = (*iter).mirror(mirrorX,mirrorY);
       basePos=lastPos-nDir;
-      break;
+      continue;
+    }
+    if(mirrorDone){
+      floor.getTerrainType(cSpot) = TerrainType::GrassFloor;
     }
     if (auto targetID = floor.getMonster(cSpot)) {
       int nRemDist = monsterHit(state.getMonster(targetID),maxDist-dist);

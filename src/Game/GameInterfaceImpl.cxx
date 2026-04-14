@@ -104,14 +104,18 @@ constexpr auto WallType = []() {
   return ret;
 }();
 
-[[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor &floor, Position pos, TerrainType t) noexcept {
+
+[[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor &floor, Position pos) noexcept {
+  TerrainType t = floor.getTerrainType(pos);
   switch (t) {
   case TerrainType::DownStair:
     return TerrainTypeInterface::DownStair;
   case TerrainType::UpStair:
     return TerrainTypeInterface::UpStair;
-  case TerrainType::Empty:
-    return TerrainTypeInterface::Empty;
+  case TerrainType::GrassFloor:
+    return TerrainTypeInterface::GrassFloor;
+  case TerrainType::StoneFloor:
+    return TerrainTypeInterface::StoneFloor;
   case TerrainType::Wall:
     auto getType = [&floor, pos](Dir dir) {
       return !floor.inBounds(pos + dir) || floor.getTerrainType(pos + dir) == TerrainType::Wall;
@@ -134,6 +138,10 @@ constexpr auto WallType = []() {
     }
     return WallType[dirs];
   }
+}
+
+[[nodiscard]] TerrainTypeInterface toInterface(const GameState &state, Location loc) noexcept {
+  return toInterface(state.getFloor(loc.mapPos),loc.pos);
 }
 
 bool isWall(TerrainTypeInterface type) noexcept {
@@ -171,7 +179,7 @@ WorldTileInterface WorldFloorInterface::getTile(Position pos) const noexcept {
   }
   auto &floor = *static_cast<WorldFloor *>(floor_.worldFloor);
   auto tile = floor.getTile(pos);
-  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(floor, pos, tile.terrainType));
+  WorldTileInterface ret(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(floor, pos));
   return ret;
 }
 int WorldFloorInterface::rows() const noexcept { return static_cast<WorldFloor *>(floor_.worldFloor)->rows(); }
@@ -185,7 +193,7 @@ std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVis
       for (int c = 0; c < cols(); ++c) {
         Position pos(c, r);
         auto tile = static_cast<WorldFloor *>(floor_.worldFloor)->getTile(pos);
-        ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(*static_cast<WorldFloor *>(floor_.worldFloor), pos, tile.terrainType)));
+        ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(*static_cast<WorldFloor *>(floor_.worldFloor), pos)));
       }
     }
     return ret;
@@ -196,7 +204,7 @@ std::vector<std::pair<Position, WorldTileInterface>> WorldFloorInterface::getVis
   ret.reserve(positions.size());
   for (auto pos : positions) {
     auto tile = static_cast<WorldFloor *>(floor_.worldFloor)->getTile(pos);
-    ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(*static_cast<WorldFloor *>(floor_.worldFloor), pos, tile.terrainType)));
+    ret.emplace_back(pos, WorldTileInterface(ObjectContainerInterface(tile.objects), toMonsterList(gameState_, tile.monster), toInterface(*static_cast<WorldFloor *>(floor_.worldFloor), pos)));
   }
   return ret;
 }
@@ -222,8 +230,8 @@ public:
   void monsterHitMonster(const Monster::HitReturn &hitreturn, const Monster &attacker, const Monster &attacked) noexcept final {
     safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(gameState_, attacker), toInterface(gameState_, attacked)); });
   }
-  void monsterHitWall(const Monster &attacker, TerrainType attacked) noexcept final {
-    safeCall([&] { impl_->monsterHitWall(toInterface(gameState_, attacker), attacked); });
+  void monsterHitWall(const Monster &attacker, Location loc) noexcept final {
+    safeCall([&] { impl_->monsterHitWall(toInterface(gameState_, attacker), toInterface(*static_cast<GameState*>(gameState_.gameState),loc)); });
   }
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
     safeCall([&] { impl_->monsterAte(toInterface(gameState_, eater), ObjectInterface(eaten)); });
