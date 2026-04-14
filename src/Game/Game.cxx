@@ -833,7 +833,6 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
       const Dir movDir = lastPos-cSpot;
       const bool mX = movDir.dx!=0;
       const bool mY = movDir.dy!=0;
-      mirrorDone = true;
       mirrorX^=mX;
       mirrorY^=mY;
       const Dir nDir = (*iter).mirror(mirrorX,mirrorY);
