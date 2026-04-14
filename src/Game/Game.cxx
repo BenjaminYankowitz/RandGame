@@ -7,7 +7,7 @@ import SerializationLib;
 
 export class GameState;
 export class Monster {
-private:
+public:
   struct MonsterBodyInit {
     TimePeriod speed;
     MustInit<Health> maxHealth;
@@ -18,8 +18,6 @@ private:
     int maxThrowingDistance = 10;
     bool immortal = false;
   };
-
-public:
   struct MonsterBody {
     explicit MonsterBody(MonsterBodyInit body) noexcept : speed(body.speed), maxHealth(body.maxHealth), health(body.currentHealth), maxThrowingDistance(body.maxThrowingDistance), damage(body.damage), mClass(body.mClass), alive(body.alive), immortal(body.immortal) {}
     TimePeriod speed;
