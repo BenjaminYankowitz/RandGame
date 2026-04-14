@@ -820,17 +820,11 @@ constexpr TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept
   mY = !floor.isOpenTerrain(lastPos + Dir{0, moveDir.dy});
   if (mX || mY)
     return std::make_pair(mX, mY);
-  mX = true;
-  mY = true;
   int choice = 2;
   if not consteval {
     choice = Rnd::rnd(3);
   }
-  if (choice == 0)
-    mX = false;
-  else if (choice == 1)
-    mY = false;
-  return std::make_pair(mX, mY);
+  return std::make_pair(choice!=0, choice!=1);
 }
 
 constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto& monsterHit, bool bounceOnWall) noexcept { // TODO: ben - add animation for this.
