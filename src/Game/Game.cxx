@@ -438,7 +438,19 @@ private:
 export std::size_t toStream(std::ostream &out, const GameState &input);
 export GameState fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<GameState> /**/);
 
-export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept;
+void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept {
+  const WorldFloor &floorRef = state.getFloor(floor);
+  for (int i = 0; i < count; ++i) {
+    Position pos;
+    int attempts = 0;
+    do {
+      pos = {Rnd::rnd(floorRef.cols()), Rnd::rnd(floorRef.rows())};
+    } while (!floorRef.isOpenTile(pos) && (++attempts < 100));
+    if (!floorRef.isOpenTile(pos))
+      continue;
+    Monster::createMonster(state, {pos, floor}, MonsterClass::Imp);
+  }
+}
 
 void GameState::generateGame() noexcept {
   constexpr int DungeonWidth = 90;
@@ -484,20 +496,6 @@ void GameState::generateGame() noexcept {
   startingFloor.getObjects({4, 2}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
   startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Iron});
   startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Gold});
-}
-
-export void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept {
-  const WorldFloor &floorRef = state.getFloor(floor);
-  for (int i = 0; i < count; ++i) {
-    Position pos;
-    int attempts = 0;
-    do {
-      pos = {Rnd::rnd(floorRef.cols()), Rnd::rnd(floorRef.rows())};
-    } while (!floorRef.isOpenTile(pos) && (++attempts < 100));
-    if (!floorRef.isOpenTile(pos))
-      continue;
-    Monster::createMonster(state, {pos, floor}, MonsterClass::Imp);
-  }
 }
 
 Monster &WorldFloor::IDToMonster::operator()(Monster::ID monst) const noexcept {
