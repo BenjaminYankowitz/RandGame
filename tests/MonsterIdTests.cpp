@@ -66,11 +66,14 @@ TEST(MonsterIdGenerator, StdHashWorks) {
   EXPECT_EQ(map.size(), 2u);
 }
 
-// Generate 100 IDs, verify all unique
+// Generate 100 IDs, verify all unique and non null
 TEST(MonsterIdGenerator, ManyUniqueIds) {
   Monster::ID::Generator gen;
   std::unordered_set<Monster::ID> ids;
-  for (int i = 0; i < 100; ++i)
+  for (int i = 0; i < 100; ++i){
+    auto id = gen.next();
+    EXPECT_NE(id,Monster::ID::null());
     ids.insert(gen.next());
+  }
   EXPECT_EQ(ids.size(), 100u);
 }
