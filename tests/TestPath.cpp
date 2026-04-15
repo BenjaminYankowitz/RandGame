@@ -141,3 +141,37 @@ static_assert(testAtClosest(
     " x "
     " x ",
     3, 3));
+
+// --- Path around vertical wall (diagonal shortcut) ---
+static_assert(testMap(
+    "s xxx"
+    "  x  "
+    "  x  "
+    "  x  "
+    "  e  ",
+    5, 5, 4));
+
+// --- Large obstacle in center of open field ---
+static_assert(testMap(
+    "s        "
+    "   xxx   "
+    "   xxx   "
+    "   xxx   "
+    "        e",
+    5, 9, 9));
+
+// --- Goal on wall (unreachable) ---
+static_assert(testAtClosest(
+    "s  "
+    "xxx"
+    "xex",
+    3, 3));
+
+// --- Diagonal movement in open field ---
+static_assert(testMap(
+    "s    "
+    "     "
+    "     "
+    "     "
+    "    e",
+    5, 5, 4));

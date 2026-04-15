@@ -83,6 +83,22 @@ add_executable(LOSTests LOSTests.cpp)
 target_link_libraries(LOSTests PRIVATE Common TestHeader)
 add_test(NAME LOSTests COMMAND LOSTests)
 
+add_executable(ObjectTests ObjectTests.cpp)
+target_link_libraries(ObjectTests PRIVATE Game TestHeader)
+add_test(NAME ObjectTests COMMAND ObjectTests)
+
+add_executable(CorpseTests CorpseTests.cpp)
+target_link_libraries(CorpseTests PRIVATE GameTypes TestHeader)
+add_test(NAME CorpseTests COMMAND CorpseTests)
+
+add_executable(MonsterCombatTests MonsterCombatTests.cpp)
+target_link_libraries(MonsterCombatTests PRIVATE Game TestHeader)
+add_test(NAME MonsterCombatTests COMMAND MonsterCombatTests)
+
+add_executable(WorldFloorTests WorldFloorTests.cpp)
+target_link_libraries(WorldFloorTests PRIVATE Game TestHeader)
+add_test(NAME WorldFloorTests COMMAND WorldFloorTests)
+
 set(CURSES_NEED_NCURSES TRUE)
 find_package(Curses REQUIRED)
 add_executable(LOSVisualizer LOSVisualizer.cpp)
