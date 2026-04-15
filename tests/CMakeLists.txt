@@ -32,8 +32,15 @@ add_executable(SerializationLibTests SerializationLibTests.cpp)
 target_link_libraries(SerializationLibTests PRIVATE Common SerializationLib TestHeader)
 add_test(NAME SerializationLibTests COMMAND SerializationLibTests)
 
+add_library(NullEventViewer STATIC)
+target_sources(NullEventViewer
+	PUBLIC
+		FILE_SET CXX_MODULES FILES
+		NullEventViewer.cxx)
+target_link_libraries(NullEventViewer PUBLIC Game GameInterface Common)
+
 add_executable(GameSerializationTests GameSerializationTests.cpp)
-target_link_libraries(GameSerializationTests PRIVATE Game SerializationLib TestHeader)
+target_link_libraries(GameSerializationTests PRIVATE Game SerializationLib NullEventViewer TestHeader)
 add_test(NAME GameSerializationTests COMMAND GameSerializationTests)
 
 add_executable(MiscTests MiscTests.cpp)
@@ -65,7 +72,7 @@ target_link_libraries(RandomTests PRIVATE Common TestHeader)
 add_test(NAME RandomTests COMMAND RandomTests)
 
 add_executable(GameInterfaceTests GameInterfaceTests.cpp)
-target_link_libraries(GameInterfaceTests PRIVATE GameInterface TestHeader)
+target_link_libraries(GameInterfaceTests PRIVATE GameInterface NullEventViewer TestHeader)
 add_test(NAME GameInterfaceTests COMMAND GameInterfaceTests)
 
 add_executable(DungeonMakerTests DungeonMakerTests.cpp)

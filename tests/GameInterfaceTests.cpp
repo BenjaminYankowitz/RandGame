@@ -3,22 +3,10 @@ import Game;
 import GameInterface;
 import GameTypes;
 import Common;
+import NullEventViewer;
 import std;
 
 namespace {
-class NullEventViewer final : public EventViewerInterface {
-  void itemPickup(MonsterInterface /*grabber*/, ObjectInterface /*grabbed*/) override {}
-  void debug(std::string_view /*message*/) override {}
-  void monsterHitMonster(HitInfo /*hitinfo*/, MonsterInterface /*attacker*/, MonsterInterface /*attacked*/) override {}
-  void monsterHitWall(MonsterInterface /*attacker*/, TerrainTypeInterface /*attacked*/) override {}
-  void exception(const std::exception & /*e*/) noexcept override {}
-  void monsterAte(MonsterInterface /*eater*/, ObjectInterface /*eaten*/) override {}
-};
-
-std::unique_ptr<EventViewerInterface> makeNullViewer() {
-  return std::make_unique<NullEventViewer>();
-}
-
 GameInterface makeGI(GameState &game) {
   GameInterface gi((IGameState(&game)));
   gi.setControlled(game.getPlayer().getId());
