@@ -377,6 +377,8 @@ TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
 }
 
 TimePeriod Monster::castBeam(GameState &state, Dir dir) noexcept {
+  if(!useMP(5))
+    return TimePeriod{0};
   createBeam(state, *this, loc_, dir, Rnd::uniform_int(10, 20), body_.damage);
   return getSpeed();
 }

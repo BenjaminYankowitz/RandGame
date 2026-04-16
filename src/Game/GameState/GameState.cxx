@@ -155,7 +155,6 @@ public:
   [[nodiscard]] TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
-  [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir, Health damage) noexcept;
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
   Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config = brain}) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
