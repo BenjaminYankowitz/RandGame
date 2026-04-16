@@ -274,7 +274,7 @@ TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept {
 }
 
 [[nodiscard]] constexpr std::pair<bool, bool> getNMirror(const WorldFloor &floor, Position lastPos, Position cSpot) noexcept {
-  const Dir moveDir = lastPos - cSpot;
+  const Dir moveDir = cSpot-lastPos;
   bool mX = moveDir.dx != 0;
   bool mY = moveDir.dy != 0;
   if (!mX || !mY)
@@ -346,7 +346,7 @@ void createBeam(GameState &state, Monster &source, Location start, Dir dir, int 
     monsterHitMonster(state, source, target, {damage()});
     return distLeft - Rnd::rnd(5);
   };
-  auto beamStep = [&state,floor=start.mapPos](Position pos) { state.printBeamStep({pos,floor}); };
+  auto beamStep = [&state,floor=start.mapPos](Position pos) { state.broadcastBeamStep({pos,floor}); };
   runPath(state, start, dir, maxDist, onHit, true, beamStep);
 }
 
