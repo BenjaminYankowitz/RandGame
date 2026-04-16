@@ -123,6 +123,7 @@ TimePeriod Monster::pathTo(GameState &state, Location target, MoveMode onceReach
   state.printDebug("If it is possible logic should probably be reworked.");
   return reThink(ReThinkReason::FailedAttack);
 }
+
 void Monster::findTask(GameState &state) noexcept {
   auto [pos, mapPos] = getLoc();
   const auto &cFloor = state.getFloor(mapPos);
@@ -151,6 +152,7 @@ void Monster::findTask(GameState &state) noexcept {
     }
   }
 }
+
 TimePeriod Monster::takeItem(GameState &state, ObjectContainer &container, std::size_t index) noexcept {
   static constexpr std::size_t PickUpItemSpeedFraction = 10;
   state.broadcastItemPickup(*this, container[index]);
@@ -191,18 +193,19 @@ TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveMode mode) 
 TimePeriod Monster::generalMove(GameState &state, Position nPos, MoveMode mode) noexcept {
   return generalMove(state, Location(nPos, loc_.mapPos), mode);
 }
+
 TimePeriod Monster::generalMove(GameState &state, Dir d, MoveMode mode) noexcept {
   return generalMove(state, Location(loc_.pos + d, loc_.mapPos), mode);
 }
 
-[[nodiscard]] TimePeriod Monster::goUpStair(GameState &state, MoveMode m) noexcept {
+TimePeriod Monster::goUpStair(GameState &state, MoveMode m) noexcept {
   if (state.getTerrainType(loc_) == TerrainType::UpStair) {
     return generalMove(state, loc_.up(), m);
   }
   return TimePeriod(0);
 }
 
-[[nodiscard]] TimePeriod Monster::goDownStair(GameState &state, MoveMode m) noexcept {
+TimePeriod Monster::goDownStair(GameState &state, MoveMode m) noexcept {
   if (state.getTerrainType(loc_) == TerrainType::DownStair) {
     return generalMove(state, loc_.down(), m);
   }
