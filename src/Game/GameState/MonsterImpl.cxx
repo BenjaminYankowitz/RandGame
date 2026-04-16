@@ -273,7 +273,7 @@ TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept {
   return getSpeed() / DropItemSpeedFraction;
 }
 
-[[nodiscard]] constexpr std::pair<bool, bool> getNMirror(WorldFloor &floor, Position lastPos, Position cSpot) noexcept {
+[[nodiscard]] constexpr std::pair<bool, bool> getNMirror(const WorldFloor &floor, Position lastPos, Position cSpot) noexcept {
   const Dir moveDir = lastPos - cSpot;
   bool mX = moveDir.dx != 0;
   bool mY = moveDir.dy != 0;
@@ -294,8 +294,8 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
   if (dir.noMove()) {
     return start;
   }
-  auto [startPos, floorId] = start;
-  auto &floor = state.getFloor(floorId);
+  const auto [startPos, floorId] = start;
+  const auto &floor = state.getFloor(floorId);
   Position lastPos = startPos;
   Position basePos = startPos;
   auto iter = ++PathIterable(dir).begin();
@@ -306,19 +306,19 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
     const int dist = Dir::chessboard(cDir);
     if (dist > maxDist)
       break;
-    Position cSpot = basePos + cDir;
+    const Position cSpot = basePos + cDir;
     if (!floor.isOpenTerrain(cSpot)) {
       if (!bounceOnWall)
         break;
-      auto [mX, mY] = getNMirror(floor, lastPos, cSpot);
+      const auto [mX, mY] = getNMirror(floor, lastPos, cSpot);
       mirrorX ^= mX;
       mirrorY ^= mY;
       const Dir nDir = (*iter).mirror(mirrorX, mirrorY);
       basePos = lastPos - nDir;
       continue;
     }
-    if (auto targetID = floor.getMonster(cSpot)) {
-      int nRemDist = monsterHit(state.getMonster(targetID), maxDist - dist);
+    if (const auto targetID = floor.getMonster(cSpot)) {
+      const int nRemDist = monsterHit(state.getMonster(targetID), maxDist - dist);
       maxDist = dist + nRemDist;
     }
     lastPos = cSpot;
