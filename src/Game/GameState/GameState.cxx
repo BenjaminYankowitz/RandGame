@@ -343,7 +343,7 @@ public:
   }
   [[nodiscard]] auto tryGetMonster(this auto &&self, Monster::ID id) noexcept {
     auto found = self.monsterMap_.find(id);
-    return found == self.monsterMap_.end() ? OptionalReference<std::remove_reference_t<decltype(std::forward_like<decltype(self)>(*found->second))>>() : OptionalReference(std::forward_like<decltype(self)>(*found->second));
+    return OptionalReference(found == self.monsterMap_.end() ? nullptr : &std::forward_like<decltype(self)>(*found->second));
   }
   [[nodiscard]] auto &getMonster(this auto &&self, Monster::ID id) noexcept {
     return *self.tryGetMonster(id);
