@@ -21,7 +21,7 @@ target_link_libraries(CompileTimeHashMapTests PRIVATE Common TestHeader)
 add_test(NAME CompileTimeHashMapTests COMMAND CompileTimeHashMapTests)
 
 add_executable(ObjectContainerTests ObjectContainerTests.cpp)
-target_link_libraries(ObjectContainerTests PRIVATE Game TestHeader)
+target_link_libraries(ObjectContainerTests PRIVATE GameState TestHeader)
 add_test(NAME ObjectContainerTests COMMAND ObjectContainerTests)
 
 add_executable(DiceTests DiceTests.cpp)
@@ -37,10 +37,10 @@ target_sources(NullEventViewer
 	PUBLIC
 		FILE_SET CXX_MODULES FILES
 		NullEventViewer.cxx)
-target_link_libraries(NullEventViewer PUBLIC Game GameInterface Common)
+target_link_libraries(NullEventViewer PUBLIC GameState GameInterface Common)
 
 add_executable(GameSerializationTests GameSerializationTests.cpp)
-target_link_libraries(GameSerializationTests PRIVATE Game SerializationLib NullEventViewer TestHeader)
+target_link_libraries(GameSerializationTests PRIVATE GameState SerializationLib NullEventViewer TestHeader)
 add_test(NAME GameSerializationTests COMMAND GameSerializationTests)
 
 add_executable(MiscTests MiscTests.cpp)
@@ -60,7 +60,7 @@ target_link_libraries(MonsterConfigTests PRIVATE MonsterClassConfig TestHeader)
 add_test(NAME MonsterConfigTests COMMAND MonsterConfigTests)
 
 add_executable(MonsterIdTests MonsterIdTests.cpp)
-target_link_libraries(MonsterIdTests PRIVATE Game TestHeader)
+target_link_libraries(MonsterIdTests PRIVATE GameState TestHeader)
 add_test(NAME MonsterIdTests COMMAND MonsterIdTests)
 
 add_executable(PathIterableTests PathIterableTests.cpp)
@@ -84,7 +84,7 @@ target_link_libraries(LOSTests PRIVATE Common TestHeader)
 add_test(NAME LOSTests COMMAND LOSTests)
 
 add_executable(ObjectTests ObjectTests.cpp)
-target_link_libraries(ObjectTests PRIVATE Game TestHeader)
+target_link_libraries(ObjectTests PRIVATE GameState TestHeader)
 add_test(NAME ObjectTests COMMAND ObjectTests)
 
 add_executable(CorpseTests CorpseTests.cpp)
@@ -92,11 +92,11 @@ target_link_libraries(CorpseTests PRIVATE GameTypes TestHeader)
 add_test(NAME CorpseTests COMMAND CorpseTests)
 
 add_executable(MonsterCombatTests MonsterCombatTests.cpp)
-target_link_libraries(MonsterCombatTests PRIVATE Game TestHeader)
+target_link_libraries(MonsterCombatTests PRIVATE GameState TestHeader)
 add_test(NAME MonsterCombatTests COMMAND MonsterCombatTests)
 
 add_executable(WorldFloorTests WorldFloorTests.cpp)
-target_link_libraries(WorldFloorTests PRIVATE Game TestHeader)
+target_link_libraries(WorldFloorTests PRIVATE GameState TestHeader)
 add_test(NAME WorldFloorTests COMMAND WorldFloorTests)
 
 set(CURSES_NEED_NCURSES TRUE)

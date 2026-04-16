@@ -1,5 +1,5 @@
 #include "TestHeader.h"
-import Game;
+import GameState;
 import SerializationLib;
 import Common;
 import NullEventViewer;

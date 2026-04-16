@@ -1,6 +1,5 @@
 #include "TestHeader.h"
 import Common;
-import std;
 
 struct BoolMap {
   const StaticPositionArr<bool> &real;

@@ -1,8 +1,7 @@
 export module NullEventViewer;
-import Game;
+import GameState;
 import GameInterface;
 import Common;
-import std;
 
 export class NullEventViewer final : public EventViewer {
   void itemPickup(const Monster & /*grabber*/, const Object & /*grabbed*/) noexcept override {}

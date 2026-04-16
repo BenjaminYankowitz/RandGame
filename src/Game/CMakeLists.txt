@@ -1,4 +1,5 @@
 add_subdirectory(Types)
+add_subdirectory(GameState)
 add_library(DungeonMaker STATIC)
 target_sources(DungeonMaker
 	PUBLIC
@@ -14,16 +15,6 @@ target_sources(MonsterClassConfig
 
 target_link_libraries(MonsterClassConfig PUBLIC Common GameTypes)
 
-add_library(Game STATIC)  
-target_sources(Game
-	PUBLIC
-		FILE_SET CXX_MODULES FILES
-      	Game.cxx
-	PRIVATE
-		GameSerialization.cxx)
-            
-target_link_libraries(Game PUBLIC DungeonMaker Common MonsterClassConfig GameTypes PRIVATE SerializationLib)
-
 add_library(GameInterface STATIC)
 target_sources(GameInterface
 	PUBLIC
@@ -32,4 +23,4 @@ target_sources(GameInterface
 	PRIVATE
 				GameInterfaceImpl.cxx)
 
-target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE Game SerializationLib)
+target_link_libraries(GameInterface PUBLIC Common GameTypes PRIVATE GameState SerializationLib)

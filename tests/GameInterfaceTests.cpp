@@ -1,5 +1,5 @@
 #include "TestHeader.h"
-import Game;
+import GameState;
 import GameInterface;
 import GameTypes;
 import Common;

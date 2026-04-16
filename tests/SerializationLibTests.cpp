@@ -1,7 +1,6 @@
 #include "TestHeader.h"
 import SerializationLib;
 import Common;
-import std;
 using SerializationLib::Tag;
 
 TEST(SerializationLibTests, SerializeAndDeserializeSingleInt) {

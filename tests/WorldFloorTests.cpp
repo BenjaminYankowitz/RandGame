@@ -1,7 +1,6 @@
 #include "TestHeader.h"
-import Game;
+import GameState;
 import Common;
-import std;
 
 TEST(WorldFloor, SeeThroughDefault) {
   WorldFloor floor(5, 5);

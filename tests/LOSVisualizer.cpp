@@ -1,7 +1,6 @@
 #include <clocale>
 #include <cursesw.h>
 import Common;
-import std;
 
 constexpr int MapW = 40;
 constexpr int MapH = 20;

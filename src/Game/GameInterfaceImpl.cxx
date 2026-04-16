@@ -2,7 +2,7 @@ module;
 #include "../Common/EnumBitOps.h"
 module GameInterface;
 import Common;
-import Game;
+import GameState;
 import SerializationLib;
 
 ObjectInterface::ObjectInterface(const Object &obj) noexcept : obj_(&obj) {}

@@ -1,6 +1,5 @@
 #include "TestHeader.h"
 import Common;
-import std;
 
 TEST(RandomTests, UniformIntInRange) {
   for (int i = 0; i < 1000; ++i) {

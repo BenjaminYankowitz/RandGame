@@ -1,5 +1,4 @@
-module;
-module Game;
+module GameState;
 import Common;
 import SerializationLib;
 

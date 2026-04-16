@@ -1,8 +1,7 @@
 #include "TestHeader.h"
-import Game;
+import GameState;
 import Common;
 import MonsterClassConfig;
-import std;
 using namespace Dice::Literals;
 
 namespace {

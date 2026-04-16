@@ -1,6 +1,6 @@
 import std;
 import CursesIO;
-import Game;
+import GameState;
 import GameInterface;
 
 namespace {
