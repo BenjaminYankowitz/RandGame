@@ -393,9 +393,8 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   }
   const auto &mInfo = MonsterClassInfoArr[mClass];
   ID id = game.nextMonsterId();
-  MonsterBodyInit body{.speed = mInfo.speed, .maxHealth = mInfo.baseHealth, .maxMP = mInfo.baseMP, .damage = mInfo.damage, .mClass = mClass};
   MonsterBrainConfig brain = isPlayer ? PlayerBrain : mInfo.brain;
-  Monster &mstr = game.insertMonster(std::make_unique<Monster>(body, loc, id, brain));
+  Monster &mstr = game.insertMonster(std::make_unique<Monster>(MonsterBodyInit::make(mInfo), loc, id, brain));
   if (mstr.caresEvent()) {
     game.getFloor(loc.mapPos).addEventListener(id);
   }

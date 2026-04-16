@@ -33,18 +33,15 @@ export enum class ObjectTypeImpl : std::uint8_t {
 };
 
 export enum class EquipType : std::uint8_t {
-  CantEquip = 0,
-  Hand = 1,
-  Helm = Hand << 1,
-  Gloves = Helm << 1,
-  Ring = Gloves << 1,
-  Body = Ring << 1,
-  Cloak = Body << 1,
-  Shoes = Cloak << 1,
+  CantEquip,
+  Hand,
+  Helm,
+  Gloves,
+  Ring,
+  Body,
+  Cloak,
+  Shoes,
 };
-export {
-  DEFINE_ENUM_BIT_OPS(EquipType)
-}
 
 [[nodiscard]] constexpr bool isCorpse(ObjectTypeImpl obj) {
   return (std::to_underlying(obj) & std::to_underlying(ObjectTypeImpl::Corpse)) != 0;

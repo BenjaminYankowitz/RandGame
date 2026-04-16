@@ -135,6 +135,8 @@ getMatAdj(ObjectInterface obj) noexcept {
     return {{"die"}, "dice"};
   case Corpse:
     return {{"corpse"}};
+  case Armor:
+    return {{"armor"}};
   }
 }
 
@@ -143,6 +145,7 @@ getMatAdj(ObjectInterface obj) noexcept {
     using enum ObjectTypeImpl;
   case KingsCoin:
   case Knife:
+  case Armor:
     return true;
   case Die:
   case Corpse:
@@ -282,8 +285,10 @@ export constexpr chtype ObjectTypeToCharacter(ObjectType otype) noexcept {
     return ')';
   case Die:
     return '(';
-  case ObjectTypeImpl::Corpse:
+  case Corpse:
     return '%';
+  case Armor:
+    return '[';
   }
 }
 

@@ -9,20 +9,25 @@ export class GameState;
 export class Monster {
 public:
   struct MonsterBodyInit {
+    [[nodiscard]] static constexpr MonsterBodyInit make(const MonsterClassInfo& mInfo) noexcept{
+      return {.speed = mInfo.speed, .plan=mInfo.bodyPlan, .maxHealth = mInfo.baseHealth, .maxMP = mInfo.baseMP, .damage = mInfo.naturalWeapon, .mClass = mInfo.mClass,.maxThrowingDistance=mInfo.maxThrowingDistance};
+    }
     TimePeriod speed;
+    MustInit<BodyPlan> plan;
     MustInit<Health> maxHealth;
     MustInit<MP> maxMP;
     Health currentHealth = maxHealth;
     MP currentMP = maxMP;
     Dice::Group damage;
     MustInit<MonsterClass> mClass;
+    MustInit<int> maxThrowingDistance;
     bool alive = true;
-    int maxThrowingDistance = 10;
     bool immortal = false;
   };
   struct MonsterBody {
-    explicit MonsterBody(MonsterBodyInit body) noexcept : speed(body.speed), maxHealth(body.maxHealth), maxMP(body.maxMP), health(body.currentHealth), mp(body.currentMP), maxThrowingDistance(body.maxThrowingDistance), damage(body.damage), mClass(body.mClass), alive(body.alive), immortal(body.immortal) {}
+    explicit MonsterBody(MonsterBodyInit body) noexcept : speed(body.speed), plan(body.plan), maxHealth(body.maxHealth), maxMP(body.maxMP), health(body.currentHealth), mp(body.currentMP), maxThrowingDistance(body.maxThrowingDistance), damage(body.damage), mClass(body.mClass), alive(body.alive), immortal(body.immortal) {}
     TimePeriod speed;
+    BodyPlan plan;
     Health maxHealth;
     MP maxMP;
     Health health;
@@ -157,7 +162,9 @@ public:
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
   Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config = brain}) {}
-  Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
+  Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {
+    equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots()); //NOLINT(modernize-avoid-c-arrays)
+  };
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
 
@@ -166,13 +173,7 @@ public:
 private:
   constexpr void setDead(bool dead = true) noexcept { body_.alive = !dead; }
   ObjectContainer inventory_;
-  std::unique_ptr<Object> helm_;
-  std::array<std::unique_ptr<Object>,2> hands_;
-  std::unique_ptr<Object> gloves_;
-  std::array<std::unique_ptr<Object>,2> rings_;
-  std::unique_ptr<Object> bodyArmor_;
-  std::unique_ptr<Object> cloak_;
-  std::unique_ptr<Object> shoes_;
+  std::unique_ptr<std::unique_ptr<Object>[]> equipment_; //NOLINT(modernize-avoid-c-arrays)
   MonsterBody body_;
   MonsterBrain brain_;
   Location loc_;

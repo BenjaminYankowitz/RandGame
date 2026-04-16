@@ -6,7 +6,7 @@ using namespace Dice::Literals;
 
 namespace {
 Monster makeMonster() {
-  return Monster(Monster::MonsterBodyInit{.speed = TimePeriod(60), .maxHealth = 10, .maxMP = 2, .damage = "1d6"_dice, .mClass = MonsterClass::Human},
+  return Monster(Monster::MonsterBodyInit::make(MonsterClassInfoArr[MonsterClass::Human]),
                  Location({0, 0}, FloorSpecifier(0)), MonsterID::null(), MonsterBrainInit{});
 }
 } // namespace
