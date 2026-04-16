@@ -41,6 +41,7 @@ export class MonsterClassInfo {
 public:
   TimePeriod speed = BaseSpeed;
   Health baseHealth = 10;
+  MP baseMP = 0;
   Dice::Group damage;
   MonsterBrainConfig brain = MonsterBrainInit{};
   MonsterCategories catagories;
@@ -59,12 +60,12 @@ public:
 
 export constexpr auto MonsterClassInfoArr = []() {
   using namespace Dice::Literals;
-  constexpr MonsterClassInfo Human{.baseHealth = 10, .damage = "1d6"_dice, .catagories = MonsterCategories::Mammal | MonsterCategories::Humanoid, .prey = MonsterCategories::Pest, .mClass = MonsterClass::Human};
-  constexpr MonsterClassInfo Cat{.speed = BaseSpeed * 11 / 12, .baseHealth = 10, .damage = "2d6"_dice, .catagories = MonsterCategories::Mammal, .mClass = MonsterClass::Cat};
-  constexpr MonsterClassInfo SeaSlug{.speed = BaseSpeed * 53, .baseHealth = 10, .damage = "10d2"_dice, .catagories = MonsterCategories::Nothing, .prey = MonsterCategories::SlugFood, .mClass = MonsterClass::SeaSlug};
-  constexpr MonsterClassInfo GreedyWeasel{.speed = BaseSpeed * 11 / 12, .baseHealth = 10, .damage = "d4"_dice, .brain = MonsterBrainInit{.hatesItemPickups = true}, .catagories = MonsterCategories::Pest, .mClass = MonsterClass::GreedyWeasel};
-  constexpr MonsterClassInfo Bryozoan{.speed = TimePeriod(0), .baseHealth = 10, .damage = "0"_dice, .catagories = MonsterCategories::SlugFood, .mClass = MonsterClass::Bryozoan};
-  constexpr MonsterClassInfo Imp{.baseHealth = 5, .damage = "1d3+1"_dice, .catagories = MonsterCategories::Demon | MonsterCategories::Pest, .prey = MonsterCategories::Humanoid, .mClass = MonsterClass::Imp};
+  constexpr MonsterClassInfo Human{.baseMP = 10, .damage = "1d6"_dice, .catagories = MonsterCategories::Mammal | MonsterCategories::Humanoid, .prey = MonsterCategories::Pest, .mClass = MonsterClass::Human};
+  constexpr MonsterClassInfo Cat{.speed = BaseSpeed * 11 / 12, .damage = "2d6"_dice, .catagories = MonsterCategories::Mammal, .mClass = MonsterClass::Cat};
+  constexpr MonsterClassInfo SeaSlug{.speed = BaseSpeed * 53, .damage = "10d2"_dice, .catagories = MonsterCategories::Nothing, .prey = MonsterCategories::SlugFood, .mClass = MonsterClass::SeaSlug};
+  constexpr MonsterClassInfo GreedyWeasel{.speed = BaseSpeed * 11 / 12, .damage = "d4"_dice, .brain = MonsterBrainInit{.hatesItemPickups = true}, .catagories = MonsterCategories::Pest, .mClass = MonsterClass::GreedyWeasel};
+  constexpr MonsterClassInfo Bryozoan{.speed = TimePeriod(0), .damage = "0"_dice, .catagories = MonsterCategories::SlugFood, .mClass = MonsterClass::Bryozoan};
+  constexpr MonsterClassInfo Imp{.damage = "1d3+1"_dice, .catagories = MonsterCategories::Demon | MonsterCategories::Pest, .prey = MonsterCategories::Humanoid, .mClass = MonsterClass::Imp};
   return mkEnumToObject<MonsterClassInfo>({Human, Cat, SeaSlug, GreedyWeasel, Bryozoan, Imp});
 }();
 

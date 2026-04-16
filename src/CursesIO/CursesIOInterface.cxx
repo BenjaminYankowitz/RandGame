@@ -49,7 +49,7 @@ void IOModule::Interface::updateGameScreen() {
   mainWindow_.updateScreen();
   statusWindow_.clear();
   statusWindow_.moveCursor(0, 0);
-  statusWindow_ << "Health: "sv << gState_->getHealth() << "/"sv << gState_->getMaxHealth();
+  statusWindow_ << "Health: "sv << gState_->getHealth() << "/"sv << gState_->getMaxHealth() << " MP: "sv << gState_->getMP() << "/"sv << gState_->getMaxMP();
   statusWindow_ << " ["sv;
   MoveMode mode = mod_.getMoveMode();
   if (hasOverlap(mode, MoveMode::Fight))

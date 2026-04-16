@@ -19,6 +19,8 @@ bool MonsterInterface::isAlive() const noexcept { return static_cast<const Monst
 Location MonsterInterface::getLoc() const noexcept { return static_cast<const Monster *>(monster_.monster)->getLoc(); }
 Health MonsterInterface::getHealth() const noexcept { return static_cast<const Monster *>(monster_.monster)->getHealth(); }
 Health MonsterInterface::getMaxHealth() const noexcept { return static_cast<const Monster *>(monster_.monster)->getMaxHealth(); }
+int MonsterInterface::getMP() const noexcept { return static_cast<const Monster *>(monster_.monster)->getMP(); }
+int MonsterInterface::getMaxMP() const noexcept { return static_cast<const Monster *>(monster_.monster)->getMaxMP(); }
 ObjectContainerInterface MonsterInterface::viewInventory() const noexcept { return ObjectContainerInterface(static_cast<const Monster *>(monster_.monster)->viewInventory()); }
 bool MonsterInterface::isNull() const noexcept { return monster_.monster == nullptr; }
 
@@ -104,7 +106,6 @@ constexpr auto WallType = []() {
   return ret;
 }();
 
-
 [[nodiscard]] TerrainTypeInterface toInterface(const WorldFloor &floor, Position pos) noexcept {
   TerrainType t = floor.getTerrainType(pos);
   switch (t) {
@@ -141,7 +142,7 @@ constexpr auto WallType = []() {
 }
 
 [[nodiscard]] TerrainTypeInterface toInterface(const GameState &state, Location loc) noexcept {
-  return toInterface(state.getFloor(loc.mapPos),loc.pos);
+  return toInterface(state.getFloor(loc.mapPos), loc.pos);
 }
 
 bool isWall(TerrainTypeInterface type) noexcept {
@@ -231,7 +232,7 @@ public:
     safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(gameState_, attacker), toInterface(gameState_, attacked)); });
   }
   void monsterHitWall(const Monster &attacker, Location loc) noexcept final {
-    safeCall([&] { impl_->monsterHitWall(toInterface(gameState_, attacker), toInterface(*static_cast<GameState*>(gameState_.gameState),loc)); });
+    safeCall([&] { impl_->monsterHitWall(toInterface(gameState_, attacker), toInterface(*static_cast<GameState *>(gameState_.gameState), loc)); });
   }
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
     safeCall([&] { impl_->monsterAte(toInterface(gameState_, eater), ObjectInterface(eaten)); });
@@ -308,6 +309,14 @@ Health GameInterface::getHealth() const noexcept {
 
 Health GameInterface::getMaxHealth() const noexcept {
   return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).getMaxHealth();
+}
+
+int GameInterface::getMP() const noexcept {
+  return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).getMP();
+}
+
+int GameInterface::getMaxMP() const noexcept {
+  return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).getMaxMP();
 }
 
 GameTime GameInterface::getTime() const noexcept {

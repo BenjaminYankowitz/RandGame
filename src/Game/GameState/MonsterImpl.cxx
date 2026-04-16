@@ -365,7 +365,9 @@ TimePeriod Monster::eatItem(GameState &state, std::size_t i, bool fromFloor) noe
 TimePeriod Monster::rest() noexcept {
   using namespace Dice::Literals;
   static constexpr auto HealDice = "1d2-1"_dice;
+  static constexpr auto MPRegenDice = "1d2-1"_dice;
   body_.health = std::min<Health>(body_.health + HealDice(), body_.maxHealth);
+  body_.mp = std::min<MP>(body_.mp + MPRegenDice(), body_.maxMP);
   return getSpeed();
 }
 
@@ -386,7 +388,7 @@ Monster::ID Monster::createMonster(GameState &game, Location loc, MonsterClass m
   }
   const auto &mInfo = MonsterClassInfoArr[mClass];
   ID id = game.nextMonsterId();
-  MonsterBodyInit body{.speed = mInfo.speed, .maxHealth = mInfo.baseHealth, .damage = mInfo.damage, .mClass = mClass};
+  MonsterBodyInit body{.speed = mInfo.speed, .maxHealth = mInfo.baseHealth, .maxMP = mInfo.baseMP, .damage = mInfo.damage, .mClass = mClass};
   MonsterBrainConfig brain = isPlayer ? PlayerBrain : mInfo.brain;
   Monster &mstr = game.insertMonster(std::make_unique<Monster>(body, loc, id, brain));
   if (mstr.caresEvent()) {

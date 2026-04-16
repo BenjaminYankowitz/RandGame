@@ -5,6 +5,7 @@ import :GameTime;
 import Common;
 import std;
 export using Health = int;
+export using MP = int;
 
 export enum class TerrainType : std::uint8_t {
   StoneFloor,

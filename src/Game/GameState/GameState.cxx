@@ -11,7 +11,9 @@ public:
   struct MonsterBodyInit {
     TimePeriod speed;
     MustInit<Health> maxHealth;
+    MustInit<MP> maxMP;
     Health currentHealth = maxHealth;
+    MP currentMP = maxMP;
     Dice::Group damage;
     MustInit<MonsterClass> mClass;
     bool alive = true;
@@ -19,15 +21,17 @@ public:
     bool immortal = false;
   };
   struct MonsterBody {
-    explicit MonsterBody(MonsterBodyInit body) noexcept : speed(body.speed), maxHealth(body.maxHealth), health(body.currentHealth), maxThrowingDistance(body.maxThrowingDistance), damage(body.damage), mClass(body.mClass), alive(body.alive), immortal(body.immortal) {}
+    explicit MonsterBody(MonsterBodyInit body) noexcept : speed(body.speed), maxHealth(body.maxHealth), maxMP(body.maxMP), health(body.currentHealth), mp(body.currentMP), maxThrowingDistance(body.maxThrowingDistance), damage(body.damage), mClass(body.mClass), alive(body.alive), immortal(body.immortal) {}
     TimePeriod speed;
     Health maxHealth;
+    MP maxMP;
     Health health;
+    MP mp;
     int maxThrowingDistance;
     Dice::Group damage;
     MonsterClass mClass;
     bool alive : 1;
-    bool immortal : 1; 
+    bool immortal : 1;
   };
   using ID = MonsterID;
   struct HitReturn {
@@ -64,15 +68,24 @@ public:
   [[nodiscard]] constexpr TimePeriod getSpeed() const noexcept { return body_.speed; };
   [[nodiscard]] constexpr Health getHealth() const noexcept { return body_.health; }
   [[nodiscard]] constexpr Health getMaxHealth() const noexcept { return body_.maxHealth; }
+  [[nodiscard]] constexpr int getMP() const noexcept { return body_.mp; }
+  [[nodiscard]] constexpr bool useMP(MP amount) noexcept {
+    if (amount > body_.mp)
+      return false;
+    body_.mp -= amount;
+    return true;
+  }
+  constexpr void drainMP(MP amount) noexcept {
+    body_.mp = std::max(0, body_.mp - amount);
+  }
+  [[nodiscard]] constexpr int getMaxMP() const noexcept { return body_.maxMP; }
   [[nodiscard]] constexpr int getMaxThrowingDistance() const noexcept { return body_.maxThrowingDistance; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
-    if (0 >= (body_.health -= amount)) {
-      if (body_.immortal) {
-        body_.health = body_.maxHealth;
-        return false;
-      }
+    if ((body_.health -= amount)>0)
+      return false;
+    if (!body_.immortal)
       return true;
-    }
+    body_.health = body_.maxHealth;
     return false;
   }
   [[nodiscard]] constexpr Location getLoc() const noexcept { return loc_; }
@@ -144,7 +157,7 @@ public:
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir, Health damage) noexcept;
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
-  Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config=brain}) {}
+  Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config = brain}) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {};
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
@@ -236,7 +249,7 @@ public:
     *val = EventListenerArr_.back();
     EventListenerArr_.pop_back();
   }
-  [[nodiscard]] constexpr auto& getEventListeners() noexcept {
+  [[nodiscard]] constexpr auto &getEventListeners() noexcept {
     return EventListenerArr_;
   }
   [[nodiscard]] constexpr auto &getEventListenersArr() noexcept {

@@ -84,6 +84,8 @@ public:
   [[nodiscard]] Location getLoc() const noexcept;
   [[nodiscard]] Health getHealth() const noexcept;
   [[nodiscard]] Health getMaxHealth() const noexcept;
+  [[nodiscard]] int getMP() const noexcept;
+  [[nodiscard]] int getMaxMP() const noexcept;
   [[nodiscard]] ObjectContainerInterface viewInventory() const noexcept;
   [[nodiscard]] bool isNull() const noexcept;
 
@@ -180,6 +182,8 @@ public:
   [[nodiscard]] Location getLocation() const noexcept;
   [[nodiscard]] Health getHealth() const noexcept;
   [[nodiscard]] Health getMaxHealth() const noexcept;
+  [[nodiscard]] int getMP() const noexcept;
+  [[nodiscard]] int getMaxMP() const noexcept;
   [[nodiscard]] GameTime getTime() const noexcept;
   [[nodiscard]] TimePeriod getSpeed() const noexcept;
   void dropItem(std::size_t i) noexcept;
