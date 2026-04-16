@@ -28,8 +28,23 @@ export enum class ObjectTypeImpl : std::uint8_t {
   KingsCoin,
   Knife,
   Die,
+  Armor,
   Corpse = 1 << (std::numeric_limits<std::uint8_t>::digits - 1),
 };
+
+export enum class EquipType : std::uint8_t {
+  CantEquip = 0,
+  Hand = 1,
+  Helm = Hand << 1,
+  Gloves = Helm << 1,
+  Ring = Gloves << 1,
+  Body = Ring << 1,
+  Cloak = Body << 1,
+  Shoes = Cloak << 1,
+};
+export {
+  DEFINE_ENUM_BIT_OPS(EquipType)
+}
 
 [[nodiscard]] constexpr bool isCorpse(ObjectTypeImpl obj) {
   return (std::to_underlying(obj) & std::to_underlying(ObjectTypeImpl::Corpse)) != 0;
@@ -48,6 +63,19 @@ private:
   friend constexpr MonsterClass corpseOfWhat(ObjectType obj);
   ObjectTypeImpl type_;
 };
+
+export [[nodiscard]] constexpr EquipType getEquipType(ObjectType obj){
+  switch (obj) {
+    using enum ObjectTypeImpl;
+    using enum EquipType;
+  case Knife:
+    return Hand;
+  case Armor:
+    return Body;
+  default:
+    return CantEquip;
+  }
+}
 
 export [[nodiscard]] constexpr bool isCorpse(ObjectType obj) {
   return obj == ObjectType::Corpse;
@@ -84,6 +112,8 @@ export constexpr Material defaultMat(ObjectType type) {
     return Plastic;
   case Corpse:
     return Flesh;
+  case Armor:
+    return Iron;
   }
 }
 

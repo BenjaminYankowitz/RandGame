@@ -166,6 +166,13 @@ public:
 private:
   constexpr void setDead(bool dead = true) noexcept { body_.alive = !dead; }
   ObjectContainer inventory_;
+  std::unique_ptr<Object> helm_;
+  std::array<std::unique_ptr<Object>,2> hands_;
+  std::unique_ptr<Object> gloves_;
+  std::array<std::unique_ptr<Object>,2> rings_;
+  std::unique_ptr<Object> bodyArmor_;
+  std::unique_ptr<Object> cloak_;
+  std::unique_ptr<Object> shoes_;
   MonsterBody body_;
   MonsterBrain brain_;
   Location loc_;
