@@ -290,7 +290,7 @@ TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept {
   return std::make_pair(choice != 0, choice != 1);
 }
 
-constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto &monsterHit, bool bounceOnWall) noexcept { // TODO: ben - add animation for this.
+constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDist, auto &monsterHit, bool bounceOnWall, auto &onStep) noexcept {
   if (dir.noMove()) {
     return start;
   }
@@ -321,6 +321,7 @@ constexpr Location runPath(GameState &state, Location start, Dir dir, int maxDis
       const int nRemDist = monsterHit(state.getMonster(targetID), maxDist - dist);
       maxDist = dist + nRemDist;
     }
+    onStep(cSpot);
     lastPos = cSpot;
     ++iter;
   }
@@ -336,15 +337,17 @@ constexpr void sendItemFlying(GameState &state, Monster &source, std::unique_ptr
     monsterHitMonster(state, source, target, {damage});
     return 0;
   };
-  state.getObjects(runPath(state, start, dir, maxDist, onHit, false)).addObject(std::move(obj));
+  auto noStep = [](Position) {};
+  state.getObjects(runPath(state, start, dir, maxDist, onHit, false, noStep)).addObject(std::move(obj));
 }
 
-constexpr void createBeam(GameState &state, Monster &source, Location start, Dir dir, int maxDist, Dice::Group damage) {
+void createBeam(GameState &state, Monster &source, Location start, Dir dir, int maxDist, Dice::Group damage) {
   auto onHit = [&](Monster &target, int distLeft) {
     monsterHitMonster(state, source, target, {damage()});
     return distLeft - Rnd::rnd(5);
   };
-  runPath(state, start, dir, maxDist, onHit, true);
+  auto beamStep = [&state,floor=start.mapPos](Position pos) { state.printBeamStep({pos,floor}); };
+  runPath(state, start, dir, maxDist, onHit, true, beamStep);
 }
 
 TimePeriod Monster::throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept {
@@ -377,7 +380,7 @@ TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
 }
 
 TimePeriod Monster::castBeam(GameState &state, Dir dir) noexcept {
-  if(!useMP(5))
+  if (!useMP(5))
     return TimePeriod{0};
   createBeam(state, *this, loc_, dir, Rnd::uniform_int(10, 20), body_.damage);
   return getSpeed();

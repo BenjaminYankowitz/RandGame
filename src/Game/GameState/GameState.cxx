@@ -81,7 +81,7 @@ public:
   [[nodiscard]] constexpr int getMaxMP() const noexcept { return body_.maxMP; }
   [[nodiscard]] constexpr int getMaxThrowingDistance() const noexcept { return body_.maxThrowingDistance; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
-    if ((body_.health -= amount)>0)
+    if ((body_.health -= amount) > 0)
       return false;
     if (!body_.immortal)
       return true;
@@ -294,6 +294,7 @@ public:
   virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
   virtual void monsterHitWall(const Monster &attacker, Location loc) noexcept = 0;
   virtual void monsterAte(const Monster &eater, const Object &eaten) noexcept = 0;
+  virtual void beamStep(Location loc) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
   virtual ~EventViewer() = default;
 };
@@ -384,6 +385,7 @@ public:
   void broadcastMonsterHitMonster(const Monster::HitReturn &hitInfo, const Monster &attacker, Monster &attacked) noexcept;
   void broadcastMonsterHitWall(const Monster &attacker, Location loc) noexcept;
   void broadcastMonsterAte(const Monster &eater, const Object &eaten) noexcept;
+  void broadcastBeamStep(Location loc) noexcept;
   void printDebug(std::string_view v) noexcept {
     eventViewer_->debug(v);
   }
@@ -398,6 +400,9 @@ public:
   }
   void printMonsterAte(const Monster &eater, const Object &eaten) noexcept {
     eventViewer_->monsterAte(eater, eaten);
+  }
+  void printBeamStep(Location loc) noexcept {
+    eventViewer_->beamStep(loc);
   }
   [[nodiscard]] Monster &getPlayer() noexcept {
     return getMonster(player_);

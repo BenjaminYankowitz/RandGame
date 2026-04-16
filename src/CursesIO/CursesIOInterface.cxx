@@ -105,6 +105,18 @@ bool IOModule::Interface::showSelection(Position pos) {
   return false;
 }
 
+void IOModule::Interface::drawBeamAt(Location loc) {
+  if(loc.mapPos!=gState_->getLocation().mapPos)
+    return;
+  if (!mainWindow_.inBounds(loc.pos.x, loc.pos.y))
+    return;
+  Symbol sym(L'*');
+  sym.setFrontColor(Cyan);
+  mainWindow_.place(loc.pos.x, loc.pos.y, sym);
+  mainWindow_.updateScreen();
+  std::this_thread::sleep_for(std::chrono::milliseconds(40));
+}
+
 StaticPositionArr<TerrainTypeInterface> &IOModule::Interface::getMemoryGrid(FloorSpecifier floor, int width, int height) {
   auto [it, inserted] = terrainMemory_.try_emplace(floor.floor, width, height);
   return it->second;

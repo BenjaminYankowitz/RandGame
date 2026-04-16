@@ -31,6 +31,7 @@ public:
   void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
   void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) final;
   void monsterAte(MonsterInterface eater, ObjectInterface eaten) final;
+  void beamStep(Location loc) final;
   void debug(std::string_view message) final;
   void exception(const std::exception &exception) noexcept final;
 
@@ -62,6 +63,7 @@ public:
   [[nodiscard]] const StaticPositionArr<TerrainTypeInterface> &getMemory(FloorSpecifier floor);
   bool showSelection(Position pos);
   constexpr void alertBeenHit() noexcept { mod_.setBeenHit(); }
+  void drawBeamAt(Location loc);
 
 private:
   [[no_unique_address]] CursesRAII Raii_;

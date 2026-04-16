@@ -237,6 +237,9 @@ public:
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
     safeCall([&] { impl_->monsterAte(toInterface(gameState_, eater), ObjectInterface(eaten)); });
   }
+  void beamStep(Location loc) noexcept final {
+    safeCall([&] { impl_->beamStep(loc); });
+  }
 
 private:
   template <typename F>

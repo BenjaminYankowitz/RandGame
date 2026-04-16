@@ -101,3 +101,11 @@ void GameState::broadcastMonsterAte(const Monster &eater, const Object &eaten) n
     viewer.informMonsterAte(*this, eater, eaten);
   });
 }
+
+
+void GameState::broadcastBeamStep(Location loc) noexcept{
+  auto& player = getPlayer();
+  if(player.getLoc().mapPos==loc.mapPos && player.inLineOfSight(*this, loc.pos)){
+    printBeamStep(loc);
+  }
+}

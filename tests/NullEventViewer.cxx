@@ -8,6 +8,7 @@ export class NullEventViewer final : public EventViewer {
   void monsterHitMonster(const Monster::HitReturn & /*hitinfo*/, const Monster & /*attacker*/, const Monster & /*attacked*/) noexcept override {}
   void monsterHitWall(const Monster & /*attacker*/, Location /*loc*/) noexcept override {}
   void monsterAte(const Monster & /*eater*/, const Object & /*eaten*/) noexcept override {}
+  void beamStep(Location /*loc*/) noexcept override {}
   void debug(std::string_view /*message*/) noexcept override {}
 };
 
@@ -16,6 +17,7 @@ export class NullEventViewerInterface final : public EventViewerInterface {
   void debug(std::string_view /*message*/) override {}
   void monsterHitMonster(HitInfo /*hitinfo*/, MonsterInterface /*attacker*/, MonsterInterface /*attacked*/) override {}
   void monsterHitWall(MonsterInterface /*attacker*/, TerrainTypeInterface /*attacked*/) override {}
+  void beamStep(Location /*loc*/) override {}
   void exception(const std::exception & /*e*/) noexcept override {}
   void monsterAte(MonsterInterface /*eater*/, ObjectInterface /*eaten*/) override {}
 };

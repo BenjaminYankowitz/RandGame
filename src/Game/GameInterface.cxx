@@ -161,6 +161,7 @@ public:
   virtual void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
   virtual void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) = 0;
   virtual void monsterAte(MonsterInterface eater, ObjectInterface eaten) = 0;
+  virtual void beamStep(Location pos) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
   virtual ~EventViewerInterface() = default;
 };

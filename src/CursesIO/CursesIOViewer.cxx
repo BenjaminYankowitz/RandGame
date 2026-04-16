@@ -51,7 +51,7 @@ void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacke
     viewer_.parent_->alertBeenHit();
   }
   printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ';
-  if(attacked.isPlayer() && attacker.isPlayer()){
+  if (attacked.isPlayer() && attacker.isPlayer()) {
     printWith_ << "yourself";
   } else {
     printWith_ << attacked;
@@ -68,4 +68,8 @@ void CursesEventViewer::monsterHitWall(MonsterInterface attacker, TerrainTypeInt
 
 void CursesEventViewer::monsterAte(MonsterInterface eater, ObjectInterface eaten) {
   printWith_ << eater << " ate " << eaten << '\n';
+}
+
+void CursesEventViewer::beamStep(Location loc) {
+  viewer_.parent_->drawBeamAt(loc);
 }
