@@ -236,8 +236,8 @@ public:
     *val = EventListenerArr_.back();
     EventListenerArr_.pop_back();
   }
-  [[nodiscard]] constexpr auto getEventListeners(GameState &state) noexcept {
-    return EventListenerArr_ | std::views::transform(IDToMonster{&state});
+  [[nodiscard]] constexpr auto& getEventListeners() noexcept {
+    return EventListenerArr_;
   }
   [[nodiscard]] constexpr auto &getEventListenersArr() noexcept {
     return EventListenerArr_;
@@ -247,10 +247,6 @@ public:
   }
 
 private:
-  struct IDToMonster {
-    GameState *state;
-    [[nodiscard]] Monster &operator()(Monster::ID monst) const noexcept;
-  };
   StaticPositionArr<ObjectContainer> ObjectsArr_;
   StaticPositionArr<Monster::ID> MonsterArr_;
   StaticPositionArr<TerrainType> TerrainTypeArr_;
