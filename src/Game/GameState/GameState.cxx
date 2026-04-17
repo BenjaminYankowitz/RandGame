@@ -9,8 +9,8 @@ export class GameState;
 export class Monster {
 public:
   struct MonsterBodyInit {
-    [[nodiscard]] static constexpr MonsterBodyInit make(const MonsterClassInfo& mInfo) noexcept{
-      return {.speed = mInfo.speed, .plan=mInfo.bodyPlan, .maxHealth = mInfo.baseHealth, .maxMP = mInfo.baseMP, .damage = mInfo.naturalWeapon, .mClass = mInfo.mClass,.maxThrowingDistance=mInfo.maxThrowingDistance};
+    [[nodiscard]] static constexpr MonsterBodyInit make(const MonsterClassInfo &mInfo) noexcept {
+      return {.speed = mInfo.speed, .plan = mInfo.bodyPlan, .maxHealth = mInfo.baseHealth, .maxMP = mInfo.baseMP, .damage = mInfo.naturalWeapon, .mClass = mInfo.mClass, .maxThrowingDistance = mInfo.maxThrowingDistance};
     }
     TimePeriod speed;
     MustInit<BodyPlan> plan;
@@ -158,12 +158,17 @@ public:
   [[nodiscard]] TimePeriod dropItem(GameState &state, std::size_t i) noexcept;
   [[nodiscard]] TimePeriod throwItem(GameState &state, std::size_t i, Dir dir, int count) noexcept;
   [[nodiscard]] TimePeriod eatItem(GameState &state, std::size_t i, bool fromFloor) noexcept;
+  [[nodiscard]] TimePeriod equipItem(GameState &state, std::size_t inventoryIdx) noexcept;
+  [[nodiscard]] TimePeriod unequipItem(GameState &state, std::int8_t slot) noexcept;
+  [[nodiscard]] constexpr const BodyPlan &getBodyPlan() const noexcept { return body_.plan; }
+  [[nodiscard]] constexpr std::int8_t equipmentSize() const noexcept { return body_.plan.totalSlots(); }
+  [[nodiscard]] constexpr const Object *viewEquipped(std::int8_t slot) const noexcept { return equipment_[slot].get(); }
   [[nodiscard]] TimePeriod rest() noexcept;
   [[nodiscard]] TimePeriod hitMonster(GameState &state, Monster &target) noexcept;
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
   Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config = brain}) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {
-    equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots()); //NOLINT(modernize-avoid-c-arrays)
+    equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots()); // NOLINT(modernize-avoid-c-arrays)
   };
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
@@ -173,7 +178,7 @@ public:
 private:
   constexpr void setDead(bool dead = true) noexcept { body_.alive = !dead; }
   ObjectContainer inventory_;
-  std::unique_ptr<std::unique_ptr<Object>[]> equipment_; //NOLINT(modernize-avoid-c-arrays)
+  std::unique_ptr<std::unique_ptr<Object>[]> equipment_; // NOLINT(modernize-avoid-c-arrays)
   MonsterBody body_;
   MonsterBrain brain_;
   Location loc_;
@@ -299,6 +304,9 @@ export WorldFloor fromStream(std::istream &in, std::size_t &numRead, Serializati
 export class EventViewer {
 public:
   virtual void itemPickup(const Monster &grabber, const Object &grabbed) noexcept = 0;
+  virtual void itemEquipped(const Monster &wearer, const Object &item) noexcept = 0;
+  virtual void itemUnequipped(const Monster &wearer, const Object &item) noexcept = 0;
+  virtual void equipSlotsFull(const Monster &wearer, const Object &item) noexcept = 0;
   virtual void monsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept = 0;
   virtual void monsterHitWall(const Monster &attacker, Location loc) noexcept = 0;
   virtual void monsterAte(const Monster &eater, const Object &eaten) noexcept = 0;
@@ -399,6 +407,15 @@ public:
   }
   void printItemPickup(const Monster &monster, const Object &object) noexcept {
     eventViewer_->itemPickup(monster, object);
+  }
+  void printItemEquipped(const Monster &wearer, const Object &item) noexcept {
+    eventViewer_->itemEquipped(wearer, item);
+  }
+  void printItemUnequipped(const Monster &wearer, const Object &item) noexcept {
+    eventViewer_->itemUnequipped(wearer, item);
+  }
+  void printEquipSlotsFull(const Monster &wearer, const Object &item) noexcept {
+    eventViewer_->equipSlotsFull(wearer, item);
   }
   void printMonsterHitMonster(const Monster::HitReturn &hitinfo, const Monster &attacker, const Monster &attacked) noexcept {
     eventViewer_->monsterHitMonster(hitinfo, attacker, attacked);

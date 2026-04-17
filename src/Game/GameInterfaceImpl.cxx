@@ -237,6 +237,15 @@ public:
   void monsterAte(const Monster &eater, const Object &eaten) noexcept final {
     safeCall([&] { impl_->monsterAte(toInterface(gameState_, eater), ObjectInterface(eaten)); });
   }
+  void itemEquipped(const Monster &wearer, const Object &item) noexcept final {
+    safeCall([&] { impl_->itemEquipped(toInterface(gameState_, wearer), ObjectInterface(item)); });
+  }
+  void itemUnequipped(const Monster &wearer, const Object &item) noexcept final {
+    safeCall([&] { impl_->itemUnequipped(toInterface(gameState_, wearer), ObjectInterface(item)); });
+  }
+  void equipSlotsFull(const Monster &wearer, const Object &item) noexcept final {
+    safeCall([&] { impl_->equipSlotsFull(toInterface(gameState_, wearer), ObjectInterface(item)); });
+  }
   void beamStep(Location loc) noexcept final {
     safeCall([&] { impl_->beamStep(loc); });
   }
@@ -342,6 +351,37 @@ void GameInterface::dropItem(std::size_t i) noexcept {
     }
     passTime(self.dropItem(*static_cast<GameState *>(gs_.gameState), i));
   });
+}
+
+void GameInterface::equipItem(std::size_t inventoryIdx) noexcept {
+  ifAlive([&](auto &self) {
+    const auto &invent = self.viewInventory();
+    if (inventoryIdx >= invent.size()) {
+      return;
+    }
+    passTime(self.equipItem(*static_cast<GameState *>(gs_.gameState), inventoryIdx));
+  });
+}
+
+void GameInterface::unequipItem(std::int8_t slot) noexcept {
+  ifAlive([&](auto &self) {
+    if (slot < 0 || slot >= self.equipmentSize()) {
+      return;
+    }
+    passTime(self.unequipItem(*static_cast<GameState *>(gs_.gameState), slot));
+  });
+}
+
+std::int8_t GameInterface::equipmentSize() const noexcept {
+  return static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).equipmentSize();
+}
+
+std::optional<ObjectInterface> GameInterface::viewEquipped(std::int8_t slot) const noexcept {
+  const Object *obj = static_cast<GameState *>(gs_.gameState)->getMonster(controlled_).viewEquipped(slot);
+  if (obj == nullptr) {
+    return std::nullopt;
+  }
+  return ObjectInterface(*obj);
 }
 
 void GameInterface::eatItem(std::size_t i, bool fromFloor) noexcept {

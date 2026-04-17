@@ -44,7 +44,11 @@ WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /*
 
 // --- Monster member implementations ---
 std::size_t Monster::serializeTo(std::ostream &out) const noexcept {
-  return serialize(out, inventory_, body_, brain_, loc_, exp_, id_, next_, prev_);
+  std::size_t written = serialize(out, inventory_, body_, brain_, loc_, exp_, id_, next_, prev_);
+  for (std::int8_t i = 0; i < body_.plan.totalSlots(); ++i) {
+    written += toStream(out, equipment_[i]);
+  }
+  return written;
 }
 
 Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
@@ -71,6 +75,10 @@ Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
   m.next_ = next;
   m.prev_ = prev;
   m.exp_ = exp;
+  for (std::int8_t i = 0; i < m.body_.plan.totalSlots(); ++i) {
+    m.equipment_[i] = fromStream(in, localRead, Tag<std::unique_ptr<Object>>{});
+    totalRead += localRead;
+  }
   numRead = totalRead;
   return m;
 }

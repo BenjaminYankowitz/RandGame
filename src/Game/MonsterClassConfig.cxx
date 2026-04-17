@@ -38,38 +38,38 @@ enum class MonsterCategories : std::uint8_t {
 DEFINE_ENUM_BIT_OPS(MonsterCategories)
 
 export class BodyPlan {
-  public:
-  consteval BodyPlan(std::initializer_list<std::pair<EquipType,std::int8_t>> list) {
+public:
+  consteval BodyPlan(std::initializer_list<std::pair<EquipType, std::int8_t>> list) {
     slots_.fill(0);
-    for(auto [type, count] : list){
+    for (auto [type, count] : list) {
       const auto index = std::to_underlying(type);
-      if(slots_[index]!=0 || count < 0)
+      if (slots_[index] != 0 || count < 0)
         std::unreachable();
       slots_[index] = count;
     }
-    for(int i = 1; i < slots_.size(); i++){
-      slots_[i]+=slots_[i-1];
+    for (int i = 1; i < slots_.size(); i++) {
+      slots_[i] += slots_[i - 1];
     }
   }
-  [[nodiscard]] constexpr std::pair<std::int8_t,std::int8_t> gSlots(EquipType type) const noexcept{
+  [[nodiscard]] constexpr std::pair<std::int8_t, std::int8_t> gSlots(EquipType type) const noexcept {
     std::uint8_t index = std::to_underlying(type);
     std::int8_t prev = 0;
-    if(index!=0){
-      prev = slots_[index-1];
-    }
-    return {prev,index-prev};
+    if (index != 0)
+      prev = slots_[index - 1];
+    return {prev, static_cast<std::int8_t>(slots_[index] - prev)};
   };
-  [[nodiscard]] constexpr std::int8_t gNSlots(EquipType type) const noexcept{
+  [[nodiscard]] constexpr std::int8_t gNSlots(EquipType type) const noexcept {
     return gSlots(type).second;
   };
-  [[nodiscard]] constexpr std::int8_t totalSlots() const noexcept{
+  [[nodiscard]] constexpr std::int8_t totalSlots() const noexcept {
     return slots_.back();
   }
-  private:
-  std::array<std::int8_t,8> slots_;
+
+private:
+  std::array<std::int8_t, 8> slots_;
 };
 using enum EquipType;
-constexpr BodyPlan HumaniodBody = {{Hand,2},{Helm,1},{Gloves,1},{Ring,2},{Body,1},{Cloak,1},{Shoes,1}};
+constexpr BodyPlan HumaniodBody = {{Hand, 2}, {Helm, 1}, {Gloves, 1}, {Ring, 2}, {Body, 1}, {Cloak, 1}, {Shoes, 1}};
 
 export class MonsterClassInfo {
 public:

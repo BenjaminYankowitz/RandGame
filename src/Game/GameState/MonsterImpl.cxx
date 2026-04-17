@@ -273,8 +273,42 @@ TimePeriod Monster::dropItem(GameState &state, std::size_t i) noexcept {
   return getSpeed() / DropItemSpeedFraction;
 }
 
+TimePeriod Monster::equipItem(GameState &state, std::size_t inventoryIdx) noexcept {
+  const EquipType et = getEquipType(inventory_[inventoryIdx].type());
+  const auto [start, count] = body_.plan.gSlots(et);
+  std::int8_t slot = -1;
+  for (std::int8_t i = start; i < start + count; ++i) {
+    if (!equipment_[i]) {
+      slot = i;
+      break;
+    }
+  }
+  if (slot < 0) {
+    if (isPlayer()) {
+      state.printEquipSlotsFull(*this, inventory_[inventoryIdx]);
+    }
+    return TimePeriod(0);
+  }
+  equipment_[slot] = removeFromInvent(inventoryIdx, 1);
+  if (isPlayer()) {
+    state.printItemEquipped(*this, *equipment_[slot]);
+  }
+  return getSpeed();
+}
+
+TimePeriod Monster::unequipItem(GameState &state, std::int8_t slot) noexcept {
+  if (slot < 0 || slot >= body_.plan.totalSlots() || !equipment_[slot]) {
+    return TimePeriod(0);
+  }
+  if (isPlayer()) {
+    state.printItemUnequipped(*this, *equipment_[slot]);
+  }
+  inventory_.addObject(std::move(equipment_[slot]));
+  return getSpeed();
+}
+
 [[nodiscard]] constexpr std::pair<bool, bool> getNMirror(const WorldFloor &floor, Position lastPos, Position cSpot) noexcept {
-  const Dir moveDir = cSpot-lastPos;
+  const Dir moveDir = cSpot - lastPos;
   bool mX = moveDir.dx != 0;
   bool mY = moveDir.dy != 0;
   if (!mX || !mY)
@@ -346,7 +380,7 @@ void createBeam(GameState &state, Monster &source, Location start, Dir dir, int 
     monsterHitMonster(state, source, target, {damage()});
     return distLeft - Rnd::rnd(5);
   };
-  auto beamStep = [&state,floor=start.mapPos](Position pos) { state.broadcastBeamStep({pos,floor}); };
+  auto beamStep = [&state, floor = start.mapPos](Position pos) { state.broadcastBeamStep({pos, floor}); };
   runPath(state, start, dir, maxDist, onHit, true, beamStep);
 }
 

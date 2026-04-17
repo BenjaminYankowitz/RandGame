@@ -157,17 +157,17 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
   std::size_t cycleIndex = 0;
   auto getTarget = [&](chtype cmnd) -> std::optional<Position> {
     if (cmnd == 'x') {
-      if(cycleTargets.empty())
+      if (cycleTargets.empty())
         return {};
       auto ret = cycleTargets[cycleIndex];
       cycleIndex = (cycleIndex + 1) % cycleTargets.size();
       return ret;
     }
-    if(auto target = TtypeSelect(cmnd)){
+    if (auto target = TtypeSelect(cmnd)) {
       return findTerrain(memory, pos, *target);
     }
     auto dir = keyToDir(std::tolower(cmnd));
-    if(dir.noMove())
+    if (dir.noMove())
       return {};
     int step = std::isupper(cmnd) ? 10 : 1;
     auto jump = Dir(dir.dx * step, dir.dy * step);
@@ -259,6 +259,47 @@ void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /
 void dropItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   selectAndAct(interface, gState.lookAtInventory(), "What do you want to drop?", {.doStandAloneDisplay = false},
                [&](std::size_t i) { gState.dropItem(i); });
+}
+
+void equipItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  selectAndAct(interface, gState.lookAtInventory(), "What do you want to equip?",
+               {.doStandAloneDisplay = false,
+                .isEligible = [](ObjectInterface obj) { return getEquipType(obj.type()) != EquipType::CantEquip; }},
+               [&](std::size_t i) { gState.equipItem(i); });
+}
+
+void unequipItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  std::vector<std::int8_t> filledSlots;
+  for (std::int8_t s = 0; s < gState.equipmentSize(); ++s) {
+    if (gState.viewEquipped(s)) {
+      filledSlots.push_back(s);
+    }
+  }
+  if (filledSlots.empty())
+    return;
+  std::ostream &out = interface.interfacePrinter();
+  out << "What do you want to take off? [";
+  auto letters = InventLetters | std::views::take(filledSlots.size());
+  for (auto c : letters) {
+    out << c;
+  }
+  out << "]\n";
+  interface.updateGameScreen();
+  while (true) {
+    auto userInput = CursesRAII::getChar();
+    if (userInput == SpecialChar::Escape)
+      return;
+    std::optional<std::size_t> index;
+    if (userInput >= 'a' && userInput <= 'z') {
+      index = static_cast<std::size_t>(userInput - 'a');
+    } else if (userInput >= 'A' && userInput <= 'Z') {
+      index = static_cast<std::size_t>(userInput - 'A') + 26;
+    }
+    if (index && *index < filledSlots.size()) {
+      gState.unequipItem(filledSlots[*index]);
+      return;
+    }
+  }
 }
 
 void passTime(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &mod) noexcept {
@@ -594,6 +635,8 @@ constexpr auto CmndMpPairs = CompileTimeHashMap::to_Pairing<std::uint16_t, Actio
     {'d', dropItem},
     {'e', eatItem},
     {'t', throwItem},
+    {'W', equipItem},
+    {'T', unequipItem},
     {'Z', castBeam},
     {',', pickUpItem},
     {'.', rest},

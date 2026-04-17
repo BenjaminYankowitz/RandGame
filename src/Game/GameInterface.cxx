@@ -157,6 +157,9 @@ public:
     bool killed;
   };
   virtual void itemPickup(MonsterInterface grabber, ObjectInterface grabbed) = 0;
+  virtual void itemEquipped(MonsterInterface wearer, ObjectInterface item) = 0;
+  virtual void itemUnequipped(MonsterInterface wearer, ObjectInterface item) = 0;
+  virtual void equipSlotsFull(MonsterInterface wearer, ObjectInterface item) = 0;
   virtual void debug(std::string_view message) = 0;
   virtual void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) = 0;
   virtual void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) = 0;
@@ -192,6 +195,10 @@ public:
   [[nodiscard]] bool canEat(ObjectInterface obj) const noexcept;
   [[nodiscard]] int getMaxThrowingDistance() const noexcept;
   void throwItem(std::size_t i, Dir dir, int count) noexcept;
+  void equipItem(std::size_t inventoryIdx) noexcept;
+  void unequipItem(std::int8_t slot) noexcept;
+  [[nodiscard]] std::int8_t equipmentSize() const noexcept;
+  [[nodiscard]] std::optional<ObjectInterface> viewEquipped(std::int8_t slot) const noexcept;
   void castBeam(Dir dir) noexcept;
   void passTime(TimePeriod numTurns) noexcept;
   [[nodiscard]] bool isDebugMode() const noexcept;
@@ -223,7 +230,7 @@ public:
   ~GameInterface();
 
 private:
-  static constexpr int SaveVersion = 0;
+  static constexpr int SaveVersion = 1;
   static constexpr std::uint64_t MagicNumber = 8360033890706637073;
   template <typename F>
   void ifAlive(F &&f) noexcept;

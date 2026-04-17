@@ -46,6 +46,18 @@ void CursesEventViewer::itemPickup(MonsterInterface grabber, ObjectInterface gra
   printWith_ << grabber << " picked up " << grabed << '\n';
 }
 
+void CursesEventViewer::itemEquipped(MonsterInterface wearer, ObjectInterface item) {
+  printWith_ << wearer << " put on " << item << '\n';
+}
+
+void CursesEventViewer::itemUnequipped(MonsterInterface wearer, ObjectInterface item) {
+  printWith_ << wearer << " took off " << item << '\n';
+}
+
+void CursesEventViewer::equipSlotsFull(MonsterInterface wearer, ObjectInterface item) {
+  printWith_ << wearer << " cannot equip " << item << " (no free slots)\n";
+}
+
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
   if (attacked.isPlayer()) {
     viewer_.parent_->alertBeenHit();

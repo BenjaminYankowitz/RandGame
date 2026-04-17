@@ -60,10 +60,11 @@ void GameState::generateGame() noexcept {
   tryPlaceMonster({2, 4}, MonsterClass::GreedyWeasel);
   tryPlaceMonster({4, 4}, MonsterClass::Bryozoan);
   WorldFloor &startingFloor = floorData_[0];
-  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
-  startingFloor.getObjects({4, 2}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
-  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Iron});
-  startingFloor.getObjects({1, 0}).addObject({.type = ObjectType::Knife, .mat = Material::Gold});
+  startingFloor.getObjects({1, 5}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
+  startingFloor.getObjects({4, 7}).addObject({.type = ObjectType::KingsCoin, .mat = Material::Gold});
+  startingFloor.getObjects({1, 5}).addObject({.type = ObjectType::Knife, .mat = Material::Iron});
+  startingFloor.getObjects({1, 5}).addObject({.type = ObjectType::Knife, .mat = Material::Gold});
+  startingFloor.getObjects({2, 5}).addObject({.type = ObjectType::Armor, .mat = Material::Iron});
 }
 
 void GameState::broadcastEvent(Location eventLoc, auto &&func) noexcept {
@@ -102,10 +103,9 @@ void GameState::broadcastMonsterAte(const Monster &eater, const Object &eaten) n
   });
 }
 
-
-void GameState::broadcastBeamStep(Location loc) noexcept{
-  auto& player = getPlayer();
-  if(player.getLoc().mapPos==loc.mapPos && player.inLineOfSight(*this, loc.pos)){
+void GameState::broadcastBeamStep(Location loc) noexcept {
+  auto &player = getPlayer();
+  if (player.getLoc().mapPos == loc.mapPos && player.inLineOfSight(*this, loc.pos)) {
     printBeamStep(loc);
   }
 }

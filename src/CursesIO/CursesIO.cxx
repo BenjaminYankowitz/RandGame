@@ -28,6 +28,9 @@ class CursesEventViewer final : public EventViewerInterface {
 public:
   explicit CursesEventViewer(Interface *parent) noexcept : viewer_(parent), printWith_(&viewer_) {}
   void itemPickup(MonsterInterface grabber, ObjectInterface grabed) final;
+  void itemEquipped(MonsterInterface wearer, ObjectInterface item) final;
+  void itemUnequipped(MonsterInterface wearer, ObjectInterface item) final;
+  void equipSlotsFull(MonsterInterface wearer, ObjectInterface item) final;
   void monsterHitMonster(HitInfo hitinfo, MonsterInterface attacker, MonsterInterface attacked) final;
   void monsterHitWall(MonsterInterface attacker, TerrainTypeInterface attacked) final;
   void monsterAte(MonsterInterface eater, ObjectInterface eaten) final;
