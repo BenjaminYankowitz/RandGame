@@ -41,6 +41,26 @@ void IOModule::Interface::updateGameScreen() {
   }
   ObjectContainerInterface playerInvent = gState_->lookAtInventory();
   displayInvent(inventWindow_, playerInvent);
+  int equipRow = std::min<int>(inventWindow_.prntHeight(), playerInvent.size());
+  bool headerWritten = false;
+  for (std::int8_t slot = 0; slot < gState_->equipmentSize(); ++slot) {
+    auto eq = gState_->viewEquipped(slot);
+    if (!eq)
+      continue;
+    if (!headerWritten) {
+      if (equipRow + 1 >= inventWindow_.prntHeight())
+        break;
+      inventWindow_.moveCursor(0, equipRow);
+      inventWindow_ << "Equipped:"sv;
+      ++equipRow;
+      headerWritten = true;
+    }
+    if (equipRow >= inventWindow_.prntHeight())
+      break;
+    inventWindow_.moveCursor(0, equipRow);
+    inventWindow_ << "* "sv << *eq;
+    ++equipRow;
+  }
   inventWindow_.updateScreen();
   mainWindow_.updateScreen();
   statusWindow_.clear();
@@ -102,7 +122,7 @@ bool IOModule::Interface::showSelection(Position pos) {
 }
 
 void IOModule::Interface::drawBeamAt(Location loc) {
-  if(loc.mapPos!=gState_->getLocation().mapPos)
+  if (loc.mapPos != gState_->getLocation().mapPos)
     return;
   if (!mainWindow_.inBounds(loc.pos.x, loc.pos.y))
     return;
