@@ -1,9 +1,0 @@
-syntaxError
-unusedFunction
-noExplicitConstructor
-unusedStructMember
-missingIncludeSystem
-missingReturn
-noConstructor
-uninitMemberVar
-*:Common/OpenSimplexImpl.cxx
