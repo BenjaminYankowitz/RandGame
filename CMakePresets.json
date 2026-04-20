@@ -8,7 +8,7 @@
       "hidden": true,
       "environment": {
         "WARNINGFLAGS": "-Wall -Wextra -pedantic -Wno-reserved-module-identifier -Wno-deprecated-declarations -Qunused-arguments",
-        "CXXFLAGSBASE" : "-stdlib=libc++ $env{WARNINGFLAGS}",
+        "CXXFLAGSBASE" : "$penv{CXXFLAGS} -stdlib=libc++ -fuse-ld=lld $env{WARNINGFLAGS}",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
@@ -29,14 +29,21 @@
       "name": "fastdebug",
       "inherits": "debug",
       "environment": {
-        "CXXFLAGS":"$env{CXXFLAGSBASE} -g -O3"
+        "CXXFLAGS":"$env{CXXFLAGSBASE} -g -O3 -flto"
       }
     },
     {
       "name": "nodebug",
       "inherits": "base",
       "environment": {
-        "CXXFLAGS": "penv{CXXFLAGSBASE} -O3 -DNDEBUG"
+        "CXXFLAGS": "$env{CXXFLAGSBASE} -O3 -DNDEBUG -flto -Wl,--icf=safe"
+      }    
+    },
+    {
+      "name": "smallnodebug",
+      "inherits": "base",
+      "environment": {
+        "CXXFLAGS": "$env{CXXFLAGSBASE} -Oz -DNDEBUG -flto -Wl,--icf=safe"
       }    
     }
   ]
