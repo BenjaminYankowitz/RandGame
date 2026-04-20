@@ -2,42 +2,42 @@
   "version": 11,
   "configurePresets": [
     {
-      "name": "default",
+      "name": "base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
+      "hidden": true,
+      "environment": {
+        "WARNINGFLAGS": "-Wall -Wextra -pedantic -Wno-reserved-module-identifier -Wno-deprecated-declarations -Qunused-arguments",
+        "CXXFLAGSBASE" : "-stdlib=libc++ $env{WARNINGFLAGS}",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -Wall -Wextra -pedantic -Wno-deprecated-declarations -g -Qunused-arguments",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+      }, 
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
       }
     },
     {
-      "name": "fast",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
-        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -fsanitize=undefined -Wall -Wextra -pedantic -Wno-deprecated-declarations -g -Qunused-arguments -O2",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
+      "name": "debug",
+      "inherits": "base",
+      "environment": {
+        "CXXFLAGS": "$env{CXXFLAGSBASE} -g",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/ubsan.cmake"
+      }
+    },
+    {
+      "name": "fastdebug",
+      "inherits": "debug",
+      "environment": {
+        "CXXFLAGS":"$env{CXXFLAGSBASE} -g -O3"
       }
     },
     {
       "name": "nodebug",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_CXX_FLAGS" : "-stdlib=libc++ -Wall -Wextra -pedantic -Wno-deprecated-declarations -Qunused-arguments -O3 -DNDEBUG",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": true
-      }
+      "inherits": "base",
+      "environment": {
+        "CXXFLAGS": "penv{CXXFLAGSBASE} -O3 -DNDEBUG"
+      }    
     }
   ]
 }
