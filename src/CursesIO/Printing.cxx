@@ -125,8 +125,8 @@ getMatAdj(ObjectInterface obj) noexcept {
 }
 
 [[nodiscard]] constexpr Noun getNoun(ObjectInterface obj) noexcept {
-  switch (ObjectTypeImpl(obj.type())) {
-    using enum ObjectTypeImpl;
+  switch (obj.type()) {
+    using enum ObjectType;
   case KingsCoin:
     return {{"coin"}};
   case Knife:
@@ -140,9 +140,9 @@ getMatAdj(ObjectInterface obj) noexcept {
   }
 }
 
-[[nodiscard]] constexpr bool printDefaultMat(ObjectTypeImpl type) noexcept {
+[[nodiscard]] constexpr bool printDefaultMat(ObjectType type) noexcept {
   switch (type) {
-    using enum ObjectTypeImpl;
+    using enum ObjectType;
   case KingsCoin:
   case Knife:
   case Armor:
@@ -155,11 +155,12 @@ getMatAdj(ObjectInterface obj) noexcept {
 
 [[nodiscard]] constexpr auto getAdjectives(ObjectInterface obj) noexcept {
   std::vector<Adjective> ret;
-  if (printDefaultMat(obj.type()) || defaultMat(obj.type()) != obj.mat()) {
+  auto oType = obj.type();
+  if (printDefaultMat(oType) || defaultMat(oType) != obj.mat()) {
     ret.push_back(getMatAdj(obj));
   }
-  if (isCorpse(obj.type())) {
-    ret.emplace_back(getClassNoun(corpseOfWhat(obj.type())));
+  if (oType==ObjectType::Corpse) {
+    ret.emplace_back(getClassNoun(obj.corpseOf()));
   }
   return ret;
 }
@@ -275,9 +276,9 @@ export Symbol MonsterToSymbol(MonsterInterface monst) noexcept {
   return sym;
 }
 
-export constexpr chtype ObjectTypeToCharacter(ObjectTypeImpl otype) noexcept {
+export constexpr chtype ObjectTypeToCharacter(ObjectType otype) noexcept {
   switch (otype) {
-    using enum ObjectTypeImpl;
+    using enum ObjectType;
   case KingsCoin:
     return '$';
   case Knife:
@@ -305,7 +306,7 @@ export constexpr Color ObjectToColor(ObjectInterface obj) noexcept {
   case Material::Flesh:
     const auto type = obj.type();
     if (type == ObjectType::Corpse) {
-      return toColorChar(corpseOfWhat(obj.type()));
+      return toColorChar(obj.corpseOf());
     }
     return Red;
   }

@@ -8,16 +8,26 @@ export struct ObjectBluePrint {
   Material mat = defaultMat(type);
   ArtifactId artifactStatus = ArtifactId::Normal;
   int count = 1;
+  MonsterClass corpseOf_ = MonsterClass::Human;
 };
 
+export [[nodiscard]] constexpr ObjectBluePrint mkCorpseBluePrint(MonsterClass corpseOf) noexcept{
+  return {.type=ObjectType::Corpse,.corpseOf_=corpseOf};
+};
+
+
 export class Object {
-public:
-  constexpr Object(const ObjectBluePrint &obj) noexcept : count_(obj.count), type_(obj.type), mat_(obj.mat), artifactStatus_(obj.artifactStatus) {} // NOLINT(google-explicit-constructor)
+public: 
+  constexpr Object(const ObjectBluePrint &obj) noexcept : count_(obj.count), type_(obj.type), mat_(obj.mat), artifactStatus_(obj.artifactStatus) { // NOLINT(google-explicit-constructor)
+    if(type_==ObjectType::Corpse){
+      corpseOf_ = obj.corpseOf_;
+    }
+  } 
   [[nodiscard]] constexpr bool isCombinable() const noexcept {
     return artifactStatus_ == ArtifactId::Normal;
   }
   [[nodiscard]] constexpr bool canCombine(const Object &other) const noexcept {
-    return other.type_ == type_ && other.mat_ == mat_ && isCombinable() && other.isCombinable();
+    return other.type_ == type_ && other.mat_ == mat_ && (type_!=ObjectType::Corpse || corpseOf_==other.corpseOf_) && isCombinable() && other.isCombinable();
   }
   constexpr void combine(std::unique_ptr<Object> other) noexcept {
     count_ += other->count_;
@@ -25,17 +35,23 @@ public:
   [[nodiscard]] constexpr const int &count() const noexcept { return count_; }
   [[nodiscard]] constexpr int &count() noexcept { return count_; }
   [[nodiscard]] constexpr ObjectType type() const noexcept { return type_; }
+  [[nodiscard]] constexpr MonsterClass corpseOf() const noexcept { return corpseOf_; }
   [[nodiscard]] constexpr Material mat() const noexcept { return mat_; }
   [[nodiscard]] constexpr ArtifactId artifactStatus() const noexcept { return artifactStatus_; }
   [[nodiscard]] constexpr std::unique_ptr<Object> split(int n) noexcept {
-    count_ -= n;
-    auto obj = std::make_unique<Object>(ObjectBluePrint{type_, mat_, artifactStatus_, n});
+    auto nCount = count_-n;
+    count_ = n;
+    auto obj = std::make_unique<Object>(*this);
+    count_ = nCount;
     return obj;
   }
 
 private:
   int count_;
   ObjectType type_;
+  union {
+  MonsterClass corpseOf_;
+  };
   Material mat_;
   ArtifactId artifactStatus_ = ArtifactId::Normal;
 };

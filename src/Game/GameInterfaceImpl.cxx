@@ -10,6 +10,7 @@ int ObjectInterface::count() const noexcept { return obj_->count(); }
 ObjectType ObjectInterface::type() const noexcept { return obj_->type(); }
 Material ObjectInterface::mat() const noexcept { return obj_->mat(); }
 ArtifactId ObjectInterface::artifactStatus() const noexcept { return obj_->artifactStatus(); }
+MonsterClass ObjectInterface::corpseOf() const noexcept{ return obj_->corpseOf();}
 
 MonsterInterface::MonsterInterface(IGameState gameState, IMonster monster) noexcept : monster_(monster), gameState_(gameState) {}
 MonsterInterface::MonsterInterface(std::nullptr_t) noexcept : monster_(nullptr), gameState_(nullptr) {}

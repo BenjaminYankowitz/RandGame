@@ -11,7 +11,7 @@ public:
   [[nodiscard]] ObjectType type() const noexcept;
   [[nodiscard]] Material mat() const noexcept;
   [[nodiscard]] ArtifactId artifactStatus() const noexcept;
-
+  [[nodiscard]] MonsterClass corpseOf() const noexcept;
 private:
   friend class GameInterface;
   const Object *obj_;

@@ -462,7 +462,7 @@ void Monster::kill(GameState &state, ObjectContainer &itemsTo) noexcept {
   next_.clear();
   prev_.clear();
   itemsTo.takeAllFrom(inventory_);
-  itemsTo.addObject(ObjectBluePrint{corpseOf(body_.mClass)});
+  itemsTo.addObject(mkCorpseBluePrint(body_.mClass));
 }
 
 void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, Monster::AttackInfo info) noexcept {

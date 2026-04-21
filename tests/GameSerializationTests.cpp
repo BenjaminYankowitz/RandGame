@@ -34,7 +34,7 @@ TEST(GameSerializationTests, MonsterWithInventory) {
   game.setEventViewer(std::make_unique<NullEventViewer>());
   Monster &player = game.getPlayer();
   auto &objects = game.getObjects(player.getLoc());
-  objects.addObject(ObjectBluePrint{ObjectType(ObjectTypeImpl::KingsCoin), Material::Gold});
+  objects.addObject(ObjectBluePrint{ObjectType::KingsCoin, Material::Gold});
   (void)player.takeItem(game, objects, 0);
 
   std::stringstream ss;
@@ -96,7 +96,7 @@ TEST(GameSerializationTests, WorldFloorPreservesObjects) {
   GameState game;
   game.generateGame();
   auto loc = game.getPlayer().getLoc();
-  game.getObjects(loc).addObject(ObjectBluePrint{ObjectType(ObjectTypeImpl::Knife), Material::Iron});
+  game.getObjects(loc).addObject(ObjectBluePrint{ObjectType::Knife, Material::Iron});
   const auto &floor = game.getFloor(loc.mapPos);
 
   std::stringstream ss;
@@ -175,7 +175,7 @@ TEST(GameSerializationTests, GameStatePreservesObjects) {
   GameState game;
   game.generateGame();
   auto loc = game.getPlayer().getLoc();
-  game.getObjects(loc).addObject(ObjectBluePrint{ObjectType(ObjectTypeImpl::KingsCoin), Material::Gold});
+  game.getObjects(loc).addObject(ObjectBluePrint{ObjectType::KingsCoin, Material::Gold});
 
   std::stringstream ss;
   toStream(ss, game);
@@ -183,6 +183,6 @@ TEST(GameSerializationTests, GameStatePreservesObjects) {
   auto restored = fromStream(ss, Tag<GameState>{});
 
   EXPECT_EQ(restored.getObjects(loc).size(), 1u);
-  EXPECT_EQ(restored.getObjects(loc)[0].type(), ObjectType(ObjectTypeImpl::KingsCoin));
+  EXPECT_EQ(restored.getObjects(loc)[0].type(), ObjectType::KingsCoin);
   EXPECT_EQ(restored.getObjects(loc)[0].mat(), Material::Gold);
 }

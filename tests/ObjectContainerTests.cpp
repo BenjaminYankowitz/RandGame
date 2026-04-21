@@ -63,13 +63,13 @@ static_assert([] consteval {
 // Corpses of different creatures do not stack
 static_assert([] consteval {
   ObjectContainer container;
-  container.addObject({.type = corpseOf(MonsterClass::Human)});
-  container.addObject({.type = corpseOf(MonsterClass::Cat)});
+  container.addObject(mkCorpseBluePrint(MonsterClass::Human));
+  container.addObject(mkCorpseBluePrint(MonsterClass::Cat));
   if (container.size() != 2u)
     return false;
-  if (!isCorpse(container[0].type()))
+  if (container[0].type() != ObjectType::Corpse)
     return false;
-  if (!isCorpse(container[1].type()))
+  if (container[1].type() != ObjectType::Corpse)
     return false;
   return true;
 }());
