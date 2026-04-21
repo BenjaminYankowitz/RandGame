@@ -49,8 +49,8 @@ bool askYesNo(IOModule::Interface &iterface, std::string_view question) noexcept
     displayInvent(window, items, 2);
     window.moveCursor(0, 0);
     try {
-    window << prompt;
-    } catch(std::exception& e){
+      window << prompt;
+    } catch (std::exception &e) {
       Logging::log << "Error printing prompt to window for displayItemInterfaceForChoosing" << e.what() << '\n';
     }
     window.updateScreen();
@@ -184,8 +184,8 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return {};
     if (cmnd == '.')
       return pos;
-    auto npos = getTarget(cmnd).value_or(pos).clamp({minX,minY},{maxX,maxY});
-    if (npos!=pos)
+    auto npos = getTarget(cmnd).value_or(pos).clamp({minX, minY}, {maxX, maxY});
+    if (npos != pos)
       iterface.showSelection(pos);
     pos = npos;
   }
@@ -404,16 +404,16 @@ void giveUp(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &
   mod.quitGame();
 }
 
-std::string askOpenQuestion(IOModule::Interface &interface, std::string_view prompt) noexcept{
+std::string askOpenQuestion(IOModule::Interface &interface, std::string_view prompt) noexcept {
   std::string &line = interface.addEvent(std::string(prompt));
   interface.updateGameScreen();
   while (true) {
     auto ch = CursesRAII::getChar();
     if (ch == '\n')
-      try{
+      try {
         return line.substr(prompt.size());
-      } catch(const std::out_of_range &e){
-        if constexpr(InDebug){
+      } catch (const std::out_of_range &e) {
+        if constexpr (InDebug) {
           Logging::log << "askOpenQuestion error " << e.what() << '\n';
         }
         return "";
@@ -433,7 +433,7 @@ std::string askOpenQuestion(IOModule::Interface &interface, std::string_view pro
 void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   if (!gState.isDebugMode())
     return;
-  std::string filename = askOpenQuestion(interface,"Save to: ");
+  std::string filename = askOpenQuestion(interface, "Save to: ");
   if (filename.empty())
     return;
   std::ofstream file(filename, std::ios::binary | std::ios::trunc);
@@ -450,7 +450,7 @@ void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod 
 void debugLoad(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   if (!gState.isDebugMode())
     return;
-  std::string filename = askOpenQuestion(interface,"Load from: ");
+  std::string filename = askOpenQuestion(interface, "Load from: ");
   if (filename.empty())
     return;
   std::ifstream file(filename, std::ios::binary);
@@ -463,8 +463,10 @@ void debugLoad(GameInterface &gState, IOModule::Interface &interface, ActionMod 
   if (!result.ok()) {
     if (result.error == GameInterface::LoadResult::Error::BadMagic) {
       interface.interfacePrinter() << "Not a valid save file.\n";
-    } else {
+    } else if (result.error == GameInterface::LoadResult::Error::VersionMismatch) {
       interface.interfacePrinter() << "Version mismatch: file version " << result.fileVersion << ", expected " << result.expectedVersion << "\n";
+    } else {
+      interface.interfacePrinter() << "Save file is corrupted: " << result.message << "\n";
     }
     interface.updateGameScreen();
     return;

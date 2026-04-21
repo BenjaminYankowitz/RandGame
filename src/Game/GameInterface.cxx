@@ -225,7 +225,7 @@ public:
     std::size_t bytesRead = 0;
     int fileVersion = 0;
     int expectedVersion = 0;
-    std::string message;
+    std::string message{}; // NOLINT(readability-redundant-member-init)
     [[nodiscard]] bool ok() const noexcept { return error == Error::None; }
     static LoadResult success(std::size_t bytes) noexcept { return {Error::None, bytes, SaveVersion, SaveVersion}; }
     static LoadResult badMagic() noexcept { return {Error::BadMagic}; }

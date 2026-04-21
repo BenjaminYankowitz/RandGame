@@ -161,6 +161,7 @@ TimePeriod Monster::takeItem(GameState &state, ObjectContainer &container, std::
 }
 
 TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveMode mode) noexcept {
+  if (loc_ == nLoc) return TimePeriod(0);
   if (!state.isOpenTerrain(nLoc)) {
     return TimePeriod(0);
   }

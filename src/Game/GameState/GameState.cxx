@@ -224,11 +224,11 @@ public:
 
   [[nodiscard]] constexpr auto getTile(Position pos) noexcept { return WorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
   [[nodiscard]] constexpr auto getTile(Position pos) const noexcept { return ConstWorldTile(getObjects(pos), getMonster(pos), getTerrainType(pos)); }
-  [[nodiscard]] constexpr auto seeThrough(Position pos) const noexcept {
-    return inBounds(pos) && getTerrainType(pos) != TerrainType::Wall;
-  }
   [[nodiscard]] constexpr auto isOpenTerrain(Position pos) const noexcept {
     return inBounds(pos) && getTerrainType(pos) != TerrainType::Wall;
+  }
+  [[nodiscard]] constexpr auto seeThrough(Position pos) const noexcept {
+    return isOpenTerrain(pos);
   }
   [[nodiscard]] constexpr auto isOpenTile(Position pos) const noexcept {
     return isOpenTerrain(pos) && getMonster(pos).isNull();
