@@ -312,6 +312,41 @@ TEST(SerializationLibTests, StaticPositionArrEmpty) {
   EXPECT_EQ(restored.height(), 0);
 }
 
+// --- exception safety ---
+
+TEST(SerializationLibTests, TrivialReadOnEmptyStreamThrows) {
+  std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+  EXPECT_THROW(SerializationLib::fromStream(ss, Tag<int>{}), SerializationLib::DeserializationError);
+}
+
+TEST(SerializationLibTests, TrivialReadOnTruncatedStreamThrows) {
+  std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+  char oneByte = 0x7F;
+  ss.write(&oneByte, 1);
+  EXPECT_THROW(SerializationLib::fromStream(ss, Tag<int>{}), SerializationLib::DeserializationError);
+}
+
+TEST(SerializationLibTests, VectorWithTruncatedBodyThrows) {
+  std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+  std::size_t fakeSize = 5;
+  SerializationLib::toStream(ss, fakeSize);
+  EXPECT_THROW(SerializationLib::fromStream(ss, Tag<std::vector<int>>{}), SerializationLib::DeserializationError);
+}
+
+TEST(SerializationLibTests, VariantOOBIndexThrows) {
+  using V = std::variant<int, double>;
+  std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+  std::size_t badIndex = 99;
+  SerializationLib::toStream(ss, badIndex);
+  EXPECT_THROW(SerializationLib::fromStream(ss, Tag<V>{}), SerializationLib::DeserializationError);
+}
+
+TEST(SerializationLibTests, VariantTruncatedBeforeIndexThrows) {
+  using V = std::variant<int, double>;
+  std::stringstream ss(std::ios::in | std::ios::out | std::ios::binary);
+  EXPECT_THROW(SerializationLib::fromStream(ss, Tag<V>{}), SerializationLib::DeserializationError);
+}
+
 TEST(SerializationLibTests, StaticPositionArrNonSquare) {
   std::stringstream ss;
   StaticPositionArr<double> original(2, 7);

@@ -9,7 +9,13 @@ concept EmptyClass = std::is_empty_v<T>;
 export namespace SerializationLib {
 template <class T>
 class Tag {};
+
+class DeserializationError : public std::runtime_error {
+public:
+  using std::runtime_error::runtime_error;
+};
 } // namespace SerializationLib
+using SerializationLib::DeserializationError;
 using SerializationLib::Tag;
 
 template <class Variant, std::size_t... Is>
@@ -51,9 +57,12 @@ T fromStream(std::istream &in, std::size_t &numRead, Tag<T> /**/) {
     return T{};
   }
   static constexpr std::size_t OutPutSize = sizeof(T);
-  numRead = OutPutSize;
   std::array<char, OutPutSize> buffer;
   in.read(buffer.data(), OutPutSize);
+  if (!in || in.gcount() != static_cast<std::streamsize>(OutPutSize)) {
+    throw DeserializationError("SerializationLib: short read / stream failure");
+  }
+  numRead = OutPutSize;
   return std::bit_cast<T>(buffer);
 }
 
@@ -122,6 +131,9 @@ std::variant<Ts...> fromStream(std::istream &in, std::size_t &numRead, Tag<std::
   std::size_t localRead = 0;
   auto index = fromStream(in, localRead, Tag<std::size_t>{});
   numRead = localRead;
+  if (index >= sizeof...(Ts)) {
+    throw DeserializationError("SerializationLib: variant index out of range");
+  }
   return fromStreamVariantHelper<std::variant<Ts...>>(in, numRead, index, std::index_sequence_for<Ts...>{});
 }
 
