@@ -318,7 +318,7 @@ TEST(DungeonMakerTests, CarveHVCorridorReverse) {
 
 TEST(DungeonMakerTests, RandomRoomsSmokeTest) {
   StaticPositionArr<TerrainType> floor(40, 30);
-  DungeonMaker::randomRooms(floor, Position{5, 5}, Position{35, 25});
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{Position{5, 5}, Position{35, 25}});
   // Should produce a connected map
   // Set stairs to Empty for region counting
   floor[{5, 5}] = TerrainType::StoneFloor;
@@ -330,7 +330,7 @@ TEST(DungeonMakerTests, RandomRoomsStairsAtCorners) {
   StaticPositionArr<TerrainType> floor(30, 30);
   Position up{0, 0};
   Position down{29, 29};
-  DungeonMaker::randomRooms(floor, up, down);
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{up, down});
   EXPECT_EQ(floor[up], TerrainType::UpStair);
   EXPECT_EQ(floor[down], TerrainType::DownStair);
 }
@@ -339,7 +339,7 @@ TEST(DungeonMakerTests, RandomRoomsStairsAtEdges) {
   StaticPositionArr<TerrainType> floor(30, 30);
   Position up{0, 15};
   Position down{29, 15};
-  DungeonMaker::randomRooms(floor, up, down);
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{up, down});
   EXPECT_EQ(floor[up], TerrainType::UpStair);
   EXPECT_EQ(floor[down], TerrainType::DownStair);
 }
@@ -348,14 +348,14 @@ TEST(DungeonMakerTests, RandomRoomsStairsAtCenter) {
   StaticPositionArr<TerrainType> floor(30, 30);
   Position up{15, 15};
   Position down{10, 10};
-  DungeonMaker::randomRooms(floor, up, down);
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{up, down});
   EXPECT_EQ(floor[up], TerrainType::UpStair);
   EXPECT_EQ(floor[down], TerrainType::DownStair);
 }
 
 TEST(DungeonMakerTests, RandomRoomsSmallFloor) {
   StaticPositionArr<TerrainType> floor(3, 3);
-  DungeonMaker::randomRooms(floor, Position{1, 1}, Position{2, 2});
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{Position{1, 1}, Position{2, 2}});
   // Should not crash. Stairs may or may not fit.
   // Just verify no wall-only floor (some empty cells exist)
   bool hasEmpty = false;
@@ -368,7 +368,7 @@ TEST(DungeonMakerTests, RandomRoomsSmallFloor) {
 
 TEST(DungeonMakerTests, RandomRoomsStairsOutOfBounds) {
   StaticPositionArr<TerrainType> floor(20, 20);
-  DungeonMaker::randomRooms(floor, Position{-1, -1}, Position{100, 100});
+  DungeonMaker::randomRooms(floor, DungeonMaker::StairSpots{Position{-1, -1}, Position{100, 100}});
   // Should not crash, stairs out of bounds are skipped
   bool hasEmpty = false;
   for (auto &t : floor) {
@@ -384,7 +384,7 @@ TEST(DungeonMakerTests, OpenSimplexPlacesStairs) {
   StaticPositionArr<TerrainType> floor(30, 30);
   Position up{5, 5};
   Position down{25, 25};
-  DungeonMaker::openSimplex(floor, up, down, 32, 8, -0.2);
+  DungeonMaker::openSimplex(floor, DungeonMaker::StairSpots{up, down}, DungeonMaker::Scale{32, 8}, -0.2);
   EXPECT_EQ(floor[up], TerrainType::UpStair);
   EXPECT_EQ(floor[down], TerrainType::DownStair);
 }
@@ -392,7 +392,7 @@ TEST(DungeonMakerTests, OpenSimplexPlacesStairs) {
 TEST(DungeonMakerTests, OpenSimplexSameStairPosition) {
   StaticPositionArr<TerrainType> floor(20, 20);
   Position both{10, 10};
-  DungeonMaker::openSimplex(floor, both, both, 32, 8, -0.2);
+  DungeonMaker::openSimplex(floor, DungeonMaker::StairSpots{both, both}, DungeonMaker::Scale{32, 8}, -0.2);
   // DownStair is set last, so it wins
   EXPECT_EQ(floor[both], TerrainType::DownStair);
 }
@@ -443,7 +443,7 @@ TEST(DungeonMakerTests, Maze1x1) {
 
 TEST(DungeonMakerTests, PerlinSmokeTest) {
   StaticPositionArr<TerrainType> floor(20, 20);
-  DungeonMaker::perlin(floor, 8, 8, 0.0);
+  DungeonMaker::perlin(floor, DungeonMaker::Scale{8, 8}, 0.0);
   bool hasWall = false;
   bool hasEmpty = false;
   for (auto &t : floor) {
@@ -459,7 +459,7 @@ TEST(DungeonMakerTests, PerlinSmokeTest) {
 
 TEST(DungeonMakerTests, OpenSimplexRawSmokeTest) {
   StaticPositionArr<TerrainType> floor(20, 20);
-  DungeonMaker::openSimplexRaw(floor, 8, 8, 0.0);
+  DungeonMaker::openSimplexRaw(floor, DungeonMaker::Scale{8, 8}, 0.0);
   bool hasWall = false;
   bool hasEmpty = false;
   for (auto &t : floor) {
@@ -475,7 +475,7 @@ TEST(DungeonMakerTests, OpenSimplexRawSmokeTest) {
 TEST(DungeonMakerTests, PerlinFillsAllCells) {
   StaticPositionArr<TerrainType> floor(10, 10);
   floor.fill(TerrainType::UpStair); // Fill with non-Wall/Empty to verify overwrite
-  DungeonMaker::perlin(floor, 8, 8, 0.0);
+  DungeonMaker::perlin(floor, DungeonMaker::Scale{8, 8}, 0.0);
   for (auto &t : floor) {
     EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::StoneFloor);
   }
@@ -484,7 +484,7 @@ TEST(DungeonMakerTests, PerlinFillsAllCells) {
 TEST(DungeonMakerTests, OpenSimplexRawFillsAllCells) {
   StaticPositionArr<TerrainType> floor(10, 10);
   floor.fill(TerrainType::UpStair);
-  DungeonMaker::openSimplexRaw(floor, 8, 8, 0.0);
+  DungeonMaker::openSimplexRaw(floor, DungeonMaker::Scale{8, 8}, 0.0);
   for (auto &t : floor) {
     EXPECT_TRUE(t == TerrainType::Wall || t == TerrainType::StoneFloor);
   }

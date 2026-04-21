@@ -166,11 +166,12 @@ public:
   virtual void monsterAte(MonsterInterface eater, ObjectInterface eaten) = 0;
   virtual void beamStep(Location pos) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
-  virtual ~EventViewerInterface() = default;
+  EventViewerInterface() = default;
   EventViewerInterface(const EventViewerInterface&) = default;
   EventViewerInterface& operator=(const EventViewerInterface&) = default;
   EventViewerInterface(EventViewerInterface&&) = default;
   EventViewerInterface& operator=(EventViewerInterface&&) = default;
+  virtual ~EventViewerInterface() = default;
 };
 
 export class GameInterface {

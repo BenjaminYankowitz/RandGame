@@ -208,16 +208,16 @@ static_assert(FloorSpecifier(5).up().down() == FloorSpecifier(5));
 static_assert(FloorSpecifier(0).down().up() == FloorSpecifier(0));
 
 // -- Location --
-static_assert(Location(3, 4, 5).pos == Position(3, 4));
-static_assert(Location(3, 4, 5).mapPos == FloorSpecifier(5));
-static_assert(Location(3, 4, 5) == Location(3, 4, 5));
-static_assert(!(Location(3, 4, 5) == Location(3, 4, 6)));
-static_assert(!(Location(3, 4, 5) == Location(3, 5, 5)));
-static_assert(!(Location(3, 4, 5) == Location(4, 4, 5)));
-static_assert(Location(Position(1, 2), FloorSpecifier(3)) == Location(1, 2, 3));
-static_assert(Location(5, 5, 3).up() == Location(5, 5, 2));
-static_assert(Location(5, 5, 3).down() == Location(5, 5, 4));
-static_assert(Location(5, 5, 3).up().down() == Location(5, 5, 3));
+static_assert(Location(Position(3, 4), FloorSpecifier(5)).pos == Position(3, 4));
+static_assert(Location(Position(3, 4), FloorSpecifier(5)).mapPos == FloorSpecifier(5));
+static_assert(Location(Position(3, 4), FloorSpecifier(5)) == Location(Position(3, 4), FloorSpecifier(5)));
+static_assert(!(Location(Position(3, 4), FloorSpecifier(5)) == Location(Position(3, 4), FloorSpecifier(6))));
+static_assert(!(Location(Position(3, 4), FloorSpecifier(5)) == Location(Position(3, 5), FloorSpecifier(5))));
+static_assert(!(Location(Position(3, 4), FloorSpecifier(5)) == Location(Position(4, 4), FloorSpecifier(5))));
+static_assert(Location(Position(1, 2), FloorSpecifier(3)) == Location(Position(1, 2), FloorSpecifier(3)));
+static_assert(Location(Position(5, 5), FloorSpecifier(3)).up() == Location(Position(5, 5), FloorSpecifier(2)));
+static_assert(Location(Position(5, 5), FloorSpecifier(3)).down() == Location(Position(5, 5), FloorSpecifier(4)));
+static_assert(Location(Position(5, 5), FloorSpecifier(3)).up().down() == Location(Position(5, 5), FloorSpecifier(3)));
 
 // -- PosPathIterableShort --
 
