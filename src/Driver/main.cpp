@@ -24,20 +24,22 @@ void doMain() {
     if (!result.ok()) {
       if (result.error == GameInterface::LoadResult::Error::BadMagic)
         loadError = "Failed to load save: not a valid save file.";
-      else
+      else if (result.error == GameInterface::LoadResult::Error::VersionMismatch)
         loadError = "Failed to load save: version mismatch (file version " + std::to_string(result.fileVersion) + ", expected " + std::to_string(result.expectedVersion) + ").";
+      else
+        loadError = "Failed to load save: save file is corrupted (" + result.message + ").";
     } else {
       loaded = true;
     }
   }
-  if(!loaded) {
+  if (!loaded) {
     game.generateGame();
     gi->setControlled(game.getPlayer().getId());
   }
   IOModule::Interface IORII(std::move(gi));
   if (!loadError.empty()) {
     IORII.addEvent(std::move(loadError));
-  } 
+  }
   runGame(IORII);
 }
 } // namespace
