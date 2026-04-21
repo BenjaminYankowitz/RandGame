@@ -167,10 +167,10 @@ public:
   virtual void beamStep(Location pos) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
   EventViewerInterface() = default;
-  EventViewerInterface(const EventViewerInterface&) = default;
-  EventViewerInterface& operator=(const EventViewerInterface&) = default;
-  EventViewerInterface(EventViewerInterface&&) = default;
-  EventViewerInterface& operator=(EventViewerInterface&&) = default;
+  EventViewerInterface(const EventViewerInterface &) = default;
+  EventViewerInterface &operator=(const EventViewerInterface &) = default;
+  EventViewerInterface(EventViewerInterface &&) = default;
+  EventViewerInterface &operator=(EventViewerInterface &&) = default;
   virtual ~EventViewerInterface() = default;
 };
 
@@ -219,15 +219,18 @@ public:
   struct LoadResult {
     enum class Error : std::uint8_t { None,
                                       BadMagic,
-                                      VersionMismatch };
+                                      VersionMismatch,
+                                      Exception };
     Error error = Error::None;
     std::size_t bytesRead = 0;
     int fileVersion = 0;
     int expectedVersion = 0;
+    std::string message;
     [[nodiscard]] bool ok() const noexcept { return error == Error::None; }
     static LoadResult success(std::size_t bytes) noexcept { return {Error::None, bytes, SaveVersion, SaveVersion}; }
     static LoadResult badMagic() noexcept { return {Error::BadMagic}; }
     static LoadResult versionMismatch(int file, int expected) noexcept { return {Error::VersionMismatch, 0, file, expected}; }
+    static LoadResult exception(std::string what) noexcept { return {Error::Exception, 0, 0, 0, std::move(what)}; }
   };
 
   std::size_t save(std::ostream &out) const noexcept;

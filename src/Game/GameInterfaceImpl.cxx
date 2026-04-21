@@ -252,7 +252,7 @@ public:
 
 private:
   template <typename F>
-  void safeCall(const F& f) noexcept {
+  void safeCall(const F &f) noexcept {
     try {
       f();
     } catch (const std::exception &e) {
@@ -465,19 +465,25 @@ std::size_t GameInterface::save(std::ostream &out) const noexcept {
 }
 
 GameInterface::LoadResult GameInterface::load(std::istream &in) noexcept {
-  std::size_t numRead = 0;
-  std::uint64_t magic{};
-  numRead += SerializationLib::deserialize(in, magic);
-  if (magic != MagicNumber) {
-    return LoadResult::badMagic();
+  try {
+    std::size_t numRead = 0;
+    std::uint64_t magic;
+    numRead += SerializationLib::deserialize(in, magic);
+    if (magic != MagicNumber) {
+      return LoadResult::badMagic();
+    }
+    int version{};
+    numRead += SerializationLib::deserialize(in, version);
+    if (version != SaveVersion) {
+      return LoadResult::versionMismatch(version, SaveVersion);
+    }
+    numRead += SerializationLib::deserialize(in, wasDebugMode_);
+    *static_cast<GameState *>(gs_.gameState) = fromStream(in, numRead, SerializationLib::Tag<GameState>{});
+    controlled_ = static_cast<GameState *>(gs_.gameState)->getPlayer().getId();
+    return LoadResult::success(numRead);
+  } catch (const std::exception &e) {
+    return LoadResult::exception(e.what());
+  } catch (...) {
+    return LoadResult::exception("unknown exception");
   }
-  int version{};
-  numRead += SerializationLib::deserialize(in, version);
-  if (version != SaveVersion) {
-    return LoadResult::versionMismatch(version, SaveVersion);
-  }
-  numRead += SerializationLib::deserialize(in, wasDebugMode_);
-  *static_cast<GameState *>(gs_.gameState) = fromStream(in, numRead, SerializationLib::Tag<GameState>{});
-  controlled_ = static_cast<GameState *>(gs_.gameState)->getPlayer().getId();
-  return LoadResult::success(numRead);
 }
