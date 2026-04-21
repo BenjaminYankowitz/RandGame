@@ -14,19 +14,19 @@ IOModule::Interface::~Interface() {
 
 void IOModule::Interface::updateGameScreen() {
   Raii_.setCursorState(0);
-  mainWindow_.clear();
   const auto &currentMap = gState_->getFloor(gState_->getLocation().mapPos);
   const int mapWidth = currentMap.cols();
   const int mapHeight = currentMap.rows();
   auto [height, width] = getMaxDims();
   const int mainWindowHeight = height - 6 - mapHeight;
   eventWindow_.setDims(mapWidth, mainWindowHeight - 2);
-  mainWindow_.move(0, mainWindowHeight);
   mainWindow_.setDims(mapWidth, mapHeight);
-  inventWindow_.move(mapWidth + 2, 0);
+  mainWindow_.clear();
+  mainWindow_.move(0, mainWindowHeight);
   inventWindow_.setDims(width - mapWidth - 4, height - 2);
-  statusWindow_.move(0, height - 4);
+  inventWindow_.move(mapWidth + 2, 0);
   statusWindow_.setDims(mapWidth, 2);
+  statusWindow_.move(0, height - 4);
   auto &memory = getMemoryGrid(gState_->getLocation().mapPos, mapWidth, mapHeight);
   for (auto y : std::views::iota(0, mapHeight)) {
     mainWindow_.moveCursor(0, y);

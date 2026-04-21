@@ -375,7 +375,7 @@ private:
 
 export class BoxedWindow {
 public:
-  BoxedWindow() noexcept = default;
+  BoxedWindow() : BoxedWindow(0,0,0,0){}
   BoxedWindow(int width, int height, int xoffset, int yoffset) : impl_(width + 2, height + 2, xoffset, yoffset) {
     makeBox();
     updateScreen();
