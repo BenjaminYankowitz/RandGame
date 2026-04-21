@@ -9,17 +9,18 @@ concept Distribution = requires(T dist, std::mt19937 state) {
 [[nodiscard]] std::seed_seq getSeed() noexcept {
   using intType = std::uint_fast32_t;
   static constexpr intType DefaultSeed = 659949982;
-  intType seeda = DefaultSeed;
+  intType seeda{};
   try {
     std::random_device rd;
     seeda = rd();
   } catch (...) {
+    seeda = DefaultSeed;
   }
   intType seedb = std::time(nullptr);
   return {seeda, seedb};
 }
 
-inline std::mt19937 rndState = []() {
+inline std::mt19937 rndState = []() { //NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
   auto seedSeq = getSeed();
   std::mt19937 ret(seedSeq);
   return ret;

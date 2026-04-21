@@ -20,7 +20,7 @@ struct MapWrap {
       x = -x;
     if (flipY)
       y = -y;
-    return impl[unDo(p)];
+    return (*impl_)[unDo(p)];
   }
   [[nodiscard]] constexpr Position unDo(Dir p) const noexcept {
     auto [x, y] = p;
@@ -33,8 +33,8 @@ struct MapWrap {
     return offset + Dir{x, y};
   }
   [[nodiscard]] constexpr std::pair<int, int> extentsXY() const noexcept {
-    int xC = impl.extent(1);
-    int yC = impl.extent(0);
+    int xC = impl_->extent(1);
+    int yC = impl_->extent(0);
     auto [xO, yO] = offset;
     int retX = flipX ? xO + 1 : xC - xO;
     int retY = flipY ? yO + 1 : yC - yO;
@@ -43,7 +43,7 @@ struct MapWrap {
     }
     return {retX, retY};
   }
-  const MapType &impl;
+  const MapType *impl_;
   Position offset;
   bool flipX;
   bool flipY;
@@ -72,7 +72,7 @@ static_assert(getYat({1, 1}, 2, true) == 1);
 }
 
 [[nodiscard]] constexpr auto operator==(Corner s1, Corner s2) {
-  return s1 <=> s2 == 0;
+  return (s1 <=> s2) == 0;
 }
 
 [[nodiscard]] constexpr Dir nextSpot(Dir d, Corner s) noexcept {
@@ -131,7 +131,7 @@ template <SeeThrough2dArr MapType>
 }
 
 template <SeeThrough2dArr MapType>
-void allInLineOfSightQuadRegion(MapWrap<MapType> map, Corner min, Corner max, int dist, int extentY, std::vector<std::pair<Corner, Corner>> &toCheck, std::vector<Position> &out) noexcept {
+void allInLineOfSightQuadRegion(MapWrap<MapType> map, Corner min, Corner max, int dist, int extentY, std::vector<std::pair<Corner, Corner>> &toCheck, std::vector<Position> &out) noexcept { //NOLINT(bugprone-easily-swappable-parameters)
   const int minY = getYat(min, dist, false);
   const int maxY = getYat(max, dist + 1, true);
   Corner pSlope = min;
@@ -196,7 +196,7 @@ template <SeeThrough2dArr MapType>
   if (swapXY) {
     std::swap(absX, absY);
   }
-  MapWrap<MapType> aMap{map, start, flipX, flipY, swapXY};
+  MapWrap<MapType> aMap{&map, start, flipX, flipY, swapXY};
   return bnAngleV(aMap, Dir{absX, absY});
 }
 
@@ -204,10 +204,10 @@ template <SeeThrough2dArr MapType>
 [[nodiscard]] auto allInLineOfSight(const MapType &map, Position start) noexcept {
   std::vector<Position> ret;
   ret.push_back(start);
-  allInLineOfSightQuad(MapWrap(map, start, false, false, false), ret);
-  allInLineOfSightQuad(MapWrap(map, start, false, true, true), ret);
-  allInLineOfSightQuad(MapWrap(map, start, true, false, true), ret);
-  allInLineOfSightQuad(MapWrap(map, start, true, true, false), ret);
+  allInLineOfSightQuad(MapWrap(&map, start, false, false, false), ret);
+  allInLineOfSightQuad(MapWrap(&map, start, false, true, true), ret);
+  allInLineOfSightQuad(MapWrap(&map, start, true, false, true), ret);
+  allInLineOfSightQuad(MapWrap(&map, start, true, true, false), ret);
   return ret;
 }
 } // namespace LineOfSight

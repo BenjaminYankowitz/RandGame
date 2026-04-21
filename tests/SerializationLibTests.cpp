@@ -1,3 +1,7 @@
+#include <math.h>
+
+#include <numbers>
+
 #include "TestHeader.h"
 import SerializationLib;
 import Common;
@@ -61,7 +65,7 @@ TEST(SerializationLibTests, ZeroValues) {
 TEST(SerializationLibTests, NegativeValues) {
   std::stringstream ss;
   int neg = -99999;
-  double dneg = -3.14159;
+  double dneg = -std::numbers::pi;
   SerializationLib::serialize(ss, neg, dneg);
   ss.seekg(0);
   int rn;

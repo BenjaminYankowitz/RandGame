@@ -167,6 +167,10 @@ public:
   virtual void beamStep(Location pos) = 0;
   virtual void exception(const std::exception &e) noexcept = 0;
   virtual ~EventViewerInterface() = default;
+  EventViewerInterface(const EventViewerInterface&) = default;
+  EventViewerInterface& operator=(const EventViewerInterface&) = default;
+  EventViewerInterface(EventViewerInterface&&) = default;
+  EventViewerInterface& operator=(EventViewerInterface&&) = default;
 };
 
 export class GameInterface {
@@ -227,13 +231,12 @@ public:
 
   std::size_t save(std::ostream &out) const noexcept;
   LoadResult load(std::istream &in) noexcept;
-  ~GameInterface();
 
 private:
   static constexpr int SaveVersion = 1;
   static constexpr std::uint64_t MagicNumber = 8360033890706637073;
   template <typename F>
-  void ifAlive(F &&f) noexcept;
+  void ifAlive(const F &f) noexcept;
   IGameState gs_;
   MonsterID controlled_;
   bool debugMode_ = false;

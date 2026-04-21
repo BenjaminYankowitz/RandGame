@@ -184,11 +184,19 @@ export [[nodiscard]] consteval std::uint16_t cntrl(char c) {
   return c - 64;
 }
 
-constexpr auto RetTrue(ObjectInterface/**/){return true;}
+constexpr auto RetTrue(ObjectInterface/**/) noexcept {return true;}
 export struct ItemFromInterfaceSettings {
   bool doStandAloneDisplay = true;
   bool autoSelectOne = false;
   const std::function<bool(ObjectInterface)> &isEligible = RetTrue;
+  [[nodiscard]] bool gIsEligible(ObjectInterface obj) const noexcept {
+    try {
+      return isEligible(obj);
+    } catch (...) {
+      Logging::log << "settings.isEligible threw \n";
+      return false;
+    }
+  }
 };
 
 export constexpr std::size_t NoItem = std::numeric_limits<std::size_t>::max();

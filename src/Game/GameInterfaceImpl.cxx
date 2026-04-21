@@ -86,7 +86,7 @@ constexpr auto WallType = []() {
   };
   using enum Directions;
   using enum TerrainTypeInterface;
-  RetType ret;
+  RetType ret{};
   ret[None] = CWall;
   ret[Up] = VWall;
   ret[Down] = VWall;
@@ -252,7 +252,7 @@ public:
 
 private:
   template <typename F>
-  void safeCall(F &&f) noexcept {
+  void safeCall(const F& f) noexcept {
     try {
       f();
     } catch (const std::exception &e) {
@@ -271,7 +271,7 @@ void GameInterface::setEventViewer(std::unique_ptr<EventViewerInterface> viewer)
 }
 void GameInterface::exit() noexcept {}
 template <typename F>
-void GameInterface::ifAlive(F &&f) noexcept {
+void GameInterface::ifAlive(const F &f) noexcept {
   auto &self = static_cast<GameState *>(gs_.gameState)->getMonster(controlled_);
   if (self.isAlive()) {
     f(self);
@@ -481,5 +481,3 @@ GameInterface::LoadResult GameInterface::load(std::istream &in) noexcept {
   controlled_ = static_cast<GameState *>(gs_.gameState)->getPlayer().getId();
   return LoadResult::success(numRead);
 }
-
-GameInterface::~GameInterface() {}

@@ -17,7 +17,7 @@ public:
   using const_iterator = constvalue_T *;
 
 private:
-  using arr_t = value_type[]; // NOLINT(modernize-avoid-c-arrays)
+  using arr_t = value_type[];
   template <bool b>
   struct PiteratorImpl {};
   template <>
@@ -33,7 +33,7 @@ private:
 
 public:
   template <size_type size>
-  constexpr Static2DArr(std::initializer_list<value_type[size]> list) noexcept : Static2DArr(list.size(), size) { // NOLINT(modernize-avoid-c-arrays)
+  constexpr Static2DArr(std::initializer_list<value_type[size]> list) noexcept : Static2DArr(list.size(), size) {
     constexpr static auto CZero = std::views::iota(static_cast<size_type>(0));
     for (auto [row, nRow] : std::views::zip(list, CZero)) {
       for (auto [val, nCol] : std::views::zip(row, CZero)) {
@@ -53,8 +53,10 @@ public:
     }
   }
   constexpr Static2DArr(const Static2DArr &other) = delete;
+  constexpr Static2DArr& operator=(const Static2DArr &other) = delete;
   constexpr Static2DArr(Static2DArr &&other) noexcept = default;
   constexpr Static2DArr &operator=(Static2DArr &&other) noexcept = default;
+  constexpr ~Static2DArr() noexcept = default;
   [[nodiscard]] constexpr bool isNull() const noexcept { return data_ == nullptr; }
   [[nodiscard]] constexpr auto &operator[](this auto &&self, size_type row, size_type col) noexcept {
     if constexpr (InDebug) {
@@ -114,7 +116,7 @@ std::size_t toStream(std::ostream &out, const Static2DArr<T, sizeT> &input) {
 export template <class T, class sizeT>
 Static2DArr<T, sizeT> fromStream(std::istream &in, std::size_t &numRead, Tag<Static2DArr<T, sizeT>> /**/) {
   std::size_t totalRead = 0;
-  std::size_t localRead;
+  std::size_t localRead{};
   auto rows = fromStream(in, localRead, Tag<sizeT>{});
   totalRead += localRead;
   auto cols = fromStream(in, localRead, Tag<sizeT>{});

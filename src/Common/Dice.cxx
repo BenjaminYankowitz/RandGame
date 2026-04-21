@@ -7,7 +7,7 @@ namespace {
 struct MonoState {};
 } // namespace
 constexpr std::int64_t stringViewToNumber(std::string_view str) {
-  std::int64_t out;
+  std::int64_t out = 0;
   bool negative = str[0] == '-';
   std::from_chars_result result = std::from_chars(str.begin() + ((str[0] == '+' || str[0] == '-') ? 1 : 0), str.end(), out);
   if (result.ec != std::errc()) {
@@ -41,7 +41,7 @@ public:
       faces_ = stringViewToNumber(writtenExplanation.substr(dLoc + 1));
     }
   }
-  constexpr SingleTypeGroup(std::uint16_t faces, std::int16_t number) : faces_(faces), number_(number) {
+  constexpr SingleTypeGroup(std::uint16_t faces, std::int16_t number) : faces_(faces), number_(number) { //NOLINT(bugprone-easily-swappable-parameters)
     if (faces == 0) {
       throw std::invalid_argument{"Cannot have a zero sided die"};
     }
@@ -68,8 +68,7 @@ private:
 class Group {
 public:
   constexpr static std::size_t MaxTypes = 2;
-  consteval explicit Group(std::string_view writtenExplanation) {
-    constant_ = 0;
+  consteval explicit Group(std::string_view writtenExplanation) : constant_(0) {
     const std::size_t strLen = writtenExplanation.size();
     std::size_t beginSection = 0;
     std::size_t endSection = std::min(writtenExplanation.find_first_of("+-"), strLen);

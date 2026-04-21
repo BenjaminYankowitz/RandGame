@@ -207,6 +207,10 @@ public:
     curs_set(0);
     refresh();
   }
+  CursesRAII(const CursesRAII&) = delete;
+  CursesRAII(const CursesRAII&&) = delete;
+  CursesRAII& operator=(const CursesRAII&) = delete;
+  CursesRAII& operator=(const CursesRAII&&) = delete;
   ~CursesRAII() noexcept {
     exists = false;
     endwin();
@@ -239,7 +243,7 @@ struct SymbolTraits { // should be specialzation of std::char_traits but that's 
 export using string_view_Symbol = std::basic_string_view<Symbol, SymbolTraits>;
 export class WindowWrapper {
 public:
-  constexpr WindowWrapper() noexcept : impl_(nullptr), width_(0), height_(0), xoffset_(0), yoffset_(0) {};
+  WindowWrapper() noexcept : WindowWrapper(0,0,0,0){}
   WindowWrapper(int width, int height, int xoffset, int yoffset) noexcept : impl_(newwin(height, width, yoffset, xoffset)), width_(width), height_(height), xoffset_(xoffset), yoffset_(yoffset) {}
   void clear() const {
     if (werase(impl_.get()) == ERR) {
@@ -372,12 +376,6 @@ private:
 export class BoxedWindow {
 public:
   BoxedWindow() noexcept = default;
-  BoxedWindow(BoxedWindow &&other) noexcept
-      : impl_(std::move(other.impl_)) {}
-  BoxedWindow &operator=(BoxedWindow &&other) noexcept {
-    impl_ = std::move(other.impl_);
-    return *this;
-  }
   BoxedWindow(int width, int height, int xoffset, int yoffset) : impl_(width + 2, height + 2, xoffset, yoffset) {
     makeBox();
     updateScreen();

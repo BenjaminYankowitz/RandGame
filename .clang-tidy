@@ -13,13 +13,24 @@ Checks: >
   -readability-static-accessed-through-instance,
   -google-build-using-namespace,
   -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
   -misc-no-recursion,
   -readability-uppercase-literal-suffix,
   -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
   -google-readability-braces-around-statements,
   -readability-braces-around-statements,
   -modernize-use-designated-initializers,
-  -misc-use-internal-linkage
+  -misc-use-internal-linkage,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-narrowing-conversions,
+  -bugprone-narrowing-conversions,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-avoid-c-arrays,
+  -modernize-avoid-c-arrays,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-init-variables,
+  -cppcoreguidelines-pro-type-member-init,
 
 CheckOptions:
   - { key: readability-identifier-naming.NamespaceCase,          value: CamelCase }
@@ -31,7 +42,8 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberSuffix,    value: _          }
   - { key: readability-identifier-naming.ProtectedMemberSuffix,  value: _          }
   - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
-  - { key: readability-identifier-naming.EnumConstantCase,         value: CamelCase }
-  - { key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase }
-  - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase }
-  - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase,       value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariableCase,  value: CamelCase }
+  - { key: readability-identifier-naming.GlobalConstantCase,     value: CamelCase }
+  - { key: readability-identifier-naming.StaticConstantCase,     value: CamelCase }
+  - { key: bugprone-exception-escape.IgnoredExceptions,          value: "length_error,bad_array_new_length"}

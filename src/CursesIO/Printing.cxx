@@ -125,7 +125,7 @@ getMatAdj(ObjectInterface obj) noexcept {
 }
 
 [[nodiscard]] constexpr Noun getNoun(ObjectInterface obj) noexcept {
-  switch (obj.type()) {
+  switch (ObjectTypeImpl(obj.type())) {
     using enum ObjectTypeImpl;
   case KingsCoin:
     return {{"coin"}};
@@ -140,7 +140,7 @@ getMatAdj(ObjectInterface obj) noexcept {
   }
 }
 
-[[nodiscard]] constexpr bool printDefaultMat(ObjectType type) noexcept {
+[[nodiscard]] constexpr bool printDefaultMat(ObjectTypeImpl type) noexcept {
   switch (type) {
     using enum ObjectTypeImpl;
   case KingsCoin:
@@ -232,7 +232,6 @@ export [[nodiscard]] Color toColorChar(MonsterClass mClass) noexcept {
   switch (mClass) {
     using enum MonsterClass;
   case Human:
-    return White;
   case Cat:
     return White;
   case SeaSlug:
@@ -276,7 +275,7 @@ export Symbol MonsterToSymbol(MonsterInterface monst) noexcept {
   return sym;
 }
 
-export constexpr chtype ObjectTypeToCharacter(ObjectType otype) noexcept {
+export constexpr chtype ObjectTypeToCharacter(ObjectTypeImpl otype) noexcept {
   switch (otype) {
     using enum ObjectTypeImpl;
   case KingsCoin:

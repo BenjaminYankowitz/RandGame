@@ -47,7 +47,7 @@ public:
         std::unreachable();
       slots_[index] = count;
     }
-    for (int i = 1; i < slots_.size(); i++) {
+    for (auto i : std::views::iota(static_cast<std::size_t>(1),slots_.size())) {
       slots_[i] += slots_[i - 1];
     }
   }
@@ -66,7 +66,7 @@ public:
   }
 
 private:
-  std::array<std::int8_t, 8> slots_;
+  std::array<std::int8_t, std::to_underlying(EquipType::CantEquip)+1> slots_{};
 };
 using enum EquipType;
 constexpr BodyPlan HumaniodBody = {{Hand, 2}, {Helm, 1}, {Gloves, 1}, {Ring, 2}, {Body, 1}, {Cloak, 1}, {Shoes, 1}};

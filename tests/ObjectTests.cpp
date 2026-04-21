@@ -1,6 +1,7 @@
 #include "TestHeader.h"
 import GameState;
 import GameTypes;
+import std;
 
 // isCombinable() returns true for Normal artifacts
 static_assert([] consteval {

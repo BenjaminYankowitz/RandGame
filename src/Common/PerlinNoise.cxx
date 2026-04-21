@@ -21,14 +21,14 @@ public:
     return std::inner_product(impl_.begin(), impl_.end(), other.impl_.begin(), 0.0);
   }
   [[nodiscard]] constexpr MathVector operator-(const MathVector &other) const noexcept {
-    std::array<double, N> ret;
+    std::array<double, N> ret{};
     std::ranges::transform(std::views::zip(impl_, other.impl_), ret.begin(), [](auto a) {
       return std::get<0>(a) - std::get<1>(a);
     });
     return MathVector(ret);
   }
   [[nodiscard]] constexpr std::array<std::size_t, N> corner(std::size_t n) const noexcept {
-    std::array<std::size_t, N> ret;
+    std::array<std::size_t, N> ret{};
     const auto toCorner = [n, impl_ = impl_](std::size_t i) { return ((n & (1 << i)) == 0u) ? std::floor(impl_[i]) : std::ceil(impl_[i]); };
     std::ranges::transform(std::ranges::iota_view(0ul, N), ret.begin(), toCorner);
     return ret;
@@ -63,7 +63,7 @@ public:
     const double fX = x - std::floor(x);
     const double fY = y - std::floor(y);
     const MathVector<2> vec(std::array<double, 2>{x, y});
-    std::array<double, vec.cornerNum()> values;
+    std::array<double, vec.cornerNum()> values{};
     const auto func = [vec, &arr = arr_](int i) {
       const auto cornerArr = vec.corner(i);
       const MathVector<2> corner(cornerArr);

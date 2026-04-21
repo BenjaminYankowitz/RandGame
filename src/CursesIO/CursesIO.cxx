@@ -12,8 +12,7 @@ export class Interface;
 }
 using IOModule::Interface;
 
-class PrintToViewer : public std::basic_streambuf<char> {
-public:
+struct PrintToViewer : public std::basic_streambuf<char> {
   explicit PrintToViewer(Interface *parent) noexcept : parent_(parent) {}
   Interface *parent_;
 
@@ -52,6 +51,10 @@ export namespace IOModule {
 class Interface {
 public:
   explicit Interface(std::unique_ptr<GameInterface> interface);
+  Interface(const Interface&) =delete;
+  Interface(const Interface&&) =delete;
+  Interface& operator=(const Interface&) =delete;
+  Interface& operator=(const Interface&&) =delete;
   ~Interface();
   void updateGameScreen();
   void showSuggestion(std::string_view suggestion);

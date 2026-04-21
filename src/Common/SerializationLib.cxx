@@ -59,7 +59,7 @@ T fromStream(std::istream &in, std::size_t &numRead, Tag<T> /**/) {
 
 template <class T>
 T fromStream(std::istream &in, Tag<T> tag) {
-  std::size_t _;
+  std::size_t _ = 0;
   return fromStream(in, _, tag);
 }
 
@@ -75,7 +75,7 @@ std::size_t serialize(std::ostream &out, const Serializeable auto &...inputs) {
 
 std::size_t deserialize(std::istream &in, Serializeable auto &...inputs) {
   auto readAndGetSize = [&in](auto &toFill) {
-    std::size_t sz;
+    std::size_t sz = 0;
     toFill = fromStream(in, sz, Tag<std::remove_reference_t<decltype(toFill)>>{});
     return sz;
   };
@@ -96,7 +96,7 @@ std::size_t toStream(std::ostream &out, const std::unique_ptr<T, Dealoc> &input)
 template <class T>
 std::unique_ptr<T> fromStream(std::istream &in, std::size_t &numRead, Tag<std::unique_ptr<T>> /**/) {
   std::size_t totalRead = 0;
-  std::size_t localRead;
+  std::size_t localRead = 0;
   auto hasValue = fromStream(in, localRead, Tag<bool>{});
   totalRead += localRead;
   if (hasValue) {
@@ -119,7 +119,7 @@ std::size_t toStream(std::ostream &out, const std::variant<Ts...> &input) {
 
 template <class... Ts>
 std::variant<Ts...> fromStream(std::istream &in, std::size_t &numRead, Tag<std::variant<Ts...>> /**/) {
-  std::size_t localRead;
+  std::size_t localRead = 0;
   auto index = fromStream(in, localRead, Tag<std::size_t>{});
   numRead = localRead;
   return fromStreamVariantHelper<std::variant<Ts...>>(in, numRead, index, std::index_sequence_for<Ts...>{});
@@ -138,7 +138,7 @@ std::size_t toStream(std::ostream &out, const std::vector<T> &input) {
 template <class T>
 std::vector<T> fromStream(std::istream &in, std::size_t &numRead, Tag<std::vector<T>> /**/) {
   std::size_t totalRead = 0;
-  std::size_t localRead;
+  std::size_t localRead = 0;
   auto size = fromStream(in, localRead, Tag<std::size_t>{});
   totalRead += localRead;
   std::vector<T> vec;
@@ -165,7 +165,7 @@ std::size_t toStream(std::ostream &out, const std::unordered_map<K, V> &input) {
 template <class K, class V>
 std::unordered_map<K, V> fromStream(std::istream &in, std::size_t &numRead, Tag<std::unordered_map<K, V>> /**/) {
   std::size_t totalRead = 0;
-  std::size_t localRead;
+  std::size_t localRead = 0;
   auto size = fromStream(in, localRead, Tag<std::size_t>{});
   totalRead += localRead;
   std::unordered_map<K, V> map;

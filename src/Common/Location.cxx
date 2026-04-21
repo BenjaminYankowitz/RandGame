@@ -10,7 +10,7 @@ import SerializationLib;
 export class Dir {
 public:
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
-  [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {}
+  [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {} //NOLINT(bugprone-easily-swappable-parameters)
   [[nodiscard]] constexpr bool noMove() const noexcept { return dx == 0 && dy == 0; }
   [[nodiscard]] constexpr static Dir up() noexcept {
     return {0, -1};
@@ -211,6 +211,9 @@ public:
     const int maxy = std::max(p1.y, p2.y);
     return x >= minx && x <= maxx && y >= miny && y <= maxy;
   }
+  [[nodiscard]] constexpr Position clamp(Position lower, Position upper) const noexcept { // NOLINT(bugprone-easily-swappable-parameters)
+    return {std::clamp(x, lower.x, upper.x),std::clamp(y, lower.y, upper.y)};
+  }
   int x;
   int y;
 };
@@ -220,7 +223,7 @@ class StaticPositionArr : public Static2DArr<T, int> {
 public:
   constexpr StaticPositionArr(int width, int height) noexcept : Static2DArr<T, int>(height, width) {}
   template <std::size_t size>
-  constexpr StaticPositionArr(std::initializer_list<T[size]> list) noexcept : Static2DArr<T, int>(list) {} // NOLINT(modernize-avoid-c-arrays)
+  constexpr StaticPositionArr(std::initializer_list<T[size]> list) noexcept : Static2DArr<T, int>(list) {}
   [[nodiscard]] constexpr auto &operator[](this auto &&self, Position p) noexcept {
     return self.Static2DArr<T, int>::operator[](p.y, p.x);
   }
@@ -295,7 +298,6 @@ public:
 
 export class Location {
 public:
-  [[nodiscard]] constexpr Location(int x, int y, int floor) noexcept : pos(x, y), mapPos(floor) {}
   [[nodiscard]] constexpr Location(Position p, FloorSpecifier mp) noexcept : pos(p), mapPos(mp) {}
   [[nodiscard]] constexpr Location up(int n = 1) const noexcept { return {pos, mapPos.up(n)}; }
   [[nodiscard]] constexpr Location down(int n = 1) const noexcept { return {pos, mapPos.down(n)}; }

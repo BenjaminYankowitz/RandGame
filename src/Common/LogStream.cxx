@@ -13,8 +13,8 @@ protected:
 
 export namespace Logging {
 
-IgnoreStreamBuf ignoreBuf;
+IgnoreStreamBuf ignoreBuf; //NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
-std::ostream log(std::cerr.rdbuf());
+std::ostream log(std::cerr.rdbuf()); //NOLINT(cppcoreguidelines-avoid-non-const-global-variables) //NOLINT(cppcoreguidelines-interfaces-global-init)
 
 } // namespace Logging

@@ -255,7 +255,13 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
   if (std::holds_alternative<NoTarget>(brain_.target)) {
     findTask(state);
   }
-  TimePeriod timeTaken = brain_.target.visit([&](auto target) { return goToTarget(state, target); });
+  TimePeriod timeTaken{0};
+  try{
+    timeTaken = brain_.target.visit([&](auto target) { return goToTarget(state, target); });
+  } catch (const std::exception& e){
+    Logging::log << "Variant error for runAI visit: " << e.what() << '\n';
+    return reThink(ReThinkReason::Unknown);
+  }
   if (!isAlive()) {
     return TimePeriod(0);
   }

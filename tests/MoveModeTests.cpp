@@ -19,7 +19,7 @@ static_assert(!hasOverlap(MoveMode::Fight & MoveMode::Move, MoveMode::Fight));
 static_assert(!hasOverlap(MoveMode::Fight & MoveMode::Move, MoveMode::Move));
 
 // operator^ : fight ^ fight clears fight
-static_assert(!hasOverlap(MoveMode::Fight ^ MoveMode::Fight, MoveMode::Fight));
+static_assert(!hasOverlap(MoveMode::Fight ^ MoveMode::Fight, MoveMode::Fight)); //NOLINT(misc-redundant-expression)
 
 // operator~ : ~fight clears fight
 static_assert(!hasOverlap(~MoveMode::Fight, MoveMode::Fight));

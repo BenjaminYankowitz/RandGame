@@ -4,14 +4,18 @@ import PerlinNoise;
 import OpenSimplex;
 import GameTypes;
 export namespace DungeonMaker {
-void perlin(StaticPositionArr<TerrainType> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+  struct Scale {
+    double x;
+    double y;
+  };
+void perlin(StaticPositionArr<TerrainType> &floor, Scale scale, double threshold = 0.0) noexcept {
   const double xoffset = Rnd::uniform_01();
   const double yoffset = Rnd::uniform_01();
   const double rotation = Rnd::uniform_real(0.0, 0.25 * std::numbers::pi_v<double>);
   const double cos = std::cos(rotation);
   const double sin = std::sin(rotation);
-  const double maxBaseX = (floor.cols() - 1) / xscale;
-  const double maxBaseY = (floor.rows() - 1) / yscale;
+  const double maxBaseX = (floor.cols() - 1) / scale.x;
+  const double maxBaseY = (floor.rows() - 1) / scale.y;
   const double minX = -sin * maxBaseY;
   const double minY = 0;
   const double maxX = cos * maxBaseX;
@@ -21,8 +25,8 @@ void perlin(StaticPositionArr<TerrainType> &floor, double xscale, double yscale,
   PerlinNoise::Generator gen(std::ceil(xRange + xoffset) + 1, std::ceil(yRange + yoffset) + 1);
   for (auto p : floor.indexIter()) {
     auto [xI, yI] = p;
-    const double x = xI / xscale;
-    const double y = yI / yscale;
+    const double x = xI / scale.x;
+    const double y = yI / scale.y;
     const double eX = (x * cos) - (y * sin) - minX + xoffset;
     const double eY = (y * cos) + (x * sin) - minY + yoffset;
     if (gen.getHeight(eX, eY) >= threshold) {
@@ -33,12 +37,17 @@ void perlin(StaticPositionArr<TerrainType> &floor, double xscale, double yscale,
   }
 }
 
-void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double yscale, double threshold = 0.0) noexcept {
+struct StairSpots {
+  Position up;
+  Position down;
+};
+
+void openSimplexRaw(StaticPositionArr<TerrainType> &floor, Scale scale, double threshold = 0.0) noexcept {
   OpenSimplex2S gen(Rnd::uniform_int<std::uint64_t>(0, std::numeric_limits<std::uint64_t>::max()));
   for (auto p : floor.indexIter()) {
     auto [xI, yI] = p;
-    const double x = xI / xscale;
-    const double y = yI / yscale;
+    const double x = xI / scale.x;
+    const double y = yI / scale.y;
     if (gen.noise2(x, y) >= threshold) {
       floor[p] = TerrainType::Wall;
     } else {
@@ -48,20 +57,20 @@ void openSimplexRaw(StaticPositionArr<TerrainType> &floor, double xscale, double
 }
 void connectRegions(StaticPositionArr<TerrainType> &floor) noexcept;
 
-void openSimplex(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair, double xscale, double yscale, double threshold = 0.0) { // 32, 8, -0.2 seems like good values
-  openSimplexRaw(floor, xscale, yscale, threshold);
-  if (floor.inBounds(upStair)) {
-    floor[upStair] = TerrainType::StoneFloor;
+void openSimplex(StaticPositionArr<TerrainType> &floor, StairSpots spot, Scale scale, double threshold = 0.0) { // 32, 8, -0.2 seems like good values
+  openSimplexRaw(floor, scale, threshold);
+  if (floor.inBounds(spot.up)) {
+    floor[spot.up] = TerrainType::StoneFloor;
   }
-  if (floor.inBounds(downStair)) {
-    floor[downStair] = TerrainType::StoneFloor;
+  if (floor.inBounds(spot.down)) {
+    floor[spot.down] = TerrainType::StoneFloor;
   }
   connectRegions(floor);
-  if (floor.inBounds(upStair)) {
-    floor[upStair] = TerrainType::UpStair;
+  if (floor.inBounds(spot.up)) {
+    floor[spot.up] = TerrainType::UpStair;
   }
-  if (floor.inBounds(downStair)) {
-    floor[downStair] = TerrainType::DownStair;
+  if (floor.inBounds(spot.down)) {
+    floor[spot.down] = TerrainType::DownStair;
   }
 }
 
@@ -211,7 +220,7 @@ void carveHVCorridor(StaticPositionArr<TerrainType> &floor, Position from, Posit
   }
 }
 
-void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Position downStair) noexcept {
+void randomRooms(StaticPositionArr<TerrainType> &floor, StairSpots spots) noexcept {
   floor.fill(TerrainType::Wall);
 
   struct Room {
@@ -240,10 +249,10 @@ void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Positi
   };
 
   std::vector<Room> rooms;
-  if (floor.inBounds(upStair))
-    rooms.push_back(makeRoomAt(upStair));
-  if (floor.inBounds(downStair))
-    rooms.push_back(makeRoomAt(downStair));
+  if (floor.inBounds(spots.up))
+    rooms.push_back(makeRoomAt(spots.up));
+  if (floor.inBounds(spots.down))
+    rooms.push_back(makeRoomAt(spots.down));
 
   const int numExtra = Rnd::uniform_int(5, 12);
   for (int i = 0; i < numExtra; i++) {
@@ -263,11 +272,11 @@ void randomRooms(StaticPositionArr<TerrainType> &floor, Position upStair, Positi
     carveHVCorridor(floor, rooms[i - 1].center(), rooms[i].center());
   }
 
-  if (floor.inBounds(upStair)) {
-    floor[upStair] = TerrainType::UpStair;
+  if (floor.inBounds(spots.up)) {
+    floor[spots.up] = TerrainType::UpStair;
   }
-  if (floor.inBounds(downStair)) {
-    floor[downStair] = TerrainType::DownStair;
+  if (floor.inBounds(spots.down)) {
+    floor[spots.down] = TerrainType::DownStair;
   }
 }
 } // namespace DungeonMaker

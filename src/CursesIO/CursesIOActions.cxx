@@ -48,14 +48,18 @@ bool askYesNo(IOModule::Interface &iterface, std::string_view question) noexcept
     auto window = BoxedWindow(width, height, interface.eventWindowWidth() - DesiredWidth, 0);
     displayInvent(window, items, 2);
     window.moveCursor(0, 0);
+    try {
     window << prompt;
+    } catch(std::exception& e){
+      Logging::log << "Error printing prompt to window for displayItemInterfaceForChoosing" << e.what() << '\n';
+    }
     window.updateScreen();
   } else {
     std::ostream &out = interface.interfacePrinter();
     std::size_t cnt = 0;
     std::size_t item1;
     char letter1;
-    auto validItems = firstNInvent(items.size()) | std::views::filter([&settings, &items](auto v) { return settings.isEligible(items[std::get<0>(v)]); });
+    auto validItems = firstNInvent(items.size()) | std::views::filter([&settings, &items](auto v) { return settings.gIsEligible(items[std::get<0>(v)]); });
     for (auto [i, letter] : validItems) {
       cnt++;
       if (cnt == 1) {
@@ -98,7 +102,7 @@ std::size_t getItemFromInterface(IOModule::Interface &interface, ObjectContainer
     } else if (userInput >= 'A' && userInput <= 'Z') {
       index = static_cast<std::size_t>(userInput - 'A') + 26;
     }
-    if (index && *index < items.size() && settings.isEligible(items[*index]))
+    if (index && *index < items.size() && settings.gIsEligible(items[*index]))
       return *index;
   }
   return NoItem;
@@ -153,7 +157,6 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     const auto [remfirst, remlast] = std::ranges::remove_if(cycleTargets, notInRange);
     cycleTargets.erase(remfirst, remlast);
   }
-  auto pos = playerPos;
   std::size_t cycleIndex = 0;
   auto getTarget = [&](chtype cmnd) -> std::optional<Position> {
     if (cmnd == 'x') {
@@ -164,33 +167,27 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return ret;
     }
     if (auto target = TtypeSelect(cmnd)) {
-      return findTerrain(memory, pos, *target);
+      return findTerrain(memory, playerPos, *target);
     }
     auto dir = keyToDir(std::tolower(cmnd));
     if (dir.noMove())
       return {};
     int step = std::isupper(cmnd) ? 10 : 1;
     auto jump = Dir(dir.dx * step, dir.dy * step);
-    return pos + jump;
+    return playerPos + jump;
   };
-  auto getClampedTarget = [&](chtype cmnd) {
-    return getTarget(cmnd).transform([&](Position pos) {
-      pos.x = std::clamp(pos.x, minX, maxX);
-      pos.y = std::clamp(pos.y, minY, maxY);
-      return pos;
-    });
-  };
-  iterface.showSelection(pos);
+  iterface.showSelection(playerPos);
+  Position pos = playerPos;
   while (true) {
     auto cmnd = CursesRAII::getChar();
     if (cmnd == SpecialChar::Escape)
       return {};
     if (cmnd == '.')
       return pos;
-    if (auto npos = getClampedTarget(cmnd)) {
-      pos = *npos;
+    auto npos = getTarget(cmnd).value_or(pos).clamp({minX,minY},{maxX,maxY});
+    if (npos!=pos)
       iterface.showSelection(pos);
-    }
+    pos = npos;
   }
 }
 
@@ -257,7 +254,7 @@ void eatItem(GameInterface &gState, IOModule::Interface &iterface, ActionMod & /
 }
 
 void dropItem(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
-  selectAndAct(interface, gState.lookAtInventory(), "What do you want to drop?", {.doStandAloneDisplay = false},
+  selectAndAct(interface, gState.lookAtInventory(), "What do you want to drop?", ItemFromInterfaceSettings{.doStandAloneDisplay = false},
                [&](std::size_t i) { gState.dropItem(i); });
 }
 
@@ -407,26 +404,36 @@ void giveUp(GameInterface &gState, IOModule::Interface & /*unused*/, ActionMod &
   mod.quitGame();
 }
 
-void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
-  if (!gState.isDebugMode())
-    return;
-  std::string &prompt = interface.addEvent("Save to: ");
+std::string askOpenQuestion(IOModule::Interface &interface, std::string_view prompt) noexcept{
+  std::string &line = interface.addEvent(std::string(prompt));
   interface.updateGameScreen();
   while (true) {
     auto ch = CursesRAII::getChar();
     if (ch == '\n')
-      break;
+      try{
+        return line.substr(prompt.size());
+      } catch(const std::out_of_range &e){
+        if constexpr(InDebug){
+          Logging::log << "askOpenQuestion error " << e.what() << '\n';
+        }
+        return "";
+      }
     if (ch == SpecialChar::Escape)
-      return;
+      return "";
     if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
-      if (!prompt.empty() && prompt.back() != ' ')
-        prompt.pop_back();
+      if (!line.empty() && line.back() != ' ')
+        line.pop_back();
     } else if (ch >= ' ' && ch <= '~') {
-      prompt += static_cast<char>(ch);
+      line += static_cast<char>(ch);
     }
     interface.updateGameScreen();
   }
-  std::string filename(std::string_view(prompt).substr(std::string_view("Save to: ").size()));
+}
+
+void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
+  if (!gState.isDebugMode())
+    return;
+  std::string filename = askOpenQuestion(interface,"Save to: ");
   if (filename.empty())
     return;
   std::ofstream file(filename, std::ios::binary | std::ios::trunc);
@@ -443,23 +450,7 @@ void debugSave(GameInterface &gState, IOModule::Interface &interface, ActionMod 
 void debugLoad(GameInterface &gState, IOModule::Interface &interface, ActionMod & /*mod*/) noexcept {
   if (!gState.isDebugMode())
     return;
-  std::string &prompt = interface.addEvent("Load from: ");
-  interface.updateGameScreen();
-  while (true) {
-    auto ch = CursesRAII::getChar();
-    if (ch == '\n')
-      break;
-    if (ch == SpecialChar::Escape)
-      return;
-    if (ch == SpecialChar::Backspace || ch == 127 || ch == '\b') {
-      if (!prompt.empty() && prompt.back() != ' ')
-        prompt.pop_back();
-    } else if (ch >= ' ' && ch <= '~') {
-      prompt += static_cast<char>(ch);
-    }
-    interface.updateGameScreen();
-  }
-  std::string filename(std::string_view(prompt).substr(std::string_view("Load from: ").size()));
+  std::string filename = askOpenQuestion(interface,"Load from: ");
   if (filename.empty())
     return;
   std::ifstream file(filename, std::ios::binary);

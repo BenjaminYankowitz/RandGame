@@ -24,7 +24,7 @@ export enum class MonsterClass : std::uint8_t {
   Imp,
 };
 
-export enum class ObjectTypeImpl : std::uint8_t {
+export enum class ObjectTypeImpl : std::uint8_t { //NOLINT(readability-enum-initial-value)
   KingsCoin,
   Knife,
   Die,
@@ -33,7 +33,6 @@ export enum class ObjectTypeImpl : std::uint8_t {
 };
 
 export enum class EquipType : std::uint8_t {
-  CantEquip,
   Hand,
   Helm,
   Gloves,
@@ -41,6 +40,7 @@ export enum class EquipType : std::uint8_t {
   Body,
   Cloak,
   Shoes,
+  CantEquip //Must stay as last value.
 };
 
 [[nodiscard]] constexpr bool isCorpse(ObjectTypeImpl obj) {
@@ -98,7 +98,7 @@ export enum class Material : std::uint8_t {
 };
 
 export constexpr Material defaultMat(ObjectType type) {
-  switch (type) {
+  switch (ObjectTypeImpl(type)) {
     using enum Material;
     using enum ObjectTypeImpl;
   case KingsCoin:

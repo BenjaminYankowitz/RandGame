@@ -6,13 +6,13 @@ constexpr int MapW = 40;
 constexpr int MapH = 20;
 
 struct InstrumentedMap {
-  const StaticPositionArr<bool> &real;
+  const StaticPositionArr<bool>* real;
   [[nodiscard]] constexpr int extent(int n) const noexcept {
     switch (n) {
     case 0:
-      return real.rows();
+      return real->rows();
     case 1:
-      return real.cols();
+      return real->cols();
     default:
       std::unreachable();
     }
@@ -20,7 +20,7 @@ struct InstrumentedMap {
   mutable std::vector<Position> checked;
   [[nodiscard]] bool operator[](Position p) const {
     checked.push_back(p);
-    return real[p];
+    return (*real)[p];
   }
 };
 
@@ -278,7 +278,7 @@ int main() {
         Position end = cursor;
 
         // Run instrumented LOS
-        InstrumentedMap imap{map, {}};
+        InstrumentedMap imap{&map, {}};
         bool result = LineOfSight::inLineOfSight(imap, start, end);
 
         // Phase 3: show results

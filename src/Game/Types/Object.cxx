@@ -49,8 +49,10 @@ public:
   using const_iterator = IteratorWrapper<const std::unique_ptr<Object> *, const Object &, deref>;
   ObjectContainer() = default;
   ObjectContainer(ObjectContainer &) = delete;
+  ObjectContainer& operator=(ObjectContainer &) = delete;
   ObjectContainer(ObjectContainer &&) = default;
   ObjectContainer &operator=(ObjectContainer &&) = default;
+  ~ObjectContainer() = default;
   constexpr void takeAllFrom(ObjectContainer &container) noexcept {
     for (std::unique_ptr<Object> &obj : container.impl_) {
       addObject(std::move(obj));

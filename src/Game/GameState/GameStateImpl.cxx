@@ -9,11 +9,11 @@ WorldFloor createFloor(int xDim, int yDim, Position upStair, Position downStair)
 void addMonsters(GameState &state, FloorSpecifier floor, int count) noexcept {
   const WorldFloor &floorRef = state.getFloor(floor);
   for (int i = 0; i < count; ++i) {
-    Position pos;
+    Position pos = {Rnd::rnd(floorRef.cols()), Rnd::rnd(floorRef.rows())};
     int attempts = 0;
-    do {
+    while (!floorRef.isOpenTile(pos) && (++attempts < 100)) {
       pos = {Rnd::rnd(floorRef.cols()), Rnd::rnd(floorRef.rows())};
-    } while (!floorRef.isOpenTile(pos) && (++attempts < 100));
+    }
     if (!floorRef.isOpenTile(pos))
       continue;
     Monster::createMonster(state, {pos, floor}, MonsterClass::Imp);

@@ -4,10 +4,6 @@ using namespace std::string_view_literals;
 using namespace CursesLowLevel;
 
 IOModule::Interface::Interface(std::unique_ptr<GameInterface> interface) : gState_(std::move(interface)), debugViewer_(this), interfaceViewer_(this), interfaceStream_(&interfaceViewer_) {
-  eventWindow_ = BoxedWindow(0, 0, 0, 0);
-  mainWindow_ = BoxedWindow(0, 0, 0, 0);
-  inventWindow_ = BoxedWindow(0, 0, 0, 0);
-  statusWindow_ = BoxedWindow(0, 0, 0, 0);
   oldBuffer_ = Logging::log.rdbuf(&debugViewer_);
   gState_->setEventViewer(std::make_unique<CursesEventViewer>(this));
 }

@@ -86,7 +86,8 @@ public:
   [[nodiscard]] constexpr int getMaxMP() const noexcept { return body_.maxMP; }
   [[nodiscard]] constexpr int getMaxThrowingDistance() const noexcept { return body_.maxThrowingDistance; }
   [[nodiscard]] constexpr bool removeHealth(Health amount) noexcept {
-    if ((body_.health -= amount) > 0)
+    body_.health -= amount;
+    if (body_.health > 0)
       return false;
     if (!body_.immortal)
       return true;
@@ -168,7 +169,7 @@ public:
   [[nodiscard]] TimePeriod castBeam(GameState &state, Dir dir) noexcept;
   Monster(MonsterBodyInit body, Location loc, ID id, MonsterBrainConfig brain) noexcept : Monster(MonsterBody(body), loc, id, MonsterBrain{.config = brain}) {}
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {
-    equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots()); // NOLINT(modernize-avoid-c-arrays)
+    equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots());
   };
   std::size_t serializeTo(std::ostream &out) const noexcept;
   static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
@@ -178,7 +179,7 @@ public:
 private:
   constexpr void setDead(bool dead = true) noexcept { body_.alive = !dead; }
   ObjectContainer inventory_;
-  std::unique_ptr<std::unique_ptr<Object>[]> equipment_; // NOLINT(modernize-avoid-c-arrays)
+  std::unique_ptr<std::unique_ptr<Object>[]> equipment_;
   MonsterBody body_;
   MonsterBrain brain_;
   Location loc_;
@@ -215,7 +216,7 @@ public:
   [[nodiscard]] constexpr auto end##name(this auto &&self) noexcept { return self.name##Arr_.end(); }                                    \
   [[nodiscard]] constexpr auto iterable##name(this auto &&self) noexcept { return Iterable(self.begin##name(), self.end##name()); }      \
   [[nodiscard]] constexpr auto &get##name##Arr(this auto &&self) noexcept { return std::forward_like<decltype(self)>(self.name##Arr_); } \
-  [[nodiscard]] constexpr auto &get##name(this auto &&self, Position pos) noexcept { return self.get##name##Arr()[pos]; }
+  [[nodiscard]] constexpr auto &get##name(this auto &&self, Position pos) noexcept { return self.get##name##Arr()[pos]; } // NOLINT(bugprone-macro-parentheses)
   ACCESSORS_WORLD_FLOOR(Objects)
   ACCESSORS_WORLD_FLOOR(Monster)
   ACCESSORS_WORLD_FLOOR(TerrainType)
@@ -242,6 +243,9 @@ public:
   constexpr WorldFloor(int x, int y) noexcept : ObjectsArr_(x, y), MonsterArr_(x, y), TerrainTypeArr_(x, y) {}
   constexpr WorldFloor(WorldFloor &&) noexcept = default;
   constexpr WorldFloor &operator=(WorldFloor &&) noexcept = default;
+  constexpr WorldFloor(WorldFloor &) noexcept = delete;
+  constexpr WorldFloor &operator=(WorldFloor &) noexcept = delete;
+  constexpr ~WorldFloor() noexcept = default;
   [[nodiscard]] constexpr int rows() const noexcept { return ObjectsArr_.rows(); }
   [[nodiscard]] constexpr int cols() const noexcept { return ObjectsArr_.cols(); }
   [[nodiscard]] constexpr bool inBounds(Position pos) const noexcept {
@@ -312,6 +316,11 @@ public:
   virtual void monsterAte(const Monster &eater, const Object &eaten) noexcept = 0;
   virtual void beamStep(Location loc) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
+  EventViewer() noexcept = default;
+  EventViewer(const EventViewer&) noexcept = default;
+  EventViewer& operator=(const EventViewer&) noexcept = default;
+  EventViewer(EventViewer&&) noexcept = default;
+  EventViewer& operator=(EventViewer&&) noexcept = default;
   virtual ~EventViewer() = default;
 };
 

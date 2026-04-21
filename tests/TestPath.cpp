@@ -13,15 +13,23 @@ public:
 };
 using spanT = std::mdspan<bool, std::extents<int, std::dynamic_extent, std::dynamic_extent>, std::layout_right, Accessor>;
 
-constexpr bool testMap(std::string_view map, int height, int width, int expectedLen) {
-  if (static_cast<int>(map.size()) != height * width) {
+struct Dims{
+  int height;
+  int width;
+  [[nodiscard]] constexpr int volume() const noexcept{
+    return width*height;
+  }
+};
+
+constexpr bool testMap(std::string_view map, Dims dims, int expectedLen) {
+  if (static_cast<int>(map.size()) != dims.volume()) {
     return false;
   }
   Position start{-1, -1};
   Position end{-1, -1};
-  for (int row = 0; row < height; row++) {
-    for (int col = 0; col < width; col++) {
-      const char c = map[(row * width) + col];
+  for (int row : std::views::iota(0,dims.height)) {
+    for (int col :std::views::iota(0,dims.width)) {
+      const char c = map[(row * dims.width) + col];
       if (c == 's' || c == 'b') {
         start = {col, row};
       } else if (c == 'e' || c == 'f') {
@@ -36,7 +44,7 @@ constexpr bool testMap(std::string_view map, int height, int width, int expected
     return false;
   }
   int len = 0;
-  spanT mapView(map.data(), height, width);
+  spanT mapView(map.data(), dims.height, dims.width);
   Position cSpot = start;
   while (len < expectedLen && cSpot != end) {
     auto dir = FindPath::findPath(mapView, cSpot, end);
@@ -44,7 +52,7 @@ constexpr bool testMap(std::string_view map, int height, int width, int expected
       return false;
     }
     cSpot += dir;
-    if (!cSpot.within({width - 1, height - 1})) {
+    if (!cSpot.within({dims.width - 1, dims.height - 1})) {
       return false;
     }
     if (cSpot != end && !mapView[cSpot.y, cSpot.x]) {
@@ -67,7 +75,7 @@ s  \
 xx \
 e  \
 ",
-                      3, 3, 4));
+{3, 3}, 4));
 namespace {
 // Unreachable goal returns Dir{0,0}
 constexpr bool testAtClosest(std::string_view map, int height, int width) {
@@ -101,12 +109,12 @@ static_assert(testMap(
     "  x  "
     "  x  "
     "  e  ",
-    5, 5, 6));
+    {5, 5}, 6));
 
 // --- Adjacent goal: one step ---
 static_assert(testMap(
     "se",
-    1, 2, 1));
+    {1, 2}, 1));
 
 // --- Start == end: zero steps ---
 static_assert([] {
@@ -133,7 +141,7 @@ static_assert(testMap(
     "          "
     "          "
     "         e",
-    10, 10, 9));
+    {10, 10}, 9));
 
 // --- Unreachable: full wall column separates start and end ---
 static_assert(testAtClosest(
@@ -149,7 +157,7 @@ static_assert(testMap(
     "  x  "
     "  x  "
     "  e  ",
-    5, 5, 4));
+    {5, 5}, 4));
 
 // --- Large obstacle in center of open field ---
 static_assert(testMap(
@@ -158,7 +166,7 @@ static_assert(testMap(
     "   xxx   "
     "   xxx   "
     "        e",
-    5, 9, 9));
+    {5, 9}, 9));
 
 // --- Goal on wall (unreachable) ---
 static_assert(testAtClosest(
@@ -174,4 +182,4 @@ static_assert(testMap(
     "     "
     "     "
     "    e",
-    5, 5, 4));
+    {5, 5}, 4));

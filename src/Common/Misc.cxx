@@ -54,8 +54,11 @@ public:
   constexpr explicit OptionalReference(T &value) noexcept : ptr_(&value) {}
   constexpr OptionalReference() = default;
   constexpr OptionalReference(const OptionalReference &o) = default;
+  constexpr OptionalReference(OptionalReference &&o) = default;
   constexpr OptionalReference &operator=(const OptionalReference &o) = default;
+  constexpr OptionalReference &operator=(OptionalReference &&o) = default;
   constexpr OptionalReference(OptionalReference<wConstT> o) noexcept : ptr_(o.ptr_) {} // NOLINT(google-explicit-constructor)
+  constexpr ~OptionalReference() noexcept {}
   [[nodiscard]] constexpr iterator begin() noexcept { return iterator(ptr_); }
   [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator(ptr_); }
   [[nodiscard]] constexpr iterator end() noexcept { return endIter(); }
@@ -139,7 +142,7 @@ constexpr auto mkEnumToObjectimpl(std::array<ObjectT, size> arr, std::index_sequ
 }
 
 export template <class ObjectT, std::size_t size>
-[[nodiscard]] constexpr auto mkEnumToObject(ObjectT (&&arr)[size]) noexcept { // NOLINT(modernize-avoid-c-arrays)
+[[nodiscard]] constexpr auto mkEnumToObject(ObjectT (&&arr)[size]) noexcept {
   return mkEnumToObjectimpl(std::to_array(std::move(arr)), std::make_index_sequence<size>());
 }
 

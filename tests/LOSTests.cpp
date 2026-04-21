@@ -2,24 +2,24 @@
 import Common;
 
 struct BoolMap {
-  const StaticPositionArr<bool> &real;
+  const StaticPositionArr<bool> *real;
   [[nodiscard]] constexpr int extent(int n) const noexcept {
     switch (n) {
     case 0:
-      return real.rows();
+      return real->rows();
     case 1:
-      return real.cols();
+      return real->cols();
     default:
       std::unreachable();
     }
   }
-  [[nodiscard]] bool operator[](Position p) const { return real[p]; }
+  [[nodiscard]] bool operator[](Position p) const { return (*real)[p]; }
 };
 
 // Helper: check that allInLineOfSight returns exactly the set of positions
 // for which inLineOfSight returns true.
 void verifyMatch(const StaticPositionArr<bool> &map, Position start) {
-  BoolMap bmap{map};
+  BoolMap bmap{&map};
   auto result = LineOfSight::allInLineOfSight(bmap, start);
 
   // Build set from vector for fast lookup
