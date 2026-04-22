@@ -158,6 +158,7 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
     cycleTargets.erase(remfirst, remlast);
   }
   std::size_t cycleIndex = 0;
+  Position pos = playerPos;
   auto getTarget = [&](chtype cmnd) -> std::optional<Position> {
     if (cmnd == 'x') {
       if (cycleTargets.empty())
@@ -174,10 +175,9 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return {};
     int step = std::isupper(cmnd) ? 10 : 1;
     auto jump = Dir(dir.dx * step, dir.dy * step);
-    return playerPos + jump;
+    return pos + jump;
   };
   iterface.showSelection(playerPos);
-  Position pos = playerPos;
   while (true) {
     auto cmnd = CursesRAII::getChar();
     if (cmnd == SpecialChar::Escape)
@@ -186,7 +186,7 @@ std::optional<Position> chooseTile(GameInterface &gState, IOModule::Interface &i
       return pos;
     auto npos = getTarget(cmnd).value_or(pos).clamp({minX, minY}, {maxX, maxY});
     if (npos != pos)
-      iterface.showSelection(pos);
+      iterface.showSelection(npos);
     pos = npos;
   }
 }
