@@ -43,7 +43,7 @@
       "name": "smallnodebug",
       "inherits": "base",
       "environment": {
-        "CXXFLAGS": "$env{CXXFLAGSBASE} -Oz -DNDEBUG -flto -Wl,--icf=safe"
+        "CXXFLAGS": "$env{CXXFLAGSBASE} -Oz -DNDEBUG -flto -Wl,-s,--icf=safe"
       }    
     }
   ]
