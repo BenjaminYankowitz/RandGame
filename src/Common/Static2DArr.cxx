@@ -5,6 +5,17 @@ import :Debug;
 import std;
 import SerializationLib;
 
+template<bool v,class True, class False>
+struct Select{};
+template<class True, class False>
+struct Select<true,True,False>{
+  using value = True;
+};
+template<class True, class False>
+struct Select<false,True,False>{
+  using value = False;
+};
+
 export template <class T, class sizeT = std::size_t>
 class Static2DArr {
 public:
@@ -18,18 +29,8 @@ public:
 
 private:
   using arr_t = value_type[];
-  template <bool b>
-  struct PiteratorImpl {};
-  template <>
-  struct PiteratorImpl<false> {
-    using type = iterator;
-  };
-  template <>
-  struct PiteratorImpl<true> {
-    using type = const_iterator;
-  };
   template <class U>
-  using piterator = PiteratorImpl<std::is_const_v<U>>::type;
+  using piterator = Select<std::is_const_v<U>,const_iterator,iterator>;
 
 public:
   template <size_type size>

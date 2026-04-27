@@ -234,11 +234,10 @@ export std::pair<int, int> getMaxDims() { return {getmaxy(stdscr), getmaxx(stdsc
 
 template <class T>
 concept NumberC = (std::integral<T> || std::floating_point<T>) && !std::same_as<T, char>;
-namespace {
+
 struct SymbolTraits { // should be specialzation of std::char_traits but that's not working due to compiler bug
   using char_type = Symbol;
 };
-} // namespace
 
 export using string_view_Symbol = std::basic_string_view<Symbol, SymbolTraits>;
 export class WindowWrapper {
@@ -344,12 +343,10 @@ concept Printable = requires(WindowWrapper &w, T a) {
 
 template <class T>
 concept NPrintable = !Printable<T>;
-namespace {
 template <class T>
 struct IsViewS : public std::false_type {};
 template <class T>
 struct IsViewS<std::basic_string_view<T>> : public std::true_type {};
-} // namespace
 
 template <class T>
 concept PrintableView = Printable<T> && static_cast<bool>(IsViewS<T>{});

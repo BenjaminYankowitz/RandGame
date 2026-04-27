@@ -28,7 +28,7 @@ struct ConcatView {
       ++iter.iter;
     }
     constexpr ConcatViewIter &operator++() noexcept {
-      data.visit([&](auto val) { inc(val); });
+      std::visit([&](auto val) { inc(val); }, data);
       return *this;
     }
     constexpr ConcatViewIter operator++(int) noexcept {
@@ -37,7 +37,7 @@ struct ConcatView {
       return old;
     }
     [[nodiscard]] constexpr auto operator*() const noexcept {
-      return data.visit([](auto val) { return *val.iter; });
+      return std::visit([](auto val) { return *val.iter; }, data);
     }
     [[nodiscard]] constexpr bool operator==(ConcatViewIterSentinal /*unused*/) const noexcept {
       return std::holds_alternative<OnRange2>(data) && std::get<OnRange2>(data).iter == std::get<OnRange2>(data).end;

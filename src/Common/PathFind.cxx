@@ -8,7 +8,6 @@ concept Bool2dArr = requires(const T &map, int a, int b) {
   { map.extent(a) } -> std::convertible_to<int>;
   { map[a, b] } -> std::same_as<bool>;
 };
-using Dy2D = std::extents<int, std::dynamic_extent, std::dynamic_extent>;
 export namespace FindPath {
 template <Bool2dArr MapType>
 [[nodiscard]] constexpr Dir findPath(MapType map, Position start, Position goal, int maxDist = std::numeric_limits<int>::max()) {

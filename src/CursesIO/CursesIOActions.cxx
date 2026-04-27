@@ -575,7 +575,7 @@ void extendedCommand(GameInterface &gState, IOModule::Interface &interface, Acti
     suggest();
   }
   auto choices = validCommands(debugMode, false);
-  auto cmd = std::ranges::find_if(choices, [name = name.subview(1)](const ExtendedCommand &cmd) { return cmd == name; });
+  auto cmd = std::ranges::find_if(choices, [name = std::string_view{name}.substr(1)](const ExtendedCommand &cmd) { return cmd == name; });
   if (cmd != choices.end())
     cmd->command(gState, interface, mod);
 }

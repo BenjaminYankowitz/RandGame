@@ -161,7 +161,8 @@ TimePeriod Monster::takeItem(GameState &state, ObjectContainer &container, std::
 }
 
 TimePeriod Monster::generalMove(GameState &state, Location nLoc, MoveMode mode) noexcept {
-  if (loc_ == nLoc) return TimePeriod(0);
+  if (loc_ == nLoc)
+    return TimePeriod(0);
   if (!state.isOpenTerrain(nLoc)) {
     return TimePeriod(0);
   }
@@ -257,9 +258,9 @@ TimePeriod Monster::runAI(GameState &state) noexcept {
     findTask(state);
   }
   TimePeriod timeTaken{0};
-  try{
-    timeTaken = brain_.target.visit([&](auto target) { return goToTarget(state, target); });
-  } catch (const std::exception& e){
+  try {
+    timeTaken = std::visit([&](auto target) { return goToTarget(state, target); }, brain_.target);
+  } catch (const std::exception &e) {
     Logging::log << "Variant error for runAI visit: " << e.what() << '\n';
     return reThink(ReThinkReason::Unknown);
   }

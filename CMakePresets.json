@@ -11,11 +11,9 @@
         "CXXFLAGSBASE" : "$penv{CXXFLAGS} -stdlib=libc++ -fuse-ld=lld $env{WARNINGFLAGS}",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/triplets",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
-      }, 
-      "cacheVariables": {
-        "CMAKE_CXX_COMPILER": "clang++"
-      }
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE",
+        "CXX" : "clang++"
+      } 
     },
     {
       "name": "debug",
