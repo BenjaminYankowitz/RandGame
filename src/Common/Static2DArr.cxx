@@ -30,7 +30,7 @@ public:
 private:
   using arr_t = value_type[];
   template <class U>
-  using piterator = Select<std::is_const_v<U>,const_iterator,iterator>;
+  using piterator = Select<std::is_const_v<U>,const_iterator,iterator>::value;
 
 public:
   template <size_type size>
