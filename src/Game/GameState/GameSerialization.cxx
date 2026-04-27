@@ -9,109 +9,58 @@ using SerializationLib::Tag;
 using SerializationLib::toStream; // NOLINT(misc-unused-using-decls) //This is nessesary for serialize to work.
 
 // --- Monster ---
-std::size_t toStream(std::ostream &out, const Monster &input) {
-  return input.serializeTo(out);
+void toStream(std::ostream &out, const Monster &input) {
+  input.serializeTo(out);
 }
 
-Monster fromStream(std::istream &in, std::size_t &numRead, Tag<Monster> /**/) {
-  return Monster::deserializeFrom(in, numRead);
+Monster fromStream(std::istream &in, Tag<Monster> /**/) {
+  return Monster::deserializeFrom(in);
 }
 
 // --- WorldFloor ---
-std::size_t toStream(std::ostream &out, const WorldFloor &input) {
-  return serialize(out, input.getObjectsArr(), input.getMonsterArr(), input.getTerrainTypeArr(), input.getEventListenersArr());
+void toStream(std::ostream &out, const WorldFloor &input) {
+  serialize(out, input.getObjectsArr(), input.getMonsterArr(), input.getTerrainTypeArr(), input.getEventListenersArr());
 }
 
-WorldFloor fromStream(std::istream &in, std::size_t &numRead, Tag<WorldFloor> /**/) {
-  std::size_t totalRead = 0;
-  std::size_t localRead;
-  auto objects = fromStream(in, localRead, Tag<StaticPositionArr<ObjectContainer>>{});
-  totalRead += localRead;
-  auto monsters = fromStream(in, localRead, Tag<StaticPositionArr<Monster::ID>>{});
-  totalRead += localRead;
-  auto terrain = fromStream(in, localRead, Tag<StaticPositionArr<TerrainType>>{});
-  totalRead += localRead;
-
+WorldFloor fromStream(std::istream &in, Tag<WorldFloor> /**/) {
+  auto objects = fromStream(in, Tag<StaticPositionArr<ObjectContainer>>{});
   WorldFloor floor(objects.width(), objects.height());
   floor.getObjectsArr() = std::move(objects);
-  floor.getMonsterArr() = std::move(monsters);
-  floor.getTerrainTypeArr() = std::move(terrain);
-  floor.getEventListenersArr() = fromStream(in, localRead, Tag<std::vector<Monster::ID>>{});
-  totalRead += localRead;
-  numRead = totalRead;
+  floor.getMonsterArr() = fromStream(in, Tag<StaticPositionArr<Monster::ID>>{});
+  floor.getTerrainTypeArr() = fromStream(in, Tag<StaticPositionArr<TerrainType>>{});
+  floor.getEventListenersArr() = fromStream(in, Tag<std::vector<Monster::ID>>{});
   return floor;
 }
 
 // --- Monster member implementations ---
-std::size_t Monster::serializeTo(std::ostream &out) const noexcept {
-  std::size_t written = serialize(out, inventory_, body_, brain_, loc_, exp_, id_, next_, prev_);
+void Monster::serializeTo(std::ostream &out) const noexcept {
+  serialize(out, body_,loc_,id_,brain_,inventory_,exp_,next_,prev_);
+  //inventory_, body_, brain_, loc_, exp_, id_, next_, prev_
   for (std::int8_t i = 0; i < body_.plan.totalSlots(); ++i) {
-    written += toStream(out, equipment_[i]);
+    toStream(out, equipment_[i]);
   }
-  return written;
 }
 
-Monster Monster::deserializeFrom(std::istream &in, std::size_t &numRead) {
-  std::size_t totalRead = 0;
-  std::size_t localRead;
-
-  auto inventory = fromStream(in, localRead, Tag<ObjectContainer>{});
-  totalRead += localRead;
-
-  auto body = fromStream(in, localRead, Tag<Monster::MonsterBody>{});
-  totalRead += localRead;
-
-  auto brain = fromStream(in, localRead, Tag<Monster::MonsterBrain>{});
-  totalRead += localRead;
-  Location loc = fromStream(in, localRead, Tag<Location>{});
-  totalRead += localRead;
-  int exp;
-  Monster::ID id;
-  Monster::ID next;
-  Monster::ID prev;
-  totalRead += deserialize(in, exp, id, next, prev);
-  Monster m(body, loc, id, brain);
-  m.inventory_ = std::move(inventory);
-  m.next_ = next;
-  m.prev_ = prev;
-  m.exp_ = exp;
+Monster Monster::deserializeFrom(std::istream &in) {
+  auto body = fromStream(in, Tag<MonsterBody>{});
+  auto loc = fromStream(in, Tag<Location>{});
+  auto id = fromStream(in, Tag<ID>{});
+  auto brain = fromStream(in, Tag<MonsterBrain>{});
+  Monster m(body,loc,id,brain);
+  deserialize(in, m.inventory_, m.exp_, m.next_, m.prev_);
   for (std::int8_t i = 0; i < m.body_.plan.totalSlots(); ++i) {
-    m.equipment_[i] = fromStream(in, localRead, Tag<std::unique_ptr<Object>>{});
-    totalRead += localRead;
+    m.equipment_[i] = fromStream(in, Tag<std::unique_ptr<Object>>{});
   }
-  numRead = totalRead;
   return m;
 }
 
 // --- GameState ---
-std::size_t toStream(std::ostream &out, const GameState &input) {
-  return serialize(out, input.monsterMap_, input.monsterEvents_, input.floorData_, input.currentTime_, input.mIdGenerator_, input.player_);
+void toStream(std::ostream &out, const GameState &input) {
+  serialize(out, input.monsterMap_, input.monsterEvents_, input.floorData_, input.currentTime_, input.mIdGenerator_, input.player_);
 }
 
-GameState fromStream(std::istream &in, std::size_t &numRead, Tag<GameState> /**/) {
-  std::size_t totalRead = 0;
-  std::size_t localRead;
-
-  auto monsterMap = fromStream(in, localRead, Tag<std::unordered_map<Monster::ID, std::unique_ptr<Monster>>>{});
-  totalRead += localRead;
-  auto monsterEvents = fromStream(in, localRead, Tag<std::priority_queue<GameState::MonsterActionEvent, std::vector<GameState::MonsterActionEvent>, std::greater<>>>{});
-  totalRead += localRead;
-  auto floorData = fromStream(in, localRead, Tag<std::vector<WorldFloor>>{});
-  totalRead += localRead;
-
-  GameTime currentTime;
-  Monster::ID::Generator mIdGenerator;
-  Monster::ID player;
-  totalRead += deserialize(in, currentTime, mIdGenerator, player);
-
+GameState fromStream(std::istream &in, Tag<GameState> /**/) {
   GameState state;
-  state.monsterMap_ = std::move(monsterMap);
-  state.monsterEvents_ = std::move(monsterEvents);
-  state.floorData_ = std::move(floorData);
-  state.currentTime_ = currentTime;
-  state.mIdGenerator_ = mIdGenerator;
-  state.player_ = player;
-
-  numRead = totalRead;
+  deserialize(in,state.monsterMap_,state.monsterEvents_,state.floorData_,state.currentTime_,state.mIdGenerator_,state.player_);
   return state;
 }

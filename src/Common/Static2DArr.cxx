@@ -53,7 +53,7 @@ public:
     }
   }
   constexpr Static2DArr(const Static2DArr &other) = delete;
-  constexpr Static2DArr& operator=(const Static2DArr &other) = delete;
+  constexpr Static2DArr &operator=(const Static2DArr &other) = delete;
   constexpr Static2DArr(Static2DArr &&other) noexcept = default;
   constexpr Static2DArr &operator=(Static2DArr &&other) noexcept = default;
   constexpr ~Static2DArr() noexcept = default;
@@ -103,29 +103,21 @@ using SerializationLib::Tag;
 using SerializationLib::toStream;
 
 export template <class T, class sizeT>
-std::size_t toStream(std::ostream &out, const Static2DArr<T, sizeT> &input) {
-  std::size_t written = 0;
-  written += toStream(out, input.rows());
-  written += toStream(out, input.cols());
+void toStream(std::ostream &out, const Static2DArr<T, sizeT> &input) {
+  toStream(out, input.rows());
+  toStream(out, input.cols());
   for (const auto &elem : input) {
-    written += toStream(out, elem);
+    toStream(out, elem);
   }
-  return written;
 }
 
 export template <class T, class sizeT>
-Static2DArr<T, sizeT> fromStream(std::istream &in, std::size_t &numRead, Tag<Static2DArr<T, sizeT>> /**/) {
-  std::size_t totalRead = 0;
-  std::size_t localRead{};
-  auto rows = fromStream(in, localRead, Tag<sizeT>{});
-  totalRead += localRead;
-  auto cols = fromStream(in, localRead, Tag<sizeT>{});
-  totalRead += localRead;
+Static2DArr<T, sizeT> fromStream(std::istream &in, Tag<Static2DArr<T, sizeT>> /**/) {
+  auto rows = fromStream(in, Tag<sizeT>{});
+  auto cols = fromStream(in, Tag<sizeT>{});
   Static2DArr<T, sizeT> arr(rows, cols);
   for (auto &elem : arr) {
-    elem = fromStream(in, localRead, Tag<T>{});
-    totalRead += localRead;
+    elem = fromStream(in, Tag<T>{});
   }
-  numRead = totalRead;
   return arr;
 }

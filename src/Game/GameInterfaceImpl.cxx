@@ -10,7 +10,7 @@ int ObjectInterface::count() const noexcept { return obj_->count(); }
 ObjectType ObjectInterface::type() const noexcept { return obj_->type(); }
 Material ObjectInterface::mat() const noexcept { return obj_->mat(); }
 ArtifactId ObjectInterface::artifactStatus() const noexcept { return obj_->artifactStatus(); }
-MonsterClass ObjectInterface::corpseOf() const noexcept{ return obj_->corpseOf();}
+MonsterClass ObjectInterface::corpseOf() const noexcept { return obj_->corpseOf(); }
 
 MonsterInterface::MonsterInterface(IGameState gameState, IMonster monster) noexcept : monster_(monster), gameState_(gameState) {}
 MonsterInterface::MonsterInterface(std::nullptr_t) noexcept : monster_(nullptr), gameState_(nullptr) {}
@@ -456,32 +456,27 @@ void GameInterface::setPlayerMortal() noexcept {
     return;
   ifAlive([](Monster &self) { self.setImmortal(false); });
 }
-std::size_t GameInterface::save(std::ostream &out) const noexcept {
-  std::size_t written = 0;
-  written += SerializationLib::serialize(out, MagicNumber);
-  written += SerializationLib::serialize(out, SaveVersion);
-  written += SerializationLib::serialize(out, wasDebugMode_);
-  written += toStream(out, *static_cast<GameState *>(gs_.gameState));
-  return written;
+void GameInterface::save(std::ostream &out) const noexcept {
+  SerializationLib::serialize(out, MagicNumber,SaveVersion,wasDebugMode_);
+  toStream(out, *static_cast<GameState *>(gs_.gameState));
 }
 
 GameInterface::LoadResult GameInterface::load(std::istream &in) noexcept {
   try {
-    std::size_t numRead = 0;
     std::uint64_t magic;
-    numRead += SerializationLib::deserialize(in, magic);
+    SerializationLib::deserialize(in, magic);
     if (magic != MagicNumber) {
       return LoadResult::badMagic();
     }
     int version{};
-    numRead += SerializationLib::deserialize(in, version);
+    SerializationLib::deserialize(in, version);
     if (version != SaveVersion) {
       return LoadResult::versionMismatch(version, SaveVersion);
     }
-    numRead += SerializationLib::deserialize(in, wasDebugMode_);
-    *static_cast<GameState *>(gs_.gameState) = fromStream(in, numRead, SerializationLib::Tag<GameState>{});
+    SerializationLib::deserialize(in, wasDebugMode_);
+    *static_cast<GameState *>(gs_.gameState) = fromStream(in, SerializationLib::Tag<GameState>{});
     controlled_ = static_cast<GameState *>(gs_.gameState)->getPlayer().getId();
-    return LoadResult::success(numRead);
+    return LoadResult::success();
   } catch (const std::exception &e) {
     return LoadResult::exception(e.what());
   } catch (...) {

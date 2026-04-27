@@ -10,7 +10,7 @@ import SerializationLib;
 export class Dir {
 public:
   [[nodiscard]] constexpr Dir() noexcept : dx(0), dy(0) {}
-  [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {} //NOLINT(bugprone-easily-swappable-parameters)
+  [[nodiscard]] constexpr Dir(int dxI, int dyI) noexcept : dx(dxI), dy(dyI) {} // NOLINT(bugprone-easily-swappable-parameters)
   [[nodiscard]] constexpr bool noMove() const noexcept { return dx == 0 && dy == 0; }
   [[nodiscard]] constexpr static Dir up() noexcept {
     return {0, -1};
@@ -212,7 +212,7 @@ public:
     return x >= minx && x <= maxx && y >= miny && y <= maxy;
   }
   [[nodiscard]] constexpr Position clamp(Position lower, Position upper) const noexcept { // NOLINT(bugprone-easily-swappable-parameters)
-    return {std::clamp(x, lower.x, upper.x),std::clamp(y, lower.y, upper.y)};
+    return {std::clamp(x, lower.x, upper.x), std::clamp(y, lower.y, upper.y)};
   }
   int x;
   int y;
@@ -249,13 +249,13 @@ using SerializationLib::Tag;
 using SerializationLib::toStream;
 
 export template <class T>
-std::size_t toStream(std::ostream &out, const StaticPositionArr<T> &input) {
-  return toStream(out, static_cast<const Static2DArr<T, int> &>(input));
+void toStream(std::ostream &out, const StaticPositionArr<T> &input) {
+  toStream(out, static_cast<const Static2DArr<T, int> &>(input));
 }
 
 export template <class T>
-StaticPositionArr<T> fromStream(std::istream &in, std::size_t &numRead, Tag<StaticPositionArr<T>> /**/) {
-  auto base = fromStream(in, numRead, Tag<Static2DArr<T, int>>{});
+StaticPositionArr<T> fromStream(std::istream &in, Tag<StaticPositionArr<T>> /**/) {
+  auto base = fromStream(in, Tag<Static2DArr<T, int>>{});
   StaticPositionArr<T> arr(base.cols(), base.rows());
   for (auto pos : arr.indexIter()) {
     arr[pos] = std::move(base[pos.y, pos.x]);

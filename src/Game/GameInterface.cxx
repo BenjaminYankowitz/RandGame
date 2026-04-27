@@ -12,6 +12,7 @@ public:
   [[nodiscard]] Material mat() const noexcept;
   [[nodiscard]] ArtifactId artifactStatus() const noexcept;
   [[nodiscard]] MonsterClass corpseOf() const noexcept;
+
 private:
   friend class GameInterface;
   const Object *obj_;
@@ -222,18 +223,17 @@ public:
                                       VersionMismatch,
                                       Exception };
     Error error = Error::None;
-    std::size_t bytesRead = 0;
     int fileVersion = 0;
     int expectedVersion = 0;
     std::string message{}; // NOLINT(readability-redundant-member-init)
     [[nodiscard]] bool ok() const noexcept { return error == Error::None; }
-    static LoadResult success(std::size_t bytes) noexcept { return {Error::None, bytes, SaveVersion, SaveVersion}; }
+    static LoadResult success() noexcept { return {Error::None, SaveVersion, SaveVersion}; }
     static LoadResult badMagic() noexcept { return {Error::BadMagic}; }
-    static LoadResult versionMismatch(int file, int expected) noexcept { return {Error::VersionMismatch, 0, file, expected}; }
-    static LoadResult exception(std::string what) noexcept { return {Error::Exception, 0, 0, 0, std::move(what)}; }
+    static LoadResult versionMismatch(int file, int expected) noexcept { return {Error::VersionMismatch, file, expected}; }
+    static LoadResult exception(std::string what) noexcept { return {Error::Exception, 0, 0, std::move(what)}; }
   };
 
-  std::size_t save(std::ostream &out) const noexcept;
+  void save(std::ostream &out) const noexcept;
   LoadResult load(std::istream &in) noexcept;
 
 private:

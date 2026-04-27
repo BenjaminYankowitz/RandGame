@@ -171,8 +171,8 @@ public:
   Monster(MonsterBody body, Location loc, ID id, MonsterBrain brain) noexcept : body_(body), brain_(brain), loc_(loc), id_(id) {
     equipment_ = std::make_unique<std::unique_ptr<Object>[]>(body_.plan.totalSlots());
   };
-  std::size_t serializeTo(std::ostream &out) const noexcept;
-  static Monster deserializeFrom(std::istream &in, std::size_t &numRead);
+  void serializeTo(std::ostream &out) const noexcept;
+  static Monster deserializeFrom(std::istream &in);
 
   constexpr void setImmortal(bool immortal = true) noexcept { body_.immortal = immortal; }
 
@@ -191,8 +191,8 @@ private:
 [[nodiscard]] constexpr bool operator==(const Monster &lhs, const Monster &rhs) noexcept {
   return &lhs == &rhs;
 }
-export std::size_t toStream(std::ostream &out, const Monster &input);
-export Monster fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<Monster> /**/);
+export void toStream(std::ostream &out, const Monster &input);
+export Monster fromStream(std::istream &in, SerializationLib::Tag<Monster> /**/);
 
 class WorldTile {
 public:
@@ -303,8 +303,8 @@ struct WorldFloorWrapper {
   }
 };
 
-export std::size_t toStream(std::ostream &out, const WorldFloor &input);
-export WorldFloor fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<WorldFloor> /**/);
+export void toStream(std::ostream &out, const WorldFloor &input);
+export WorldFloor fromStream(std::istream &in, SerializationLib::Tag<WorldFloor> /**/);
 export class EventViewer {
 public:
   virtual void itemPickup(const Monster &grabber, const Object &grabbed) noexcept = 0;
@@ -317,10 +317,10 @@ public:
   virtual void beamStep(Location loc) noexcept = 0;
   virtual void debug(std::string_view message) noexcept = 0;
   EventViewer() noexcept = default;
-  EventViewer(const EventViewer&) noexcept = default;
-  EventViewer& operator=(const EventViewer&) noexcept = default;
-  EventViewer(EventViewer&&) noexcept = default;
-  EventViewer& operator=(EventViewer&&) noexcept = default;
+  EventViewer(const EventViewer &) noexcept = default;
+  EventViewer &operator=(const EventViewer &) noexcept = default;
+  EventViewer(EventViewer &&) noexcept = default;
+  EventViewer &operator=(EventViewer &&) noexcept = default;
   virtual ~EventViewer() = default;
 };
 
@@ -468,9 +468,9 @@ private:
   Monster::ID player_;
   std::unique_ptr<EventViewer> eventViewer_;
 
-  friend std::size_t toStream(std::ostream &out, const GameState &input);
-  friend GameState fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<GameState> /**/);
+  friend void toStream(std::ostream &out, const GameState &input);
+  friend GameState fromStream(std::istream &in, SerializationLib::Tag<GameState> /**/);
 };
 
-export std::size_t toStream(std::ostream &out, const GameState &input);
-export GameState fromStream(std::istream &in, std::size_t &numRead, SerializationLib::Tag<GameState> /**/);
+export void toStream(std::ostream &out, const GameState &input);
+export GameState fromStream(std::istream &in, SerializationLib::Tag<GameState> /**/);

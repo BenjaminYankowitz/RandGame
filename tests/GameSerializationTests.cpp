@@ -53,9 +53,8 @@ TEST(GameSerializationTests, MonsterBytesWritten) {
   const Monster &player = game.getPlayer();
 
   std::stringstream ss;
-  std::size_t written = toStream(ss, player);
-  EXPECT_GT(written, 0u);
-  EXPECT_EQ(static_cast<std::size_t>(ss.tellp()), written);
+  toStream(ss, player);
+  EXPECT_GT(static_cast<std::streamsize>(ss.tellp()), 0);
 }
 
 // --- WorldFloor ---
