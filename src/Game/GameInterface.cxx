@@ -154,6 +154,7 @@ private:
 export class EventViewerInterface {
 public:
   struct HitInfo {
+    bool hitLanded;
     std::optional<Health> damageDone;
     bool killed;
   };

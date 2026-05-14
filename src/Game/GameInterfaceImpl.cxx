@@ -230,7 +230,7 @@ public:
     safeCall([&] { impl_->debug(message); });
   }
   void monsterHitMonster(const Monster::HitReturn &hitreturn, const Monster &attacker, const Monster &attacked) noexcept final {
-    safeCall([&] { impl_->monsterHitMonster({hitreturn.damageDone, !!hitreturn.killed}, toInterface(gameState_, attacker), toInterface(gameState_, attacked)); });
+    safeCall([&] { impl_->monsterHitMonster({hitreturn.hitLanded, hitreturn.damageDone, !!hitreturn.killed}, toInterface(gameState_, attacker), toInterface(gameState_, attacked)); });
   }
   void monsterHitWall(const Monster &attacker, Location loc) noexcept final {
     safeCall([&] { impl_->monsterHitWall(toInterface(gameState_, attacker), toInterface(*static_cast<GameState *>(gameState_.gameState), loc)); });
@@ -457,7 +457,7 @@ void GameInterface::setPlayerMortal() noexcept {
   ifAlive([](Monster &self) { self.setImmortal(false); });
 }
 void GameInterface::save(std::ostream &out) const noexcept {
-  SerializationLib::serialize(out, MagicNumber,SaveVersion,wasDebugMode_);
+  SerializationLib::serialize(out, MagicNumber, SaveVersion, wasDebugMode_);
   toStream(out, *static_cast<GameState *>(gs_.gameState));
 }
 

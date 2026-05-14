@@ -58,11 +58,18 @@ void CursesEventViewer::equipSlotsFull(MonsterInterface wearer, ObjectInterface 
   printWith_ << wearer << " cannot equip " << item << " (no free slots)\n";
 }
 
+constexpr std::string_view getHitVerb(CursesEventViewer::HitInfo info) {
+  if (!info.hitLanded)
+    return "missed";
+  return info.killed ? "killed" : "hit";
+}
+
 void CursesEventViewer::monsterHitMonster(HitInfo info, MonsterInterface attacker, MonsterInterface attacked) {
   if (attacked.isPlayer()) {
     viewer_.parent_->alertBeenHit();
   }
-  printWith_ << attacker << ' ' << (info.killed ? "killed" : "hit") << ' ';
+  std::string_view verb = getHitVerb(info);
+  printWith_ << attacker << ' ' << verb << ' ';
   if (attacked.isPlayer() && attacker.isPlayer()) {
     printWith_ << "yourself";
   } else {

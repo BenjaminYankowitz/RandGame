@@ -40,6 +40,7 @@ public:
   };
   using ID = MonsterID;
   struct HitReturn {
+    MustInit<bool> hitLanded;
     MustInit<Health> damageDone;
     int exp = 0;
     bool killed = false;
@@ -59,6 +60,7 @@ public:
   };
 
   struct AttackInfo {
+    MustInit<int> toHit;
     MustInit<Health> damage;
   };
 

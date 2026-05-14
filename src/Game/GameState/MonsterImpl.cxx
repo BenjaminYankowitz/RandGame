@@ -376,7 +376,7 @@ constexpr void sendItemFlying(GameState &state, Monster &source, std::unique_ptr
     Health damage = obj.type() == ObjectType::Knife ? 5 : 2;
     if (distLeft < maxDist / 2) // TODO: ben - replace this with to-hit penalty once to-hit is added
       damage /= 2;
-    monsterHitMonster(state, source, target, {damage});
+    monsterHitMonster(state, source, target, {5, damage});
     return 0;
   };
   auto noStep = [](Position) {};
@@ -385,7 +385,7 @@ constexpr void sendItemFlying(GameState &state, Monster &source, std::unique_ptr
 
 void createBeam(GameState &state, Monster &source, Location start, Dir dir, int maxDist, Dice::Group damage) {
   auto onHit = [&](Monster &target, int distLeft) {
-    monsterHitMonster(state, source, target, {damage()});
+    monsterHitMonster(state, source, target, {5, damage()});
     return distLeft - Rnd::rnd(5);
   };
   auto beamStep = [&state, floor = start.mapPos](Position pos) { state.broadcastBeamStep({pos, floor}); };
@@ -417,7 +417,7 @@ TimePeriod Monster::rest() noexcept {
 }
 
 TimePeriod Monster::hitMonster(GameState &state, Monster &target) noexcept {
-  monsterHitMonster(state, *this, target, {body_.damage()});
+  monsterHitMonster(state, *this, target, {5, body_.damage()});
   return getSpeed();
 }
 
@@ -479,6 +479,11 @@ void monsterHitMonster(GameState &state, Monster &attacker, Monster &attacked, M
 }
 
 Monster::HitReturn Monster::hitBy(AttackInfo info) noexcept {
+  using namespace Dice::Literals;
+  const bool hitLanded = "1d20"_dice() + info.toHit >= 10;
+  if (!hitLanded) {
+    return {false, Health{0}, 0, false};
+  }
   const bool killed = removeHealth(info.damage);
-  return {info.damage, killed ? exp_ / 2 : 0, killed};
+  return {true, info.damage, killed ? exp_ / 2 : 0, killed};
 }
